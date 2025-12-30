@@ -1,6 +1,5 @@
 import { test, expect } from "../fixtures/auth.fixture"
 import { CenterEditPage } from "../pages/center-edit.page"
-import { DashboardPage } from "../pages/dashboard.page"
 import { TEST_CENTERS } from "../utils/test-data"
 
 test.describe("Center Edit", () => {

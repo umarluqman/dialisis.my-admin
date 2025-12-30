@@ -6,7 +6,9 @@ import {
   getCenterById,
   updateCenter,
   getStates,
+  getCurrentUserRole,
 } from "@/core/functions/center-functions"
+import { useSession } from "@/lib/auth-client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -65,6 +67,13 @@ function CenterEditPage() {
   const { centerId } = Route.useParams()
   const loaderData = Route.useLoaderData()
   const queryClient = useQueryClient()
+  const { data: session } = useSession()
+
+  const { data: userRole } = useQuery({
+    queryKey: ["userRole", session?.user?.id],
+    queryFn: () => getCurrentUserRole(),
+    enabled: !!session,
+  })
 
   const { data: center, isLoading: centerLoading } = useQuery({
     queryKey: ["center", centerId],
@@ -504,31 +513,33 @@ function CenterEditPage() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Display Settings</CardTitle>
-              <CardDescription>
-                Control how this center appears on the website
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Field orientation="horizontal">
-                <div className="flex items-center gap-3">
-                  <Switch
-                    id="featured"
-                    checked={formData.featured}
-                    onCheckedChange={(checked) =>
-                      setFormData((prev) => ({ ...prev, featured: checked }))
-                    }
-                  />
-                  <Label htmlFor="featured">Featured Center</Label>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Featured centers are highlighted on the homepage
-                </p>
-              </Field>
-            </CardContent>
-          </Card>
+          {userRole?.role === "superadmin" && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Display Settings</CardTitle>
+                <CardDescription>
+                  Control how this center appears on the website
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Field orientation="horizontal">
+                  <div className="flex items-center gap-3">
+                    <Switch
+                      id="featured"
+                      checked={formData.featured}
+                      onCheckedChange={(checked) =>
+                        setFormData((prev) => ({ ...prev, featured: checked }))
+                      }
+                    />
+                    <Label htmlFor="featured">Featured Center</Label>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Featured centers are highlighted on the homepage
+                  </p>
+                </Field>
+              </CardContent>
+            </Card>
+          )}
         </form>
       </div>
     </div>

@@ -172,10 +172,16 @@ export const updateCenter = createServerFn({ method: "POST" })
       }
     }
 
+    // Strip featured field for non-superadmin users
+    const updateData = { ...data.data }
+    if (userRole !== "superadmin") {
+      delete updateData.featured
+    }
+
     await db
       .update(dialysisCenter)
       .set({
-        ...data.data,
+        ...updateData,
         updatedAt: new Date(),
       })
       .where(eq(dialysisCenter.id, data.id))
