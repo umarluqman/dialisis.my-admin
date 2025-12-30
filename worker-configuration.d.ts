@@ -11,6 +11,7 @@ declare namespace Cloudflare {
 		TURSO_DATABASE_URL: string;
 		TURSO_AUTH_TOKEN: string;
 		BETTER_AUTH_SECRET: string;
+		RESEND_API_KEY: string;
 	}
 }
 interface Env extends Cloudflare.Env {}
@@ -18,7 +19,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "MY_VAR" | "VITE_BASE_URL" | "TURSO_DATABASE_URL" | "TURSO_AUTH_TOKEN" | "BETTER_AUTH_SECRET">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "MY_VAR" | "VITE_BASE_URL" | "TURSO_DATABASE_URL" | "TURSO_AUTH_TOKEN" | "BETTER_AUTH_SECRET" | "RESEND_API_KEY">> {}
 }
 
 // Begin runtime types

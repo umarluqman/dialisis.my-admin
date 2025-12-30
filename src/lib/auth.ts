@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { db } from "@/db/connection";
+import { sendEmail, createPasswordResetEmail } from "@/lib/email";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -10,6 +11,13 @@ export const auth = betterAuth({
 
   emailAndPassword: {
     enabled: true,
+    sendResetPassword: async ({ user, url }) => {
+      void sendEmail({
+        to: user.email,
+        subject: "Reset your password - Dialisis Admin",
+        html: createPasswordResetEmail(url),
+      });
+    },
   },
 
   baseURL: process.env.VITE_BASE_URL || "http://localhost:3000",

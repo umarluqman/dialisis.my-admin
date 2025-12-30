@@ -1,5 +1,5 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
-import { signIn } from "@/lib/auth-client"
+import { createFileRoute, Link } from "@tanstack/react-router"
+import { authClient } from "@/lib/auth-client"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,42 +12,68 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 
-export const Route = createFileRoute("/auth/sign-in")({
-  component: SignInPage,
+export const Route = createFileRoute("/auth/forgot-password")({
+  component: ForgotPasswordPage,
 })
 
-function SignInPage() {
-  const navigate = useNavigate()
+function ForgotPasswordPage() {
   const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [isSuccess, setIsSuccess] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setError("")
 
-    const result = await signIn.email({
+    const { error } = await (authClient as any).forgetPassword({
       email,
-      password,
+      redirectTo: "/auth/reset-password",
     })
 
-    if (result.error) {
-      setError(result.error.message ?? "An error occurred")
+    if (error) {
+      setError(error.message ?? "An error occurred")
       setIsLoading(false)
     } else {
-      navigate({ to: "/dashboard" })
+      setIsSuccess(true)
+      setIsLoading(false)
     }
+  }
+
+  if (isSuccess) {
+    return (
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-2xl font-bold">Check your email</CardTitle>
+            <CardDescription>
+              We've sent a password reset link to <strong>{email}</strong>
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              If you don't see it, check your spam folder. The link will expire in 1 hour.
+            </p>
+            <Link
+              to="/auth/sign-in"
+              className="text-sm text-primary underline-offset-4 hover:underline"
+            >
+              Back to sign in
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold">Sign In</CardTitle>
+          <CardTitle className="text-2xl font-bold">Forgot Password</CardTitle>
           <CardDescription>
-            Enter your email and password to access your account
+            Enter your email address and we'll send you a link to reset your password
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -69,36 +95,16 @@ function SignInPage() {
                 disabled={isLoading}
               />
             </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
-                <Link
-                  to="/auth/forgot-password"
-                  className="text-sm text-primary underline-offset-4 hover:underline"
-                >
-                  Forgot password?
-                </Link>
-              </div>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
-                required
-                disabled={isLoading}
-              />
-            </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Signing in..." : "Sign In"}
+              {isLoading ? "Sending..." : "Send Reset Link"}
             </Button>
             <p className="text-center text-sm text-muted-foreground">
-              Don't have an account?{" "}
+              Remember your password?{" "}
               <Link
-                to="/auth/sign-up"
+                to="/auth/sign-in"
                 className="text-primary underline-offset-4 hover:underline"
               >
-                Sign up
+                Sign in
               </Link>
             </p>
           </form>
