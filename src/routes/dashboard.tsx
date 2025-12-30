@@ -242,7 +242,16 @@ function DashboardPage() {
                       params={{ centerId: center.id }}
                       className="block transition-transform hover:scale-[1.02]"
                     >
-                      <Card className="h-full cursor-pointer transition-shadow hover:ring-2 hover:ring-primary/20">
+                      <Card className="h-full cursor-pointer overflow-hidden transition-shadow hover:ring-2 hover:ring-primary/20">
+                        {center.featured && center.images?.[0] && (
+                          <div className="relative aspect-video w-full overflow-hidden">
+                            <img
+                              src={center.images[0].url}
+                              alt={center.images[0].altText || center.dialysisCenterName}
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+                        )}
                         <CardHeader>
                           <CardTitle className="line-clamp-1">
                             {center.dialysisCenterName}
@@ -251,6 +260,11 @@ function DashboardPage() {
                             <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-medium">
                               {center.sector}
                             </span>
+                            {center.featured && (
+                              <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                                Featured
+                              </span>
+                            )}
                             {center.state?.name && (
                               <span className="text-xs">{center.state.name}</span>
                             )}

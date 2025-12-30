@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start"
 import { z } from "zod"
-import { eq, and } from "drizzle-orm"
+import { eq, and, inArray } from "drizzle-orm"
 import { db } from "@/db/connection"
 import {
   dialysisCenter,
@@ -35,33 +35,48 @@ export const getCentersForUser = createServerFn({ method: "GET" })
     const userId = session.user.id
     const userRole = await getUserRole(userId)
 
+    let centersData
     if (userRole === "superadmin") {
-      const centers = await db
+      centersData = await db
         .select()
         .from(dialysisCenter)
         .leftJoin(state, eq(dialysisCenter.stateId, state.id))
         .orderBy(dialysisCenter.dialysisCenterName)
-
-      return centers.map((row) => ({
-        ...row.DialysisCenter,
-        state: row.State,
-      }))
+    } else {
+      centersData = await db
+        .select()
+        .from(userCenterAccess)
+        .innerJoin(
+          dialysisCenter,
+          eq(userCenterAccess.dialysisCenterId, dialysisCenter.id)
+        )
+        .leftJoin(state, eq(dialysisCenter.stateId, state.id))
+        .where(eq(userCenterAccess.userId, userId))
+        .orderBy(dialysisCenter.dialysisCenterName)
     }
 
-    const centers = await db
-      .select()
-      .from(userCenterAccess)
-      .innerJoin(
-        dialysisCenter,
-        eq(userCenterAccess.dialysisCenterId, dialysisCenter.id)
-      )
-      .leftJoin(state, eq(dialysisCenter.stateId, state.id))
-      .where(eq(userCenterAccess.userId, userId))
-      .orderBy(dialysisCenter.dialysisCenterName)
+    const centerIds = centersData.map((row) => row.DialysisCenter.id)
 
-    return centers.map((row) => ({
+    const images =
+      centerIds.length > 0
+        ? await db
+            .select()
+            .from(centerImage)
+            .where(
+              and(
+                eq(centerImage.isActive, true),
+                inArray(centerImage.dialysisCenterId, centerIds)
+              )
+            )
+            .orderBy(centerImage.displayOrder)
+        : []
+
+    return centersData.map((row) => ({
       ...row.DialysisCenter,
       state: row.State,
+      images: images.filter(
+        (img) => img.dialysisCenterId === row.DialysisCenter.id
+      ),
     }))
   })
 
