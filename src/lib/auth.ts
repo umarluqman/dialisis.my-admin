@@ -20,11 +20,11 @@ export const auth = betterAuth({
     },
   },
 
-  baseURL: process.env.VITE_BASE_URL || "http://localhost:3000",
+  baseURL: import.meta.env.VITE_BASE_URL || "http://localhost:3000",
 
   trustedOrigins: [
     "http://localhost:3000",
-    "https://tanstack-start-app.dialisis-admin.workers.dev",
+    "https://admin.dialisis-admin.workers.dev",
   ],
 
   plugins: [tanstackStartCookies()],
