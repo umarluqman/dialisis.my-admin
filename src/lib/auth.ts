@@ -47,33 +47,55 @@ async function verifyPassword({
   password: string;
   hash: string;
 }): Promise<boolean> {
-  const combined = Uint8Array.from(atob(hash), (c) => c.charCodeAt(0));
-  const salt = combined.slice(0, 16);
-  const storedHash = combined.slice(16);
-  const encoder = new TextEncoder();
-  const keyMaterial = await crypto.subtle.importKey(
-    "raw",
-    encoder.encode(password),
-    "PBKDF2",
-    false,
-    ["deriveBits"]
-  );
-  const newHash = await crypto.subtle.deriveBits(
-    {
-      name: "PBKDF2",
-      salt,
-      iterations: 100000,
-      hash: "SHA-256",
-    },
-    keyMaterial,
-    256
-  );
-  const newHashArray = new Uint8Array(newHash);
-  if (storedHash.length !== newHashArray.length) return false;
-  for (let i = 0; i < storedHash.length; i++) {
-    if (storedHash[i] !== newHashArray[i]) return false;
+  console.log("[AUTH DEBUG] verifyPassword called");
+  console.log("[AUTH DEBUG] hash:", hash);
+  console.log("[AUTH DEBUG] hash length:", hash?.length);
+  
+  try {
+    const combined = Uint8Array.from(atob(hash), (c) => c.charCodeAt(0));
+    console.log("[AUTH DEBUG] combined length:", combined.length);
+    
+    const salt = combined.slice(0, 16);
+    const storedHash = combined.slice(16);
+    const encoder = new TextEncoder();
+    const keyMaterial = await crypto.subtle.importKey(
+      "raw",
+      encoder.encode(password),
+      "PBKDF2",
+      false,
+      ["deriveBits"]
+    );
+    const newHash = await crypto.subtle.deriveBits(
+      {
+        name: "PBKDF2",
+        salt,
+        iterations: 100000,
+        hash: "SHA-256",
+      },
+      keyMaterial,
+      256
+    );
+    const newHashArray = new Uint8Array(newHash);
+    
+    console.log("[AUTH DEBUG] storedHash length:", storedHash.length);
+    console.log("[AUTH DEBUG] newHashArray length:", newHashArray.length);
+    
+    if (storedHash.length !== newHashArray.length) {
+      console.log("[AUTH DEBUG] Length mismatch!");
+      return false;
+    }
+    for (let i = 0; i < storedHash.length; i++) {
+      if (storedHash[i] !== newHashArray[i]) {
+        console.log("[AUTH DEBUG] Hash mismatch at index:", i);
+        return false;
+      }
+    }
+    console.log("[AUTH DEBUG] Password verified successfully!");
+    return true;
+  } catch (error) {
+    console.error("[AUTH DEBUG] Error in verifyPassword:", error);
+    return false;
   }
-  return true;
 }
 
 export const auth = betterAuth({
