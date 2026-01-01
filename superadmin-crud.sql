@@ -1,10 +1,12 @@
+-- Password hashes generated via: pnpm dlx tsx gen-pass.ts (uses PBKDF2, not scrypt)
+
 -- 1. Create Superadmin
 -- Insert User
 INSERT INTO user (id, name, email, email_verified, role, created_at, updated_at)
 VALUES (
   'superadmin-id-1', 
-  'Super Admin', 
-  'admin@example.com', 
+  'Umar Luqman', 
+  'umarluqman.78@gmail.com', 
   1, 
   'superadmin', 
   (strftime('%s', 'now') * 1000), 

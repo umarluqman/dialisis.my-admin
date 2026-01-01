@@ -4,10 +4,10 @@ This guide provides instructions for manually managing the `superadmin` user and
 
 ## 1. Prerequisites: Generate a Password Hash
 
-`better-auth` uses `scrypt` hashing. Use the helper script `gen-pass.ts` to generate a valid hash for use in SQL.
+This project uses PBKDF2 password hashing (instead of the default scrypt) for Cloudflare Workers compatibility. Use `gen-pass.ts` to generate a valid hash.
 
 1.  Open `gen-pass.ts`.
-2.  Set your desired password on line 12:
+2.  Set your desired password:
     ```typescript
     const password = "your-new-password"; 
     ```
