@@ -1,6 +1,14 @@
 import { Resend } from "resend"
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+const getResendApiKey = () => {
+  if (typeof process !== "undefined" && process.env?.RESEND_API_KEY) {
+    return process.env.RESEND_API_KEY
+  }
+  const { env } = require("cloudflare:workers")
+  return env.RESEND_API_KEY
+}
+
+const resend = new Resend(getResendApiKey())
 
 const FROM_EMAIL = "noreply@dialisis.my"
 

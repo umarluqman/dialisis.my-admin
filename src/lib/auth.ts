@@ -4,7 +4,16 @@ import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { db } from "@/db/connection";
 import { sendEmail, createPasswordResetEmail } from "@/lib/email";
 
+const getSecret = () => {
+  if (typeof process !== "undefined" && process.env?.BETTER_AUTH_SECRET) {
+    return process.env.BETTER_AUTH_SECRET;
+  }
+  const { env } = require("cloudflare:workers");
+  return env.BETTER_AUTH_SECRET;
+};
+
 export const auth = betterAuth({
+  secret: getSecret(),
   database: drizzleAdapter(db, {
     provider: "sqlite",
   }),
