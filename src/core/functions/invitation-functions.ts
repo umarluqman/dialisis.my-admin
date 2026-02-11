@@ -185,3 +185,66 @@ export const consumeInvitation = createServerFn({ method: "POST" })
 
     return { success: true, assignedCenters: centerIds.length }
   })
+
+const SignUpWithInvitationSchema = z.object({
+  token: z.string().min(1),
+  name: z.string().min(1),
+  email: z.string().email(),
+  password: z.string().min(6),
+})
+
+export const signUpWithInvitation = createServerFn({ method: "POST" })
+  .inputValidator(SignUpWithInvitationSchema)
+  .handler(async ({ data }) => {
+    const [inv] = await db
+      .select()
+      .from(invitation)
+      .where(eq(invitation.token, data.token))
+      .limit(1)
+
+    if (!inv) {
+      throw new Error("Invalid invitation")
+    }
+
+    if (inv.used) {
+      throw new Error("Invitation already used")
+    }
+
+    if (new Date(inv.expiresAt) < new Date()) {
+      throw new Error("Invitation expired")
+    }
+
+    const { auth, INTERNAL_SIGNUP_HEADER, INTERNAL_SIGNUP_SECRET } =
+      await import("@/lib/auth")
+    const res = await auth.api.signUpEmail({
+      body: {
+        email: data.email,
+        password: data.password,
+        name: data.name,
+      },
+      headers: new Headers({
+        [INTERNAL_SIGNUP_HEADER]: INTERNAL_SIGNUP_SECRET,
+      }),
+    })
+
+    if (!res.user) {
+      throw new Error("Failed to create account")
+    }
+
+    const centerIds = JSON.parse(inv.centerIds) as string[]
+
+    for (const centerId of centerIds) {
+      await db.insert(userCenterAccess).values({
+        id: generateId(),
+        userId: res.user.id,
+        dialysisCenterId: centerId,
+      })
+    }
+
+    await db
+      .update(invitation)
+      .set({ used: true, usedBy: res.user.id })
+      .where(eq(invitation.id, inv.id))
+
+    return { success: true, userId: res.user.id }
+  })

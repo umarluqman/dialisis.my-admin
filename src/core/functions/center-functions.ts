@@ -10,6 +10,7 @@ import {
   user,
 } from "@/db/schema"
 import { authMiddleware } from "@/lib/middleware"
+import { triggerAmplifyDeploy } from "@/lib/amplify"
 
 async function getUserRole(userId: string) {
   const [userData] = await db
@@ -179,6 +180,8 @@ export const updateCenter = createServerFn({ method: "POST" })
         updatedAt: new Date(),
       })
       .where(eq(dialysisCenter.id, data.id))
+
+    triggerAmplifyDeploy()
 
     return { success: true }
   })

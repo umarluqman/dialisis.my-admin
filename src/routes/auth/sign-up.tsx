@@ -1,5 +1,4 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
-import { signUp } from "@/lib/auth-client"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -14,7 +13,7 @@ import {
 import { useQuery, useMutation } from "@tanstack/react-query"
 import {
   getInvitationByToken,
-  consumeInvitation,
+  signUpWithInvitation,
 } from "@/core/functions/invitation-functions"
 import { z } from "zod"
 import { toast } from "sonner"
@@ -49,38 +48,26 @@ function SignUpPage() {
     retry: false,
   })
 
-  const consumeInvitationMutation = useMutation({
-    mutationFn: (userId: string) =>
-      consumeInvitation({ data: { token: invite!, userId } }),
+  const signUpMutation = useMutation({
+    mutationFn: (data: { token: string; name: string; email: string; password: string }) =>
+      signUpWithInvitation({ data }),
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!invite) return
     setIsLoading(true)
     setError("")
 
-    const result = await signUp.email({
-      name,
-      email,
-      password,
-    })
-
-    if (result.error) {
-      setError(result.error.message ?? "An error occurred")
+    try {
+      await signUpMutation.mutateAsync({ token: invite, name, email, password })
+      toast.success("Account created and centers assigned!")
+      navigate({ to: "/auth/sign-in" })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred")
+    } finally {
       setIsLoading(false)
-      return
     }
-
-    if (invite && result.data?.user?.id) {
-      try {
-        await consumeInvitationMutation.mutateAsync(result.data.user.id)
-        toast.success("Account created and centers assigned!")
-      } catch {
-        toast.error("Account created but failed to assign centers")
-      }
-    }
-
-    navigate({ to: "/dashboard" })
   }
 
   if (invite && invitationLoading) {
@@ -148,7 +135,7 @@ function SignUpPage() {
                   onChange={(e) => setName(e.target.value)}
                   placeholder="John Doe"
                   required
-                  disabled={isLoading}
+                  disabled={isLoading || !invite}
                 />
               </div>
               <div className="space-y-2">
@@ -160,7 +147,7 @@ function SignUpPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="m@example.com"
                   required
-                  disabled={isLoading}
+                  disabled={isLoading || !invite}
                 />
               </div>
               <div className="space-y-2">
@@ -172,10 +159,10 @@ function SignUpPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Create a password"
                   required
-                  disabled={isLoading}
+                  disabled={isLoading || !invite}
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button type="submit" className="w-full" disabled={isLoading || !invite}>
                 {isLoading ? "Creating account..." : "Sign Up"}
               </Button>
               <p className="text-center text-sm text-muted-foreground">

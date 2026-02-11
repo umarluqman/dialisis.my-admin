@@ -57,7 +57,7 @@ The `wrangler.jsonc` file configures your Cloudflare deployment:
 ```jsonc
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "tanstack-start-app",
+  "name": "admin",
   "compatibility_date": "2025-09-02",
   "compatibility_flags": ["nodejs_compat"],
   "main": "./src/server.ts",  // Custom server entry point
