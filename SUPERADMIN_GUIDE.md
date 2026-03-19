@@ -4,7 +4,7 @@ This guide provides instructions for manually managing the `superadmin` user and
 
 ## 1. Prerequisites: Generate a Password Hash
 
-This project uses PBKDF2 password hashing (instead of the default scrypt) for Cloudflare Workers compatibility. Use `gen-pass.ts` to generate a valid hash.
+This project uses Better Auth's default credential password hashing. Use `gen-pass.ts` to generate a valid hash.
 
 1.  Open `gen-pass.ts`.
 2.  Set your desired password:
@@ -40,7 +40,7 @@ INSERT INTO account (id, account_id, provider_id, user_id, password, created_at,
 VALUES (
   'superadmin-account-1',
   'superadmin-id-1',
-  'email-password',
+  'credential',
   'superadmin-id-1',
   '<GENERATED_HASH>',
   (strftime('%s', 'now') * 1000), 

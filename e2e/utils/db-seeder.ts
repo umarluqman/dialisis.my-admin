@@ -1,6 +1,6 @@
 import { createClient } from "@libsql/client/web"
 import { drizzle } from "drizzle-orm/libsql"
-import { hash } from "bcryptjs"
+import { hashPassword } from "better-auth/crypto"
 import * as schema from "../../src/db/schema"
 import { TEST_USERS, TEST_STATES, TEST_CENTERS, PIC_CENTER_ACCESS } from "./test-data"
 
@@ -52,7 +52,7 @@ export async function seedDatabase() {
       role: userData.role,
     })
 
-    const hashedPassword = await hash(userData.password, 10)
+    const hashedPassword = await hashPassword(userData.password)
     await db.insert(schema.account).values({
       id: `account-${userData.id}`,
       accountId: userData.id,

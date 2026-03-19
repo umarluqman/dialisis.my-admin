@@ -1,4 +1,4 @@
--- Password hashes generated via: pnpm dlx tsx gen-pass.ts (uses PBKDF2, not scrypt)
+-- Password hashes generated via: pnpm dlx tsx gen-pass.ts (uses Better Auth's default credential hashing)
 
 -- 1. Create Superadmin
 -- Insert User
@@ -18,7 +18,7 @@ INSERT INTO account (id, account_id, provider_id, user_id, password, created_at,
 VALUES (
   'superadmin-account-1',
   'superadmin-id-1',
-  'email-password',
+  'credential',
   'superadmin-id-1',
   '<GENERATED_HASH>',
   (strftime('%s', 'now') * 1000), 
