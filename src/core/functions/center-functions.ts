@@ -20,6 +20,35 @@ async function getUserRole(userId: string) {
   return userData?.role ?? "pic"
 }
 
+function slugifyCenterName(name: string) {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+}
+
+async function generateUniqueCenterSlug(name: string) {
+  const baseSlug = slugifyCenterName(name) || crypto.randomUUID()
+  let slug = baseSlug
+  let suffix = 2
+
+  while (true) {
+    const [existingCenter] = await db
+      .select({ id: dialysisCenter.id })
+      .from(dialysisCenter)
+      .where(eq(dialysisCenter.slug, slug))
+      .limit(1)
+
+    if (!existingCenter) {
+      return slug
+    }
+
+    slug = `${baseSlug}-${suffix}`
+    suffix += 1
+  }
+}
+
 export const getCurrentUserRole = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .handler(async ({ context }) => {
@@ -133,6 +162,75 @@ export const getCenterById = createServerFn({ method: "GET" })
     }
   })
 
+const CreateCenterSchema = z.object({
+  dialysisCenterName: z.string().trim().min(1),
+  title: z.string(),
+  sector: z.string(),
+  description: z.string(),
+  tel: z.string(),
+  phoneNumber: z.string(),
+  fax: z.string(),
+  email: z.string(),
+  website: z.string(),
+  address: z.string(),
+  addressWithUnit: z.string(),
+  town: z.string(),
+  stateId: z.string().trim().min(1),
+  drInCharge: z.string(),
+  drInChargeTel: z.string(),
+  panelNephrologist: z.string(),
+  centreManager: z.string(),
+  centreCoordinator: z.string(),
+  units: z.string(),
+  hepatitisBay: z.string(),
+  benefits: z.string(),
+  featured: z.boolean().default(false),
+})
+
+export const createCenter = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .inputValidator(CreateCenterSchema)
+  .handler(async ({ context, data }) => {
+    const { session } = context
+    const userRole = await getUserRole(session.user.id)
+
+    if (userRole !== "superadmin") {
+      throw new Error("Only superadmins can create centers")
+    }
+
+    const id = crypto.randomUUID()
+    const slug = await generateUniqueCenterSlug(data.dialysisCenterName)
+
+    await db.insert(dialysisCenter).values({
+      id,
+      slug,
+      dialysisCenterName: data.dialysisCenterName,
+      title: data.title,
+      sector: data.sector,
+      description: data.description,
+      tel: data.tel,
+      phoneNumber: data.phoneNumber,
+      fax: data.fax,
+      email: data.email,
+      website: data.website,
+      address: data.address,
+      addressWithUnit: data.addressWithUnit,
+      town: data.town,
+      stateId: data.stateId,
+      drInCharge: data.drInCharge,
+      drInChargeTel: data.drInChargeTel,
+      panelNephrologist: data.panelNephrologist,
+      centreManager: data.centreManager,
+      centreCoordinator: data.centreCoordinator,
+      units: data.units,
+      hepatitisBay: data.hepatitisBay,
+      benefits: data.benefits,
+      featured: data.featured,
+    })
+
+    return { id }
+  })
+
 const UpdateCenterSchema = z.object({
   id: z.string().min(1),
   data: z.object({
@@ -158,6 +256,7 @@ const UpdateCenterSchema = z.object({
     description: z.string().nullable().optional(),
     benefits: z.string().nullable().optional(),
     town: z.string().optional(),
+    stateId: z.string().min(1).optional(),
     featured: z.boolean().optional(),
   }),
 })

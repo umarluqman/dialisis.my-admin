@@ -11,6 +11,7 @@ export class DashboardPage {
   readonly invitationLinkInput: Locator
   readonly copyLinkButton: Locator
   readonly generatePicInvitation: Locator
+  readonly addCenterButton: Locator
 
   constructor(page: Page) {
     this.page = page
@@ -23,6 +24,7 @@ export class DashboardPage {
     this.invitationLinkInput = page.locator("input[readonly]")
     this.copyLinkButton = page.getByRole("button", { name: /copy/i })
     this.generatePicInvitation = page.getByText("Generate PIC Invitation")
+    this.addCenterButton = page.getByRole("link", { name: /add center/i })
   }
 
   async goto() {
@@ -44,6 +46,10 @@ export class DashboardPage {
 
   async generateInvitationLink() {
     await this.generateLinkButton.click()
+  }
+
+  async clickAddCenter() {
+    await this.addCenterButton.click()
   }
 
   async getGeneratedLink(): Promise<string> {

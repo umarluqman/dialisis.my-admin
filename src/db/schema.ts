@@ -121,6 +121,59 @@ export const centerImage = sqliteTable(
   ]
 )
 
+export const centerFaq = sqliteTable(
+  "CenterFaq",
+  {
+    id: text("id").primaryKey(),
+    question: text("question").notNull(),
+    answer: text("answer").notNull(),
+    displayOrder: integer("displayOrder").default(0).notNull(),
+    isActive: integer("isActive", { mode: "boolean" }).default(true).notNull(),
+    dialysisCenterId: text("dialysisCenterId")
+      .notNull()
+      .references(() => dialysisCenter.id, { onDelete: "cascade" }),
+    createdAt: integer("createdAt", { mode: "timestamp_ms" })
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+      .notNull(),
+    updatedAt: integer("updatedAt", { mode: "timestamp_ms" })
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("centerFaq_dialysisCenterId_idx").on(table.dialysisCenterId),
+    index("centerFaq_displayOrder_idx").on(table.displayOrder),
+    index("centerFaq_isActive_idx").on(table.isActive),
+  ]
+)
+
+export const centerOperatingHour = sqliteTable(
+  "CenterOperatingHour",
+  {
+    id: text("id").primaryKey(),
+    dayOfWeek: integer("dayOfWeek").notNull(), // 0=Sunday, 1=Monday, ..., 6=Saturday
+    openTime: text("openTime").notNull(), // "HH:mm" format
+    closeTime: text("closeTime").notNull(), // "HH:mm" format
+    isClosed: integer("isClosed", { mode: "boolean" }).default(false).notNull(),
+    dialysisCenterId: text("dialysisCenterId")
+      .notNull()
+      .references(() => dialysisCenter.id, { onDelete: "cascade" }),
+    createdAt: integer("createdAt", { mode: "timestamp_ms" })
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+      .notNull(),
+    updatedAt: integer("updatedAt", { mode: "timestamp_ms" })
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("centerOperatingHour_dialysisCenterId_idx").on(
+      table.dialysisCenterId
+    ),
+    index("centerOperatingHour_dayOfWeek_idx").on(table.dayOfWeek),
+  ]
+)
+
 export const userCenterAccess = sqliteTable(
   "user_center_access",
   {
@@ -266,6 +319,8 @@ export const dialysisCenterRelations = relations(
       references: [state.id],
     }),
     images: many(centerImage),
+    faqs: many(centerFaq),
+    operatingHours: many(centerOperatingHour),
     userAccess: many(userCenterAccess),
   })
 )
@@ -276,6 +331,23 @@ export const centerImageRelations = relations(centerImage, ({ one }) => ({
     references: [dialysisCenter.id],
   }),
 }))
+
+export const centerFaqRelations = relations(centerFaq, ({ one }) => ({
+  dialysisCenter: one(dialysisCenter, {
+    fields: [centerFaq.dialysisCenterId],
+    references: [dialysisCenter.id],
+  }),
+}))
+
+export const centerOperatingHourRelations = relations(
+  centerOperatingHour,
+  ({ one }) => ({
+    dialysisCenter: one(dialysisCenter, {
+      fields: [centerOperatingHour.dialysisCenterId],
+      references: [dialysisCenter.id],
+    }),
+  })
+)
 
 export const userCenterAccessRelations = relations(
   userCenterAccess,

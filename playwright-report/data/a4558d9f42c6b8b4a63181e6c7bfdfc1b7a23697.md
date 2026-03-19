@@ -1,0 +1,42 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]: Sign In
+      - generic [ref=e6]: Enter your email and password to access your account
+    - generic [ref=e8]:
+      - generic [ref=e9]:
+        - generic [ref=e10]: Email
+        - textbox "Email" [ref=e11]:
+          - /placeholder: m@example.com
+      - generic [ref=e12]:
+        - generic [ref=e13]:
+          - generic [ref=e14]: Password
+          - link "Forgot password?" [ref=e15] [cursor=pointer]:
+            - /url: /auth/forgot-password
+        - generic [ref=e16]:
+          - textbox "Password" [ref=e17]:
+            - /placeholder: Enter your password
+          - button [ref=e18]:
+            - img [ref=e19]
+      - button "Sign In" [ref=e22]
+      - paragraph [ref=e23]:
+        - text: Don't have an account?
+        - link "Sign up" [ref=e24] [cursor=pointer]:
+          - /url: /auth/sign-up
+  - region "Notifications alt+T"
+  - generic:
+    - contentinfo:
+      - button "Open TanStack Router Devtools" [ref=e25] [cursor=pointer]:
+        - generic [ref=e26]:
+          - img [ref=e28]
+          - img [ref=e63]
+        - generic [ref=e97]: "-"
+        - generic [ref=e98]: TanStack Router
+  - generic [ref=e99]:
+    - img [ref=e101]
+    - button "Open Tanstack query devtools" [ref=e149] [cursor=pointer]:
+      - img [ref=e150]
+```
