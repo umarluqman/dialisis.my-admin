@@ -67,13 +67,21 @@ function DashboardPage() {
     enabled: userRole?.role === "superadmin",
   })
 
-  const { data: centers, isLoading: centersLoading } = useQuery({
+  const {
+    data: centers,
+    isLoading: centersLoading,
+    error: centersError,
+  } = useQuery({
     queryKey: ["centers"],
     queryFn: () => getCentersForUser(),
     enabled: !!session,
   })
 
-  const { data: intakeLeads = [], isLoading: intakeLeadsLoading } = useQuery({
+  const {
+    data: intakeLeads,
+    isLoading: intakeLeadsLoading,
+    error: intakeLeadsError,
+  } = useQuery({
     queryKey: ["intakeLeads"],
     queryFn: () => getIntakeLeads({ data: { limit: 50 } }),
     enabled: !!session,
@@ -132,19 +140,26 @@ function DashboardPage() {
     navigate({ to: "/auth/sign-in" })
   }
 
-  const filteredCenters = centers?.filter((center) =>
-    center.dialysisCenterName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    center.town?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    center.address?.toLowerCase().includes(searchQuery.toLowerCase())
-  ) || []
+  const centersList = Array.isArray(centers) ? centers : []
+  const allCentersList = Array.isArray(allCenters) ? allCenters : []
+  const intakeLeadsList = Array.isArray(intakeLeads) ? intakeLeads : []
 
-  const filteredIntakeLeads = intakeLeads.filter((lead) => {
+  const filteredCenters = centersList.filter((center) => {
+    const query = searchQuery.toLowerCase()
+    return (
+      (center.dialysisCenterName ?? "").toLowerCase().includes(query) ||
+      (center.town ?? "").toLowerCase().includes(query) ||
+      (center.address ?? "").toLowerCase().includes(query)
+    )
+  })
+
+  const filteredIntakeLeads = intakeLeadsList.filter((lead) => {
     const query = leadSearchQuery.toLowerCase()
     return (
-      lead.fullName.toLowerCase().includes(query) ||
-      lead.centerName.toLowerCase().includes(query) ||
-      lead.phoneNumber.toLowerCase().includes(query) ||
-      lead.myKadNumber.toLowerCase().includes(query)
+      (lead.fullName ?? "").toLowerCase().includes(query) ||
+      (lead.centerName ?? "").toLowerCase().includes(query) ||
+      (lead.phoneNumber ?? "").toLowerCase().includes(query) ||
+      (lead.myKadNumber ?? "").toLowerCase().includes(query)
     )
   })
 
@@ -264,7 +279,15 @@ function DashboardPage() {
                 )}
               </div>
 
-              {centersLoading ? (
+              {centersError ? (
+                <Card>
+                  <CardContent className="py-8 text-center">
+                    <p className="text-destructive">
+                      {centersError.message || "Failed to load dialysis centers."}
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : centersLoading ? (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {[...Array(3)].map((_, i) => (
                     <Card key={i} className="animate-pulse">
@@ -305,18 +328,18 @@ function DashboardPage() {
                           <div className="relative aspect-video w-full overflow-hidden">
                             <img
                               src={center.images[0].url}
-                              alt={center.images[0].altText || center.dialysisCenterName}
+                              alt={center.images[0].altText || center.dialysisCenterName || "Dialysis center"}
                               className="h-full w-full object-cover"
                             />
                           </div>
                         )}
                         <CardHeader>
                           <CardTitle className="line-clamp-1">
-                            {center.dialysisCenterName}
+                            {center.dialysisCenterName || "Unnamed center"}
                           </CardTitle>
                           <CardDescription className="flex items-center gap-2">
                             <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-medium">
-                              {center.sector}
+                              {center.sector || "Center"}
                             </span>
                             {center.featured && (
                               <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
@@ -352,7 +375,15 @@ function DashboardPage() {
                 />
               </div>
 
-              {intakeLeadsLoading ? (
+              {intakeLeadsError ? (
+                <Card>
+                  <CardContent className="py-8 text-center">
+                    <p className="text-destructive">
+                      {intakeLeadsError.message || "Failed to load intake leads."}
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : intakeLeadsLoading ? (
                 <div className="space-y-3">
                   {[...Array(3)].map((_, i) => (
                     <div
@@ -419,19 +450,15 @@ function DashboardPage() {
                   </div>
                 ) : (
                   <div className="max-h-64 space-y-2 overflow-y-auto">
-                    {allCenters
-                      ?.filter(
-                        (center) =>
-                          center.dialysisCenterName
-                            .toLowerCase()
-                            .includes(inviteSearchQuery.toLowerCase()) ||
-                          center.town
-                            ?.toLowerCase()
-                            .includes(inviteSearchQuery.toLowerCase()) ||
-                          center.stateName
-                            ?.toLowerCase()
-                            .includes(inviteSearchQuery.toLowerCase())
-                      )
+                    {allCentersList
+                      .filter((center) => {
+                        const query = inviteSearchQuery.toLowerCase()
+                        return (
+                          (center.dialysisCenterName ?? "").toLowerCase().includes(query) ||
+                          (center.town ?? "").toLowerCase().includes(query) ||
+                          (center.stateName ?? "").toLowerCase().includes(query)
+                        )
+                      })
                       .map((center) => (
                         <div key={center.id} className="flex items-center gap-3">
                           <Checkbox

@@ -15,7 +15,7 @@ const getEnv = () => {
 
 const { url, authToken } = getEnv()
 
-const client = createClient({
+export const client = createClient({
   url: url!,
   authToken,
 })

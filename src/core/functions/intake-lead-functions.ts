@@ -2,17 +2,10 @@ import { createServerFn } from "@tanstack/react-start"
 import { z } from "zod"
 import { and, desc, eq, inArray, type SQL } from "drizzle-orm"
 import { db } from "@/db/connection"
-import { dialysisCenter, intakeLead, user, userCenterAccess } from "@/db/schema"
+import { ensureAdminDatabaseSchema } from "@/db/ensure-schema"
+import { dialysisCenter, intakeLead, userCenterAccess } from "@/db/schema"
 import { authMiddleware } from "@/lib/middleware"
-
-async function getUserRole(userId: string) {
-  const [userData] = await db
-    .select({ role: user.role })
-    .from(user)
-    .where(eq(user.id, userId))
-    .limit(1)
-  return userData?.role ?? "pic"
-}
+import { getUserRole } from "@/lib/user-role"
 
 async function getAccessibleCenterIds(userId: string) {
   const rows = await db
@@ -54,6 +47,8 @@ export const getIntakeLeads = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .inputValidator(GetIntakeLeadsSchema)
   .handler(async ({ context, data }) => {
+    await ensureAdminDatabaseSchema()
+
     const { session } = context
     const userId = session.user.id
     const userRole = await getUserRole(userId)

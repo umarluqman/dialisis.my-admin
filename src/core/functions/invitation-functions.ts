@@ -9,16 +9,9 @@ import {
   dialysisCenter,
   state,
 } from "@/db/schema"
+import { ensureAdminDatabaseSchema } from "@/db/ensure-schema"
 import { authMiddleware } from "@/lib/middleware"
-
-async function getUserRole(userId: string) {
-  const [userData] = await db
-    .select({ role: user.role })
-    .from(user)
-    .where(eq(user.id, userId))
-    .limit(1)
-  return userData?.role ?? "pic"
-}
+import { getUserRole } from "@/lib/user-role"
 
 function generateToken(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789"
@@ -46,6 +39,7 @@ export const createInvitation = createServerFn({ method: "POST" })
     const { session } = context
     const userId = session.user.id
     const userRole = await getUserRole(userId)
+    await ensureAdminDatabaseSchema()
 
     if (userRole !== "superadmin") {
       throw new Error("Only superadmins can create invitations")
@@ -74,6 +68,7 @@ export const getAllCenters = createServerFn({ method: "GET" })
     const { session } = context
     const userId = session.user.id
     const userRole = await getUserRole(userId)
+    await ensureAdminDatabaseSchema()
 
     if (userRole !== "superadmin") {
       throw new Error("Only superadmins can view all centers")
@@ -100,6 +95,8 @@ const GetInvitationSchema = z.object({
 export const getInvitationByToken = createServerFn({ method: "GET" })
   .inputValidator(GetInvitationSchema)
   .handler(async ({ data }) => {
+    await ensureAdminDatabaseSchema()
+
     const [inv] = await db
       .select()
       .from(invitation)
@@ -154,6 +151,8 @@ const ConsumeInvitationSchema = z.object({
 export const consumeInvitation = createServerFn({ method: "POST" })
   .inputValidator(ConsumeInvitationSchema)
   .handler(async ({ data }) => {
+    await ensureAdminDatabaseSchema()
+
     const [inv] = await db
       .select()
       .from(invitation)

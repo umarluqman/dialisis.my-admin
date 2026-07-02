@@ -5,8 +5,10 @@ import { emailOTP } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { and, eq, gt } from "drizzle-orm";
 import { db } from "@/db/connection";
+import { ensureAdminDatabaseSchema } from "@/db/ensure-schema";
 import { invitation, user } from "@/db/schema";
 import { createOtpEmail, sendEmail } from "@/lib/email";
+import { isBootstrapSuperadminEmail, normalizeEmail } from "@/lib/user-role";
 
 const getEnvValue = (name: string) => {
   if (typeof process !== "undefined") {
@@ -17,17 +19,6 @@ const getEnvValue = (name: string) => {
 const getSecret = () => {
   return getEnvValue("BETTER_AUTH_SECRET");
 };
-
-const normalizeEmail = (email: string) => email.trim().toLowerCase();
-
-const getBootstrapSuperadminEmails = () =>
-  (getEnvValue("BOOTSTRAP_SUPERADMIN_EMAILS") || "")
-    .split(",")
-    .map(normalizeEmail)
-    .filter(Boolean);
-
-const isBootstrapSuperadminEmail = (email: string) =>
-  getBootstrapSuperadminEmails().includes(normalizeEmail(email));
 
 const hasExistingUser = async (email: string) => {
   const [existingUser] = await db
@@ -40,6 +31,8 @@ const hasExistingUser = async (email: string) => {
 };
 
 const hasValidInvitation = async (email: string) => {
+  await ensureAdminDatabaseSchema();
+
   const [validInvitation] = await db
     .select({ id: invitation.id })
     .from(invitation)
@@ -92,6 +85,16 @@ const requireAllowedAuthUser = async (newUser: { email: string; name?: string })
   });
 };
 
+const repairCreatedAuthUserRole = async (createdUser: { id?: string; email?: string } | null) => {
+  if (!createdUser?.id || !createdUser.email) return;
+  if (!isBootstrapSuperadminEmail(createdUser.email)) return;
+
+  await db
+    .update(user)
+    .set({ role: "superadmin" })
+    .where(eq(user.id, createdUser.id));
+};
+
 export const auth = betterAuth({
   secret: getSecret(),
   database: drizzleAdapter(db, {
@@ -106,6 +109,7 @@ export const auth = betterAuth({
     user: {
       create: {
         before: requireAllowedAuthUser,
+        after: repairCreatedAuthUserRole,
       },
     },
   },

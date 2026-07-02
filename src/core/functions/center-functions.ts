@@ -7,18 +7,10 @@ import {
   userCenterAccess,
   state,
   centerImage,
-  user,
 } from "@/db/schema"
+import { ensureAdminDatabaseSchema } from "@/db/ensure-schema"
 import { authMiddleware } from "@/lib/middleware"
-
-async function getUserRole(userId: string) {
-  const [userData] = await db
-    .select({ role: user.role })
-    .from(user)
-    .where(eq(user.id, userId))
-    .limit(1)
-  return userData?.role ?? "pic"
-}
+import { getUserRole } from "@/lib/user-role"
 
 function slugifyCenterName(name: string) {
   return name
@@ -63,6 +55,7 @@ export const getCentersForUser = createServerFn({ method: "GET" })
     const { session } = context
     const userId = session.user.id
     const userRole = await getUserRole(userId)
+    await ensureAdminDatabaseSchema()
 
     let centersData
     if (userRole === "superadmin") {
@@ -120,6 +113,7 @@ export const getCenterById = createServerFn({ method: "GET" })
     const { session } = context
     const userId = session.user.id
     const userRole = await getUserRole(userId)
+    await ensureAdminDatabaseSchema()
 
     const [center] = await db
       .select()
@@ -195,6 +189,7 @@ export const createCenter = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     const { session } = context
     const userRole = await getUserRole(session.user.id)
+    await ensureAdminDatabaseSchema()
 
     if (userRole !== "superadmin") {
       throw new Error("Only superadmins can create centers")
@@ -274,6 +269,7 @@ export const updateCenter = createServerFn({ method: "POST" })
     const { session } = context
     const userId = session.user.id
     const userRole = await getUserRole(userId)
+    await ensureAdminDatabaseSchema()
 
     if (userRole !== "superadmin") {
       const [access] = await db
