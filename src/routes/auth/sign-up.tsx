@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import { authClient, signIn } from "@/lib/auth-client"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -52,12 +52,27 @@ function SignUpPage() {
 
   const consumeInvitationMutation = useMutation({
     mutationFn: (userId: string) =>
-      consumeInvitation({ data: { token: invite!, userId } }),
+      consumeInvitation({ data: { token: invite!, userId, name } }),
   })
+
+  useEffect(() => {
+    if (invitation?.email) {
+      setEmail(invitation.email)
+    }
+  }, [invitation?.email])
 
   const sendCode = async () => {
     setIsLoading(true)
     setError("")
+
+    if (
+      invitation?.email &&
+      email.trim().toLowerCase() !== invitation.email.toLowerCase()
+    ) {
+      setError("Use the email address this invitation was sent to")
+      setIsLoading(false)
+      return
+    }
 
     const result = await authClient.emailOtp.sendVerificationOtp({
       email,
@@ -191,7 +206,7 @@ function SignUpPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="m@example.com"
                   required
-                  disabled={isLoading || codeSent}
+                  disabled={isLoading || codeSent || !!invitation?.email}
                 />
               </div>
               {codeSent && (
@@ -252,7 +267,7 @@ function SignUpPage() {
             <CardHeader>
               <CardTitle className="text-lg">Assigned Centers</CardTitle>
               <CardDescription>
-                After signing up, you will have access to these dialysis centers
+                After signing up with {invitation.email}, you will have access to these dialysis centers
               </CardDescription>
             </CardHeader>
             <CardContent>

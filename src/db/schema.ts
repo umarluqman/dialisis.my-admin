@@ -254,6 +254,7 @@ export const invitation = sqliteTable(
   {
     id: text("id").primaryKey(),
     token: text("token").notNull().unique(),
+    email: text("email"),
     centerIds: text("center_ids").notNull(), // JSON array of center IDs
     expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
     used: integer("used", { mode: "boolean" }).default(false).notNull(),
@@ -267,6 +268,7 @@ export const invitation = sqliteTable(
   },
   (table) => [
     index("invitation_token_idx").on(table.token),
+    index("invitation_email_idx").on(table.email),
     index("invitation_createdBy_idx").on(table.createdBy),
   ]
 )

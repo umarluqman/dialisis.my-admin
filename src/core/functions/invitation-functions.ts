@@ -34,6 +34,7 @@ function generateId(): string {
 }
 
 const CreateInvitationSchema = z.object({
+  email: z.string().trim().email().transform((email) => email.toLowerCase()),
   centerIds: z.array(z.string()).min(1),
   expiresInDays: z.number().min(1).max(30).default(7),
 })
@@ -58,6 +59,7 @@ export const createInvitation = createServerFn({ method: "POST" })
     await db.insert(invitation).values({
       id: generateId(),
       token,
+      email: data.email,
       centerIds: JSON.stringify(data.centerIds),
       expiresAt,
       createdBy: userId,
@@ -137,6 +139,7 @@ export const getInvitationByToken = createServerFn({ method: "GET" })
 
     return {
       token: inv.token,
+      email: inv.email,
       expiresAt: inv.expiresAt,
       centers: allCenters.filter(Boolean),
     }
@@ -145,6 +148,7 @@ export const getInvitationByToken = createServerFn({ method: "GET" })
 const ConsumeInvitationSchema = z.object({
   token: z.string().min(1),
   userId: z.string().min(1),
+  name: z.string().trim().min(1).max(120).optional(),
 })
 
 export const consumeInvitation = createServerFn({ method: "POST" })
@@ -168,6 +172,20 @@ export const consumeInvitation = createServerFn({ method: "POST" })
       throw new Error("Invitation expired")
     }
 
+    const [authUser] = await db
+      .select({ id: user.id, email: user.email })
+      .from(user)
+      .where(eq(user.id, data.userId))
+      .limit(1)
+
+    if (!authUser) {
+      throw new Error("User not found")
+    }
+
+    if (inv.email && authUser.email.toLowerCase() !== inv.email.toLowerCase()) {
+      throw new Error("Invitation email does not match signed-in user")
+    }
+
     const centerIds = JSON.parse(inv.centerIds) as string[]
 
     for (const centerId of centerIds) {
@@ -182,6 +200,14 @@ export const consumeInvitation = createServerFn({ method: "POST" })
       .update(invitation)
       .set({ used: true, usedBy: data.userId })
       .where(eq(invitation.id, inv.id))
+
+    await db
+      .update(user)
+      .set({
+        ...(data.name ? { name: data.name } : {}),
+        role: "pic",
+      })
+      .where(eq(user.id, data.userId))
 
     return { success: true, assignedCenters: centerIds.length }
   })

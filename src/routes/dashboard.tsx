@@ -51,6 +51,7 @@ function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [leadSearchQuery, setLeadSearchQuery] = useState("")
   const [inviteSearchQuery, setInviteSearchQuery] = useState("")
+  const [inviteEmail, setInviteEmail] = useState("")
   const [selectedCenters, setSelectedCenters] = useState<string[]>([])
   const [generatedLink, setGeneratedLink] = useState<string | null>(null)
 
@@ -79,8 +80,8 @@ function DashboardPage() {
   })
 
   const createInvitationMutation = useMutation({
-    mutationFn: (centerIds: string[]) =>
-      createInvitation({ data: { centerIds, expiresInDays: 7 } }),
+    mutationFn: (data: { email: string; centerIds: string[] }) =>
+      createInvitation({ data: { ...data, expiresInDays: 7 } }),
     onSuccess: (data) => {
       const link = `${window.location.origin}/auth/sign-up?invite=${data.token}`
       setGeneratedLink(link)
@@ -92,11 +93,18 @@ function DashboardPage() {
   })
 
   const handleGenerateLink = () => {
+    if (!inviteEmail.trim()) {
+      toast.error("Please enter the PIC email")
+      return
+    }
     if (selectedCenters.length === 0) {
       toast.error("Please select at least one center")
       return
     }
-    createInvitationMutation.mutate(selectedCenters)
+    createInvitationMutation.mutate({
+      email: inviteEmail,
+      centerIds: selectedCenters,
+    })
   }
 
   const handleCopyLink = async () => {
@@ -111,6 +119,11 @@ function DashboardPage() {
         ? prev.filter((id) => id !== centerId)
         : [...prev, centerId]
     )
+    setGeneratedLink(null)
+  }
+
+  const handleInviteEmailChange = (value: string) => {
+    setInviteEmail(value)
     setGeneratedLink(null)
   }
 
@@ -375,6 +388,17 @@ function DashboardPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="inviteEmail">PIC Email</Label>
+                  <Input
+                    id="inviteEmail"
+                    type="email"
+                    placeholder="pic@example.com"
+                    value={inviteEmail}
+                    onChange={(e) => handleInviteEmailChange(e.target.value)}
+                  />
+                </div>
+
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
@@ -435,6 +459,7 @@ function DashboardPage() {
                   <Button
                     onClick={handleGenerateLink}
                     disabled={
+                      !inviteEmail.trim() ||
                       selectedCenters.length === 0 ||
                       createInvitationMutation.isPending
                     }

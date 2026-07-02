@@ -29,6 +29,13 @@
       "when": 1782825663354,
       "tag": "0003_robust_longshot",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1782990076600,
+      "tag": "0004_woozy_molten_man",
+      "breakpoints": true
     }
   ]
 }
