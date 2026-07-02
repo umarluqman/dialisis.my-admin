@@ -19,12 +19,15 @@ import {
   getOperatingHoursForCenter,
   upsertOperatingHours,
 } from "@/core/functions/operating-hour-functions"
+import { getIntakeLeads } from "@/core/functions/intake-lead-functions"
 import { useSession } from "@/lib/auth-client"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
+import { IntakeLeadList } from "@/components/intake-lead-list"
 import {
   Select,
   SelectContent,
@@ -40,6 +43,19 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
+import {
+  ArrowLeft,
+  Building2,
+  Clock,
+  FileQuestion,
+  MapPin,
+  MessageCircle,
+  Phone,
+  Save,
+  Settings2,
+  Stethoscope,
+  Users,
+} from "lucide-react"
 
 export const Route = createFileRoute("/centers/$centerId")({
   component: CenterEditPage,
@@ -76,6 +92,8 @@ type CenterFormData = {
   hepatitisBay: string
   benefits: string
   featured: boolean
+  whatsappPicName: string
+  whatsappPicPhoneNumber: string
 }
 
 const EMPTY_CENTER_FORM_DATA: CenterFormData = {
@@ -101,6 +119,8 @@ const EMPTY_CENTER_FORM_DATA: CenterFormData = {
   hepatitisBay: "",
   benefits: "",
   featured: false,
+  whatsappPicName: "",
+  whatsappPicPhoneNumber: "",
 }
 
 function CenterEditPage() {
@@ -125,7 +145,6 @@ function CenterEditPage() {
   })
   const center = centerQuery.data
   const centerLoading = !isNewCenter && centerQuery.isLoading
-
   const { data: states } = useQuery({
     queryKey: ["states"],
     queryFn: () => getStates(),
@@ -158,6 +177,8 @@ function CenterEditPage() {
         hepatitisBay: center.hepatitisBay ?? "",
         benefits: center.benefits ?? "",
         featured: center.featured ?? false,
+        whatsappPicName: center.whatsappPicName ?? "",
+        whatsappPicPhoneNumber: center.whatsappPicPhoneNumber ?? "",
       })
     }
   }, [center])
@@ -191,6 +212,13 @@ function CenterEditPage() {
       toast.error(error.message || "Failed to create center")
     },
   })
+
+  const isSaving = updateMutation.isPending || createMutation.isPending
+  const saveButtonText = isSaving
+    ? "Saving..."
+    : isNewCenter
+      ? "Create Center"
+      : "Save Changes"
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -229,42 +257,54 @@ function CenterEditPage() {
   }
 
   return (
-    <div className="min-h-screen p-8">
-      <div className="mx-auto max-w-4xl space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <Link
-              to="/dashboard"
-              className="text-sm text-muted-foreground hover:text-foreground"
+    <div className="min-h-screen bg-muted/30 pb-24 sm:pb-8">
+      <div className="mx-auto w-full max-w-5xl space-y-4 px-3 py-4 sm:space-y-6 sm:px-6 lg:px-8">
+        <div className="sticky top-0 z-20 -mx-3 border-b bg-background/95 px-3 py-3 backdrop-blur sm:static sm:mx-0 sm:rounded-lg sm:border sm:px-4">
+          <div className="flex items-center gap-3">
+            <Button variant="outline" size="icon" asChild className="size-10 shrink-0">
+              <Link to="/dashboard" aria-label="Back to dashboard">
+                <ArrowLeft className="size-4" />
+              </Link>
+            </Button>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="truncate text-lg font-semibold sm:text-2xl">
+                  {isNewCenter ? "Create Center" : "Edit Center"}
+                </h1>
+                {!isNewCenter && center?.state?.name && (
+                  <Badge variant="secondary" className="hidden sm:inline-flex">
+                    {center.state.name}
+                  </Badge>
+                )}
+              </div>
+              <p className="truncate text-sm text-muted-foreground">
+                {formData.dialysisCenterName || "Dialysis center details"}
+              </p>
+            </div>
+            <Button
+              type="submit"
+              form="center-form"
+              disabled={isSaving}
+              className="hidden h-10 gap-2 px-4 sm:inline-flex"
             >
-              &larr; Back to Dashboard
-            </Link>
-            <h1 className="text-2xl font-bold">
-              {isNewCenter ? "Create Center" : "Edit Center"}
-            </h1>
+              <Save className="size-4" />
+              {saveButtonText}
+            </Button>
           </div>
-          <Button
-            type="submit"
-            form="center-form"
-            disabled={updateMutation.isPending || createMutation.isPending}
-          >
-            {createMutation.isPending || updateMutation.isPending
-              ? "Saving..."
-              : isNewCenter
-                ? "Create Center"
-                : "Save Changes"}
-          </Button>
         </div>
 
-        <form id="center-form" onSubmit={handleSubmit} className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Basic Information</CardTitle>
-              <CardDescription>
-                General details about the dialysis center
-              </CardDescription>
+        <form id="center-form" onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+          <Card className="overflow-hidden">
+            <CardHeader className="gap-2 px-4 py-4 sm:px-6">
+              <div className="flex items-center gap-3">
+                <Building2 className="size-5 text-primary" />
+                <div>
+                  <CardTitle className="text-base sm:text-lg">Basic Information</CardTitle>
+                  <CardDescription>General details about the dialysis center</CardDescription>
+                </div>
+              </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
               <FieldGroup className="gap-4">
                 <Field>
                   <FieldLabel htmlFor="dialysisCenterName">
@@ -278,7 +318,7 @@ function CenterEditPage() {
                     placeholder="Enter center name"
                   />
                 </Field>
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4 md:grid-cols-2">
                   <Field>
                     <FieldLabel htmlFor="title">Title</FieldLabel>
                     <Input
@@ -316,18 +356,22 @@ function CenterEditPage() {
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle>Contact Information</CardTitle>
-              <CardDescription>
-                Phone, email, and website details
-              </CardDescription>
+            <CardHeader className="gap-2 px-4 py-4 sm:px-6">
+              <div className="flex items-center gap-3">
+                <Phone className="size-5 text-primary" />
+                <div>
+                  <CardTitle className="text-base sm:text-lg">Contact Information</CardTitle>
+                  <CardDescription>Phone, email, and website details</CardDescription>
+                </div>
+              </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
               <FieldGroup className="gap-4">
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4 md:grid-cols-2">
                   <Field>
                     <FieldLabel htmlFor="tel">Telephone</FieldLabel>
                     <Input
+                      inputMode="tel"
                       id="tel"
                       name="tel"
                       value={formData.tel}
@@ -338,6 +382,7 @@ function CenterEditPage() {
                   <Field>
                     <FieldLabel htmlFor="phoneNumber">Phone Number</FieldLabel>
                     <Input
+                      inputMode="tel"
                       id="phoneNumber"
                       name="phoneNumber"
                       value={formData.phoneNumber}
@@ -346,10 +391,11 @@ function CenterEditPage() {
                     />
                   </Field>
                 </div>
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4 md:grid-cols-2">
                   <Field>
                     <FieldLabel htmlFor="fax">Fax</FieldLabel>
                     <Input
+                      inputMode="tel"
                       id="fax"
                       name="fax"
                       value={formData.fax}
@@ -363,6 +409,7 @@ function CenterEditPage() {
                       id="email"
                       name="email"
                       type="email"
+                      inputMode="email"
                       value={formData.email}
                       onChange={handleInputChange}
                       placeholder="Enter email"
@@ -384,11 +431,61 @@ function CenterEditPage() {
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle>Location</CardTitle>
-              <CardDescription>Address and location details</CardDescription>
+            <CardHeader className="gap-2 px-4 py-4 sm:px-6">
+              <div className="flex items-center gap-3">
+                <MessageCircle className="size-5 text-primary" />
+                <div>
+                  <CardTitle className="text-base sm:text-lg">Lead Follow-Up</CardTitle>
+                  <CardDescription>Email alerts go to assigned admin users; WhatsApp handoff uses the PIC number</CardDescription>
+                </div>
+              </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
+              <FieldGroup className="gap-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Field>
+                    <FieldLabel htmlFor="whatsappPicName">PIC Name</FieldLabel>
+                    <Input
+                      id="whatsappPicName"
+                      name="whatsappPicName"
+                      value={formData.whatsappPicName}
+                      onChange={handleInputChange}
+                      placeholder="Enter PIC name"
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="whatsappPicPhoneNumber">
+                      PIC WhatsApp Number
+                    </FieldLabel>
+                    <Input
+                      inputMode="tel"
+                      id="whatsappPicPhoneNumber"
+                      name="whatsappPicPhoneNumber"
+                      value={formData.whatsappPicPhoneNumber}
+                      onChange={handleInputChange}
+                      placeholder="60123456789"
+                    />
+                  </Field>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  SES lead emails are sent to assigned PIC/admin users for this center.
+                  If no user is assigned, the center email is used as fallback.
+                </p>
+              </FieldGroup>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="gap-2 px-4 py-4 sm:px-6">
+              <div className="flex items-center gap-3">
+                <MapPin className="size-5 text-primary" />
+                <div>
+                  <CardTitle className="text-base sm:text-lg">Location</CardTitle>
+                  <CardDescription>Address and location details</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
               <FieldGroup className="gap-4">
                 <Field>
                   <FieldLabel htmlFor="address">Address</FieldLabel>
@@ -413,7 +510,7 @@ function CenterEditPage() {
                     placeholder="Enter address with unit number"
                   />
                 </Field>
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4 md:grid-cols-2">
                   <Field>
                     <FieldLabel htmlFor="town">Town</FieldLabel>
                     <Input
@@ -450,15 +547,18 @@ function CenterEditPage() {
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle>Staff Information</CardTitle>
-              <CardDescription>
-                Key personnel at the dialysis center
-              </CardDescription>
+            <CardHeader className="gap-2 px-4 py-4 sm:px-6">
+              <div className="flex items-center gap-3">
+                <Users className="size-5 text-primary" />
+                <div>
+                  <CardTitle className="text-base sm:text-lg">Staff Information</CardTitle>
+                  <CardDescription>Key personnel at the dialysis center</CardDescription>
+                </div>
+              </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
               <FieldGroup className="gap-4">
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4 md:grid-cols-2">
                   <Field>
                     <FieldLabel htmlFor="drInCharge">
                       Doctor In Charge
@@ -476,6 +576,7 @@ function CenterEditPage() {
                       Doctor Phone
                     </FieldLabel>
                     <Input
+                      inputMode="tel"
                       id="drInChargeTel"
                       name="drInChargeTel"
                       value={formData.drInChargeTel}
@@ -496,7 +597,7 @@ function CenterEditPage() {
                     placeholder="Enter nephrologist name"
                   />
                 </Field>
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4 md:grid-cols-2">
                   <Field>
                     <FieldLabel htmlFor="centreManager">
                       Centre Manager
@@ -527,15 +628,18 @@ function CenterEditPage() {
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle>Facilities</CardTitle>
-              <CardDescription>
-                Equipment and services available
-              </CardDescription>
+            <CardHeader className="gap-2 px-4 py-4 sm:px-6">
+              <div className="flex items-center gap-3">
+                <Stethoscope className="size-5 text-primary" />
+                <div>
+                  <CardTitle className="text-base sm:text-lg">Facilities</CardTitle>
+                  <CardDescription>Equipment and services available</CardDescription>
+                </div>
+              </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
               <FieldGroup className="gap-4">
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4 md:grid-cols-2">
                   <Field>
                     <FieldLabel htmlFor="units">Units</FieldLabel>
                     <Input
@@ -576,13 +680,16 @@ function CenterEditPage() {
 
           {userRole?.role === "superadmin" && (
             <Card>
-              <CardHeader>
-                <CardTitle>Display Settings</CardTitle>
-                <CardDescription>
-                  Control how this center appears on the website
-                </CardDescription>
+              <CardHeader className="gap-2 px-4 py-4 sm:px-6">
+                <div className="flex items-center gap-3">
+                  <Settings2 className="size-5 text-primary" />
+                  <div>
+                    <CardTitle className="text-base sm:text-lg">Display Settings</CardTitle>
+                    <CardDescription>Control how this center appears on the website</CardDescription>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
                 <Field orientation="horizontal">
                   <div className="flex items-center gap-3">
                     <Switch
@@ -605,8 +712,8 @@ function CenterEditPage() {
 
         {isNewCenter ? (
           <Card>
-            <CardHeader>
-              <CardTitle>Additional Details</CardTitle>
+            <CardHeader className="px-4 py-4 sm:px-6">
+              <CardTitle className="text-base sm:text-lg">Additional Details</CardTitle>
               <CardDescription>
                 Create the center first to manage operating hours and FAQs.
               </CardDescription>
@@ -614,10 +721,22 @@ function CenterEditPage() {
           </Card>
         ) : (
           <>
+            <IntakeLeadsSection centerId={centerId} />
             <OperatingHoursSection centerId={centerId} />
             <FaqSection centerId={centerId} />
           </>
         )}
+      </div>
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 p-3 shadow-lg backdrop-blur sm:hidden">
+        <Button
+          type="submit"
+          form="center-form"
+          disabled={isSaving}
+          className="h-11 w-full gap-2"
+        >
+          <Save className="size-4" />
+          {saveButtonText}
+        </Button>
       </div>
     </div>
   )
@@ -646,6 +765,40 @@ const DEFAULT_HOURS: HourEntry[] = Array.from({ length: 7 }, (_, i) => ({
   closeTime: "22:00",
   isClosed: false,
 }))
+
+function IntakeLeadsSection({ centerId }: { centerId: string }) {
+  const { data: leads = [], isLoading } = useQuery({
+    queryKey: ["intakeLeads", centerId],
+    queryFn: () => getIntakeLeads({ data: { centerId, limit: 20 } }),
+  })
+
+  return (
+    <Card>
+      <CardHeader className="px-4 py-4 sm:px-6">
+        <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+          <MessageCircle className="size-5 text-primary" />
+          Intake Leads
+        </CardTitle>
+        <CardDescription>
+          Recent appointment requests from the public site
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
+        {isLoading ? (
+          <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
+            Loading leads...
+          </div>
+        ) : (
+          <IntakeLeadList
+            leads={leads}
+            emptyMessage="No intake leads for this center yet."
+            showCenter={false}
+          />
+        )}
+      </CardContent>
+    </Card>
+  )
+}
 
 function OperatingHoursSection({ centerId }: { centerId: string }) {
   const queryClient = useQueryClient()
@@ -696,54 +849,60 @@ function OperatingHoursSection({ centerId }: { centerId: string }) {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Operating Hours</CardTitle>
+      <CardHeader className="px-4 py-4 sm:px-6">
+        <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+          <Clock className="size-5 text-primary" />
+          Operating Hours
+        </CardTitle>
         <CardDescription>
           Set the opening and closing times for each day
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3 px-4 pb-4 sm:px-6 sm:pb-6">
         {hours.map((h) => (
           <div
             key={h.dayOfWeek}
-            className="flex items-center gap-4"
+            className="rounded-lg border bg-background p-3"
           >
-            <span className="w-24 text-sm font-medium">
-              {DAY_NAMES[h.dayOfWeek]}
-            </span>
-            <Input
-              type="time"
-              value={h.openTime}
-              onChange={(e) =>
-                updateDay(h.dayOfWeek, "openTime", e.target.value)
-              }
-              disabled={h.isClosed}
-              className="w-32"
-            />
-            <span className="text-sm text-muted-foreground">to</span>
-            <Input
-              type="time"
-              value={h.closeTime}
-              onChange={(e) =>
-                updateDay(h.dayOfWeek, "closeTime", e.target.value)
-              }
-              disabled={h.isClosed}
-              className="w-32"
-            />
-            <div className="flex items-center gap-2">
-              <Switch
-                checked={h.isClosed}
-                onCheckedChange={(checked) =>
-                  updateDay(h.dayOfWeek, "isClosed", checked)
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <span className="text-sm font-medium">
+                {DAY_NAMES[h.dayOfWeek]}
+              </span>
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={h.isClosed}
+                  onCheckedChange={(checked) =>
+                    updateDay(h.dayOfWeek, "isClosed", checked)
+                  }
+                />
+                <Label className="text-sm">Closed</Label>
+              </div>
+            </div>
+            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+              <Input
+                type="time"
+                value={h.openTime}
+                onChange={(e) =>
+                  updateDay(h.dayOfWeek, "openTime", e.target.value)
                 }
+                disabled={h.isClosed}
               />
-              <Label className="text-sm">Closed</Label>
+              <span className="text-sm text-muted-foreground">to</span>
+              <Input
+                type="time"
+                value={h.closeTime}
+                onChange={(e) =>
+                  updateDay(h.dayOfWeek, "closeTime", e.target.value)
+                }
+                disabled={h.isClosed}
+              />
             </div>
           </div>
         ))}
         <Button
           onClick={() => saveMutation.mutate()}
           disabled={saveMutation.isPending}
+          className="h-10 w-full sm:w-auto"
           size="sm"
         >
           {saveMutation.isPending ? "Saving..." : "Save Hours"}
@@ -820,13 +979,16 @@ function FaqSection({ centerId }: { centerId: string }) {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>FAQs</CardTitle>
+      <CardHeader className="px-4 py-4 sm:px-6">
+        <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+          <FileQuestion className="size-5 text-primary" />
+          FAQs
+        </CardTitle>
         <CardDescription>
           Frequently asked questions for this center
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-6 px-4 pb-4 sm:px-6 sm:pb-6">
         {faqs.length > 0 && (
           <div className="space-y-4">
             {faqs.map((faq, index) => (
@@ -847,7 +1009,7 @@ function FaqSection({ centerId }: { centerId: string }) {
                       placeholder="Answer"
                       rows={3}
                     />
-                    <div className="flex gap-2">
+                    <div className="flex flex-col gap-2 sm:flex-row">
                       <Button
                         size="sm"
                         onClick={() => handleUpdate(faq.id)}
@@ -874,7 +1036,7 @@ function FaqSection({ centerId }: { centerId: string }) {
                         {faq.answer}
                       </p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col gap-2 sm:flex-row">
                       <Button
                         size="sm"
                         variant="outline"

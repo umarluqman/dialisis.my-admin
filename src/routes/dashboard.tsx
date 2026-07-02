@@ -17,9 +17,11 @@ import {
   getAllCenters,
   createInvitation,
 } from "@/core/functions/invitation-functions"
+import { getIntakeLeads } from "@/core/functions/intake-lead-functions"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
+import { IntakeLeadList } from "@/components/intake-lead-list"
 import { useState } from "react"
 import { toast } from "sonner"
 import {
@@ -36,7 +38,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
-import { Building2, UserPlus, Search, LogOut } from "lucide-react"
+import { Building2, MessageCircle, UserPlus, Search, LogOut } from "lucide-react"
 
 export const Route = createFileRoute("/dashboard")({
   component: DashboardPage,
@@ -45,8 +47,9 @@ export const Route = createFileRoute("/dashboard")({
 function DashboardPage() {
   const navigate = useNavigate()
   const { data: session, isPending: sessionPending } = useSession()
-  const [activeTab, setActiveTab] = useState<"centers" | "invitations">("centers")
+  const [activeTab, setActiveTab] = useState<"centers" | "leads" | "invitations">("centers")
   const [searchQuery, setSearchQuery] = useState("")
+  const [leadSearchQuery, setLeadSearchQuery] = useState("")
   const [inviteSearchQuery, setInviteSearchQuery] = useState("")
   const [selectedCenters, setSelectedCenters] = useState<string[]>([])
   const [generatedLink, setGeneratedLink] = useState<string | null>(null)
@@ -66,6 +69,12 @@ function DashboardPage() {
   const { data: centers, isLoading: centersLoading } = useQuery({
     queryKey: ["centers"],
     queryFn: () => getCentersForUser(),
+    enabled: !!session,
+  })
+
+  const { data: intakeLeads = [], isLoading: intakeLeadsLoading } = useQuery({
+    queryKey: ["intakeLeads"],
+    queryFn: () => getIntakeLeads({ data: { limit: 50 } }),
     enabled: !!session,
   })
 
@@ -116,6 +125,23 @@ function DashboardPage() {
     center.address?.toLowerCase().includes(searchQuery.toLowerCase())
   ) || []
 
+  const filteredIntakeLeads = intakeLeads.filter((lead) => {
+    const query = leadSearchQuery.toLowerCase()
+    return (
+      lead.fullName.toLowerCase().includes(query) ||
+      lead.centerName.toLowerCase().includes(query) ||
+      lead.phoneNumber.toLowerCase().includes(query) ||
+      lead.myKadNumber.toLowerCase().includes(query)
+    )
+  })
+
+  const activeTabTitle =
+    activeTab === "centers"
+      ? "Dialysis Centers"
+      : activeTab === "leads"
+        ? "Intake Leads"
+        : "Generate Invitations"
+
   if (sessionPending) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -148,6 +174,15 @@ function DashboardPage() {
                   <span>Dialysis Centers</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={activeTab === "leads"}
+                  onClick={() => setActiveTab("leads")}
+                >
+                  <MessageCircle />
+                  <span>Intake Leads</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
               {userRole?.role === "superadmin" && (
                 <SidebarMenuItem>
                   <SidebarMenuButton
@@ -178,7 +213,7 @@ function DashboardPage() {
           <SidebarTrigger className="-ml-1" />
           <div className="flex-1">
             <h1 className="text-xl font-semibold">
-              {activeTab === "centers" ? "Dialysis Centers" : "Generate Invitations"}
+              {activeTabTitle}
             </h1>
           </div>
         </header>
@@ -290,6 +325,38 @@ function DashboardPage() {
                     </Link>
                   ))}
                 </div>
+              )}
+            </div>
+          ) : activeTab === "leads" ? (
+            <div className="space-y-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search leads by patient, center, phone, or MyKad..."
+                  value={leadSearchQuery}
+                  onChange={(e) => setLeadSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+
+              {intakeLeadsLoading ? (
+                <div className="space-y-3">
+                  {[...Array(3)].map((_, i) => (
+                    <div
+                      key={i}
+                      className="h-36 animate-pulse rounded-lg border bg-muted/30"
+                    />
+                  ))}
+                </div>
+              ) : (
+                <IntakeLeadList
+                  leads={filteredIntakeLeads}
+                  emptyMessage={
+                    leadSearchQuery
+                      ? "No intake leads match your search."
+                      : "No intake leads yet."
+                  }
+                />
               )}
             </div>
           ) : (

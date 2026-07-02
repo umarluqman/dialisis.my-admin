@@ -6,7 +6,7 @@
   "main": "./src/server.ts",
   "vars": {
     "MY_VAR": "Hello from Cloudflare",
-    "VITE_BASE_URL": "https://admin.dialisis-admin.workers.dev"
+    "VITE_BASE_URL": "https://admin.dialisis.my"
   },
   "env": {
     "preview": {

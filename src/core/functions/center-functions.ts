@@ -185,6 +185,8 @@ const CreateCenterSchema = z.object({
   hepatitisBay: z.string(),
   benefits: z.string(),
   featured: z.boolean().default(false),
+  whatsappPicName: z.string().default(""),
+  whatsappPicPhoneNumber: z.string().default(""),
 })
 
 export const createCenter = createServerFn({ method: "POST" })
@@ -226,6 +228,8 @@ export const createCenter = createServerFn({ method: "POST" })
       hepatitisBay: data.hepatitisBay,
       benefits: data.benefits,
       featured: data.featured,
+      whatsappPicName: data.whatsappPicName.trim() || null,
+      whatsappPicPhoneNumber: data.whatsappPicPhoneNumber.trim() || null,
     })
 
     return { id }
@@ -258,6 +262,8 @@ const UpdateCenterSchema = z.object({
     town: z.string().optional(),
     stateId: z.string().min(1).optional(),
     featured: z.boolean().optional(),
+    whatsappPicName: z.string().nullable().optional(),
+    whatsappPicPhoneNumber: z.string().nullable().optional(),
   }),
 })
 
@@ -286,8 +292,10 @@ export const updateCenter = createServerFn({ method: "POST" })
       }
     }
 
-    // Strip featured field for non-superadmin users
-    const updateData = { ...data.data }
+    const updateData: Partial<typeof dialysisCenter.$inferInsert> = {
+      ...data.data,
+    }
+
     if (userRole !== "superadmin") {
       delete updateData.featured
     }

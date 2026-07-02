@@ -60,6 +60,15 @@ export const dialysisCenter = sqliteTable(
     longitude: real("longitude"),
     latitude: real("latitude"),
     phoneNumber: text("phoneNumber").default("").notNull(),
+    whatsappPicName: text("whatsappPicName"),
+    whatsappPicPhoneNumber: text("whatsappPicPhoneNumber"),
+    whatsappPicOptedInAt: integer("whatsappPicOptedInAt", {
+      mode: "timestamp_ms",
+    }),
+    whatsappTemplateName: text("whatsappTemplateName"),
+    whatsappTemplateLanguageCode: text("whatsappTemplateLanguageCode").default(
+      "ms"
+    ),
     website: text("website"),
     title: text("title").default("").notNull(),
     units: text("units").default("").notNull(),
@@ -171,6 +180,52 @@ export const centerOperatingHour = sqliteTable(
       table.dialysisCenterId
     ),
     index("centerOperatingHour_dayOfWeek_idx").on(table.dayOfWeek),
+  ]
+)
+
+export const intakeLead = sqliteTable(
+  "IntakeLead",
+  {
+    id: text("id").primaryKey(),
+    dialysisCenterId: text("dialysisCenterId")
+      .notNull()
+      .references(() => dialysisCenter.id, { onDelete: "cascade" }),
+    fullName: text("fullName").notNull(),
+    myKadNumber: text("myKadNumber").notNull(),
+    homeAddress: text("homeAddress").notNull(),
+    preferredDate: integer("preferredDate", { mode: "timestamp_ms" }).notNull(),
+    preferredSession: text("preferredSession").notNull(),
+    phoneNumber: text("phoneNumber").notNull(),
+    labResultUrl: text("labResultUrl"),
+    labResultS3Key: text("labResultS3Key"),
+    labResultOriginalName: text("labResultOriginalName"),
+    additionalNotes: text("additionalNotes"),
+    consentAt: integer("consentAt", { mode: "timestamp_ms" }).notNull(),
+    ipAddress: text("ipAddress"),
+    userAgent: text("userAgent"),
+    whatsappHandoffUrl: text("whatsappHandoffUrl").notNull(),
+    picNotificationStatus: text("picNotificationStatus")
+      .default("pending")
+      .notNull(),
+    picNotificationMessageId: text("picNotificationMessageId"),
+    picNotificationError: text("picNotificationError"),
+    accessToken: text("accessToken").notNull().unique(),
+    accessExpiresAt: integer("accessExpiresAt", {
+      mode: "timestamp_ms",
+    }).notNull(),
+    viewedAt: integer("viewedAt", { mode: "timestamp_ms" }),
+    createdAt: integer("createdAt", { mode: "timestamp_ms" })
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+      .notNull(),
+    updatedAt: integer("updatedAt", { mode: "timestamp_ms" })
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("IntakeLead_dialysisCenterId_idx").on(table.dialysisCenterId),
+    index("IntakeLead_createdAt_idx").on(table.createdAt),
+    index("IntakeLead_accessToken_idx").on(table.accessToken),
   ]
 )
 
@@ -322,6 +377,7 @@ export const dialysisCenterRelations = relations(
     faqs: many(centerFaq),
     operatingHours: many(centerOperatingHour),
     userAccess: many(userCenterAccess),
+    intakeLeads: many(intakeLead),
   })
 )
 
@@ -348,6 +404,13 @@ export const centerOperatingHourRelations = relations(
     }),
   })
 )
+
+export const intakeLeadRelations = relations(intakeLead, ({ one }) => ({
+  dialysisCenter: one(dialysisCenter, {
+    fields: [intakeLead.dialysisCenterId],
+    references: [dialysisCenter.id],
+  }),
+}))
 
 export const userCenterAccessRelations = relations(
   userCenterAccess,

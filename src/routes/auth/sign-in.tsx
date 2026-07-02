@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
-import { signIn } from "@/lib/auth-client"
+import { authClient, signIn } from "@/lib/auth-client"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,7 +11,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Eye, EyeOff } from "lucide-react"
 
 export const Route = createFileRoute("/auth/sign-in")({
   component: SignInPage,
@@ -20,27 +19,56 @@ export const Route = createFileRoute("/auth/sign-in")({
 function SignInPage() {
   const navigate = useNavigate()
   const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
+  const [otp, setOtp] = useState("")
+  const [codeSent, setCodeSent] = useState(false)
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const sendCode = async () => {
     setIsLoading(true)
     setError("")
 
-    const result = await signIn.email({
+    const result = await authClient.emailOtp.sendVerificationOtp({
       email,
-      password,
+      type: "sign-in",
     })
 
     if (result.error) {
-      setError(result.error.message ?? "An error occurred")
-      setIsLoading(false)
+      setError(result.error.message ?? "Failed to send sign-in code")
     } else {
-      navigate({ to: "/dashboard" })
+      setCodeSent(true)
     }
+
+    setIsLoading(false)
+  }
+
+  const verifyCode = async () => {
+    setIsLoading(true)
+    setError("")
+
+    const result = await signIn.emailOtp({
+      email,
+      otp,
+    })
+
+    if (result.error) {
+      setError(result.error.message ?? "Invalid sign-in code")
+      setIsLoading(false)
+      return
+    }
+
+    navigate({ to: "/dashboard" })
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (codeSent) {
+      await verifyCode()
+      return
+    }
+
+    await sendCode()
   }
 
   return (
@@ -49,7 +77,9 @@ function SignInPage() {
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold">Sign In</CardTitle>
           <CardDescription>
-            Enter your email and password to access your account
+            {codeSent
+              ? "Enter the code sent to your email"
+              : "Enter your email to receive a one-time code"}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -68,54 +98,56 @@ function SignInPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="m@example.com"
                 required
-                disabled={isLoading}
+                disabled={isLoading || codeSent}
               />
             </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
-                <Link
-                  to="/auth/forgot-password"
-                  className="text-sm text-primary underline-offset-4 hover:underline"
-                >
-                  Forgot password?
-                </Link>
-              </div>
-              <div className="relative">
+            {codeSent && (
+              <div className="space-y-2">
+                <Label htmlFor="otp">One-time code</Label>
                 <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
+                  id="otp"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/[^\d]/g, ""))}
+                  inputMode="numeric"
+                  pattern="[0-9]{6}"
+                  maxLength={6}
+                  placeholder="123456"
                   required
                   disabled={isLoading}
-                  className="pr-10"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors ease duration-200"
-                  tabIndex={-1}
-                >
-                  {showPassword ? (
-                    <EyeOff className="size-4" />
-                  ) : (
-                    <Eye className="size-4" />
-                  )}
-                </button>
               </div>
-            </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Signing in..." : "Sign In"}
+            )}
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={isLoading || (codeSent && otp.length !== 6)}
+            >
+              {isLoading
+                ? codeSent
+                  ? "Verifying..."
+                  : "Sending..."
+                : codeSent
+                  ? "Verify Code"
+                  : "Send Code"}
             </Button>
+            {codeSent && (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                disabled={isLoading}
+                onClick={sendCode}
+              >
+                Send Code Again
+              </Button>
+            )}
             <p className="text-center text-sm text-muted-foreground">
-              Don't have an account?{" "}
+              Don&apos;t have access?{" "}
               <Link
                 to="/auth/sign-up"
                 className="text-primary underline-offset-4 hover:underline"
               >
-                Sign up
+                Use invitation
               </Link>
             </p>
           </form>

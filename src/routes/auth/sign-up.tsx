@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
-import { signUp } from "@/lib/auth-client"
+import { authClient, signIn } from "@/lib/auth-client"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,7 +12,6 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { useQuery, useMutation } from "@tanstack/react-query"
-import { Eye, EyeOff } from "lucide-react"
 import {
   getInvitationByToken,
   consumeInvitation,
@@ -35,8 +34,8 @@ function SignUpPage() {
   const { invite } = Route.useSearch()
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
+  const [otp, setOtp] = useState("")
+  const [codeSent, setCodeSent] = useState(false)
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
@@ -56,19 +55,38 @@ function SignUpPage() {
       consumeInvitation({ data: { token: invite!, userId } }),
   })
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const sendCode = async () => {
     setIsLoading(true)
     setError("")
 
-    const result = await signUp.email({
-      name,
+    const result = await authClient.emailOtp.sendVerificationOtp({
       email,
-      password,
+      type: "sign-in",
     })
 
     if (result.error) {
-      setError(result.error.message ?? "An error occurred")
+      setError(result.error.message ?? "Failed to send verification code")
+      setIsLoading(false)
+      return
+    }
+
+    setCodeSent(true)
+    setIsLoading(false)
+  }
+
+  const verifyCode = async () => {
+    setIsLoading(true)
+    setError("")
+
+    const verificationPayload = {
+      email,
+      otp,
+      name,
+    }
+    const result = await signIn.emailOtp(verificationPayload)
+
+    if (result.error) {
+      setError(result.error.message ?? "Invalid verification code")
       setIsLoading(false)
       return
     }
@@ -76,13 +94,24 @@ function SignUpPage() {
     if (invite && result.data?.user?.id) {
       try {
         await consumeInvitationMutation.mutateAsync(result.data.user.id)
-        toast.success("Account created and centers assigned!")
+        toast.success("Access verified and centers assigned!")
       } catch {
-        toast.error("Account created but failed to assign centers")
+        toast.error("Access verified but failed to assign centers")
       }
     }
 
     navigate({ to: "/dashboard" })
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (codeSent) {
+      await verifyCode()
+      return
+    }
+
+    await sendCode()
   }
 
   if (invite && invitationLoading) {
@@ -131,7 +160,7 @@ function SignUpPage() {
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl font-bold">Create Account</CardTitle>
             <CardDescription>
-              Enter your information to create a new account
+              Enter your information and verify by one-time email code
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -150,7 +179,7 @@ function SignUpPage() {
                   onChange={(e) => setName(e.target.value)}
                   placeholder="John Doe"
                   required
-                  disabled={isLoading}
+                  disabled={isLoading || codeSent}
                 />
               </div>
               <div className="space-y-2">
@@ -162,39 +191,49 @@ function SignUpPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="m@example.com"
                   required
-                  disabled={isLoading}
+                  disabled={isLoading || codeSent}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <div className="relative">
+              {codeSent && (
+                <div className="space-y-2">
+                  <Label htmlFor="otp">One-time code</Label>
                   <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Create a password"
+                    id="otp"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/[^\d]/g, ""))}
+                    inputMode="numeric"
+                    pattern="[0-9]{6}"
+                    maxLength={6}
+                    placeholder="123456"
                     required
                     disabled={isLoading}
-                    className="pr-10"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors ease duration-200"
-                    tabIndex={-1}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="size-4" />
-                    ) : (
-                      <Eye className="size-4" />
-                    )}
-                  </button>
                 </div>
-              </div>
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Creating account..." : "Sign Up"}
+              )}
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={isLoading || !invite || (codeSent && otp.length !== 6)}
+              >
+                {isLoading
+                  ? codeSent
+                    ? "Verifying..."
+                    : "Sending..."
+                  : codeSent
+                    ? "Verify Code"
+                    : "Send Code"}
               </Button>
+              {codeSent && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  disabled={isLoading}
+                  onClick={sendCode}
+                >
+                  Send Code Again
+                </Button>
+              )}
               <p className="text-center text-sm text-muted-foreground">
                 Already have an account?{" "}
                 <Link

@@ -1,8 +1,9 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { emailOTP } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { db } from "@/db/connection";
-import { sendEmail, createPasswordResetEmail } from "@/lib/email";
+import { createOtpEmail, sendEmail } from "@/lib/email";
 
 const getSecret = () => {
   if (typeof process !== "undefined" && process.env?.BETTER_AUTH_SECRET) {
@@ -19,22 +20,31 @@ export const auth = betterAuth({
   }),
 
   emailAndPassword: {
-    enabled: true,
-    sendResetPassword: async ({ user, url }) => {
-      void sendEmail({
-        to: user.email,
-        subject: "Reset your password - Dialisis Admin",
-        html: createPasswordResetEmail(url),
-      });
-    },
+    enabled: false,
   },
 
   baseURL: import.meta.env.VITE_BASE_URL || "http://localhost:3000",
 
   trustedOrigins: [
     "http://localhost:3000",
+    "https://admin.dialisis.my",
     "https://admin.dialisis-admin.workers.dev",
   ],
 
-  plugins: [tanstackStartCookies()],
+  plugins: [
+    emailOTP({
+      otpLength: 6,
+      expiresIn: 300,
+      async sendVerificationOTP({ email, otp }) {
+        const message = createOtpEmail(otp);
+        await sendEmail({
+          to: email,
+          subject: "Your Dialisis Admin sign-in code",
+          html: message.html,
+          text: message.text,
+        });
+      },
+    }),
+    tanstackStartCookies(),
+  ],
 });
