@@ -17,12 +17,9 @@ const AWS_ALGORITHM = "AWS4-HMAC-SHA256"
 const encoder = new TextEncoder()
 
 function getEnvValue(name: string) {
-  if (typeof process !== "undefined" && process.env?.[name]) {
-    return process.env[name]
+  if (typeof process !== "undefined") {
+    return process.env?.[name]
   }
-
-  const { env } = require("cloudflare:workers")
-  return env[name]
 }
 
 function getRequiredEnv(name: string) {

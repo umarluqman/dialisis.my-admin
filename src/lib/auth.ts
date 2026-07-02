@@ -9,12 +9,9 @@ import { invitation, user } from "@/db/schema";
 import { createOtpEmail, sendEmail } from "@/lib/email";
 
 const getEnvValue = (name: string) => {
-  if (typeof process !== "undefined" && process.env?.[name]) {
-    return process.env[name];
+  if (typeof process !== "undefined") {
+    return process.env?.[name];
   }
-
-  const { env } = require("cloudflare:workers");
-  return env[name];
 };
 
 const getSecret = () => {
