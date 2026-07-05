@@ -10,6 +10,10 @@ import {
 } from "@/db/schema"
 import { ensureAdminDatabaseSchema } from "@/db/ensure-schema"
 import { authMiddleware } from "@/lib/middleware"
+import {
+  revalidatePublicCenterQuietly,
+  type PublicCenterRevalidationInput,
+} from "@/lib/public-site-revalidation"
 import { getUserRole } from "@/lib/user-role"
 
 function slugifyCenterName(name: string) {
@@ -39,6 +43,52 @@ async function generateUniqueCenterSlug(name: string) {
     slug = `${baseSlug}-${suffix}`
     suffix += 1
   }
+}
+
+type PublicCenterSnapshot = {
+  slug: string
+  town: string
+  stateName: string | null
+}
+
+async function getPublicCenterSnapshot(
+  id: string
+): Promise<PublicCenterSnapshot | undefined> {
+  const [center] = await db
+    .select({
+      slug: dialysisCenter.slug,
+      town: dialysisCenter.town,
+      stateName: state.name,
+    })
+    .from(dialysisCenter)
+    .leftJoin(state, eq(dialysisCenter.stateId, state.id))
+    .where(eq(dialysisCenter.id, id))
+    .limit(1)
+
+  return center
+}
+
+async function revalidatePublicCenterChange({
+  before,
+  after,
+}: {
+  before?: PublicCenterSnapshot
+  after?: PublicCenterSnapshot
+}) {
+  const center = after ?? before
+
+  if (!center) return
+
+  const payload: PublicCenterRevalidationInput = {
+    slug: after?.slug ?? before?.slug,
+    oldSlug: before?.slug,
+    stateName: after?.stateName,
+    town: after?.town,
+    oldStateName: before?.stateName,
+    oldTown: before?.town,
+  }
+
+  await revalidatePublicCenterQuietly(payload)
 }
 
 export const getCurrentUserRole = createServerFn({ method: "GET" })
@@ -227,6 +277,9 @@ export const createCenter = createServerFn({ method: "POST" })
       whatsappPicPhoneNumber: data.whatsappPicPhoneNumber.trim() || null,
     })
 
+    const createdCenter = await getPublicCenterSnapshot(id)
+    await revalidatePublicCenterChange({ after: createdCenter })
+
     return { id }
   })
 
@@ -288,6 +341,8 @@ export const updateCenter = createServerFn({ method: "POST" })
       }
     }
 
+    const beforeCenter = await getPublicCenterSnapshot(data.id)
+
     const updateData: Partial<typeof dialysisCenter.$inferInsert> = {
       ...data.data,
     }
@@ -303,6 +358,12 @@ export const updateCenter = createServerFn({ method: "POST" })
         updatedAt: new Date(),
       })
       .where(eq(dialysisCenter.id, data.id))
+
+    const afterCenter = await getPublicCenterSnapshot(data.id)
+    await revalidatePublicCenterChange({
+      before: beforeCenter,
+      after: afterCenter,
+    })
 
     return { success: true }
   })
