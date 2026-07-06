@@ -59,6 +59,7 @@ export const dialysisCenter = sqliteTable(
     hepatitisBay: text("hepatitisBay"),
     longitude: real("longitude"),
     latitude: real("latitude"),
+    googleMapsEmbed: text("googleMapsEmbed"),
     phoneNumber: text("phoneNumber").default("").notNull(),
     whatsappPicName: text("whatsappPicName"),
     whatsappPicPhoneNumber: text("whatsappPicPhoneNumber"),

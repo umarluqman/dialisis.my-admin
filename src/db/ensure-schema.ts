@@ -98,6 +98,7 @@ async function ensureSchema() {
     "whatsappTemplateLanguageCode",
     "whatsappTemplateLanguageCode text default 'ms'"
   )
+  await addColumnIfMissing("DialysisCenter", "googleMapsEmbed", "googleMapsEmbed text")
 
   await client.execute(`
     create table if not exists IntakeLead (

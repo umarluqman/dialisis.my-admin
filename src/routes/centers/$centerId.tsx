@@ -21,6 +21,7 @@ import {
 } from "@/core/functions/operating-hour-functions"
 import { getIntakeLeads } from "@/core/functions/intake-lead-functions"
 import { useSession } from "@/lib/auth-client"
+import { extractGoogleMapsCoordinates } from "@/lib/google-maps-embed"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -81,6 +82,9 @@ type CenterFormData = {
   website: string
   address: string
   addressWithUnit: string
+  googleMapsEmbed: string
+  longitude: number | null
+  latitude: number | null
   town: string
   stateId: string
   drInCharge: string
@@ -108,6 +112,9 @@ const EMPTY_CENTER_FORM_DATA: CenterFormData = {
   website: "",
   address: "",
   addressWithUnit: "",
+  googleMapsEmbed: "",
+  longitude: null,
+  latitude: null,
   town: "",
   stateId: "",
   drInCharge: "",
@@ -166,6 +173,9 @@ function CenterEditPage() {
         website: center.website ?? "",
         address: center.address ?? "",
         addressWithUnit: center.addressWithUnit ?? "",
+        googleMapsEmbed: center.googleMapsEmbed ?? "",
+        longitude: center.longitude ?? null,
+        latitude: center.latitude ?? null,
         town: center.town ?? "",
         stateId: center.stateId ?? "",
         drInCharge: center.drInCharge ?? "",
@@ -246,6 +256,19 @@ function CenterEditPage() {
   ) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const handleGoogleMapsEmbedChange = (
+    e: React.ChangeEvent<HTMLTextAreaElement>
+  ) => {
+    const value = e.target.value
+    const coordinates = extractGoogleMapsCoordinates(value)
+    setFormData((prev) => ({
+      ...prev,
+      googleMapsEmbed: value,
+      latitude: coordinates?.latitude ?? null,
+      longitude: coordinates?.longitude ?? null,
+    }))
   }
 
   if (centerLoading) {
@@ -509,6 +532,24 @@ function CenterEditPage() {
                     onChange={handleInputChange}
                     placeholder="Enter address with unit number"
                   />
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="googleMapsEmbed">
+                    Google Maps Embed
+                  </FieldLabel>
+                  <Textarea
+                    id="googleMapsEmbed"
+                    name="googleMapsEmbed"
+                    value={formData.googleMapsEmbed}
+                    onChange={handleGoogleMapsEmbedChange}
+                    placeholder="Paste Google Maps iframe or embed URL"
+                    rows={4}
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    {formData.latitude != null && formData.longitude != null
+                      ? `Waze coordinates: ${formData.latitude}, ${formData.longitude}`
+                      : "Paste embed to auto-fill Waze coordinates."}
+                  </p>
                 </Field>
                 <div className="grid gap-4 md:grid-cols-2">
                   <Field>

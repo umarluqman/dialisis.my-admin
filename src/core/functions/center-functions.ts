@@ -218,6 +218,9 @@ const CreateCenterSchema = z.object({
   website: z.string(),
   address: z.string(),
   addressWithUnit: z.string(),
+  googleMapsEmbed: z.string().default(""),
+  longitude: z.number().nullable().optional(),
+  latitude: z.number().nullable().optional(),
   town: z.string(),
   stateId: z.string().trim().min(1),
   drInCharge: z.string(),
@@ -262,6 +265,9 @@ export const createCenter = createServerFn({ method: "POST" })
       website: data.website,
       address: data.address,
       addressWithUnit: data.addressWithUnit,
+      googleMapsEmbed: data.googleMapsEmbed.trim() || null,
+      longitude: data.longitude ?? null,
+      latitude: data.latitude ?? null,
       town: data.town,
       stateId: data.stateId,
       drInCharge: data.drInCharge,
@@ -301,6 +307,7 @@ const UpdateCenterSchema = z.object({
     hepatitisBay: z.string().nullable().optional(),
     longitude: z.number().nullable().optional(),
     latitude: z.number().nullable().optional(),
+    googleMapsEmbed: z.string().nullable().optional(),
     phoneNumber: z.string().optional(),
     website: z.string().nullable().optional(),
     title: z.string().optional(),
@@ -345,6 +352,10 @@ export const updateCenter = createServerFn({ method: "POST" })
 
     const updateData: Partial<typeof dialysisCenter.$inferInsert> = {
       ...data.data,
+    }
+
+    if ("googleMapsEmbed" in updateData) {
+      updateData.googleMapsEmbed = updateData.googleMapsEmbed?.trim() || null
     }
 
     if (userRole !== "superadmin") {
