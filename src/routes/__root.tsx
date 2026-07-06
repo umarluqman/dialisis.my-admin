@@ -73,8 +73,9 @@ function RootComponent() {
     <RootDocument>
       <ThemeProvider
         attribute="class"
-        defaultTheme="system"
-        enableSystem
+        defaultTheme="light"
+        storageKey="dialisis-admin-theme"
+        enableSystem={false}
         disableTransitionOnChange={false}
       >
         <Outlet />

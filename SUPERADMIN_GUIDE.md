@@ -21,31 +21,38 @@ This project uses Better Auth's default credential password hashing. Use `gen-pa
 
 All SQL statements use the SQLite format. Replace `<GENERATED_HASH>` with the hash from step 1.
 
-### Create Superadmin
+### Reset and Create Superadmin
 ```sql
--- Insert User
+BEGIN TRANSACTION;
+
+DELETE FROM invitation;
+
+DELETE FROM user
+WHERE role = 'superadmin';
+
 INSERT INTO user (id, name, email, email_verified, role, created_at, updated_at)
 VALUES (
-  'superadmin-id-1', 
-  'Super Admin', 
-  'admin@example.com', 
-  1, 
-  'superadmin', 
-  (strftime('%s', 'now') * 1000), 
+  '<SUPERADMIN_USER_ID>',
+  '<SUPERADMIN_NAME>',
+  '<SUPERADMIN_EMAIL>',
+  1,
+  'superadmin',
+  (strftime('%s', 'now') * 1000),
   (strftime('%s', 'now') * 1000)
 );
 
--- Insert Account (linked via user_id)
 INSERT INTO account (id, account_id, provider_id, user_id, password, created_at, updated_at)
 VALUES (
-  'superadmin-account-1',
-  'superadmin-id-1',
+  '<SUPERADMIN_ACCOUNT_ID>',
+  '<SUPERADMIN_USER_ID>',
   'credential',
-  'superadmin-id-1',
+  '<SUPERADMIN_USER_ID>',
   '<GENERATED_HASH>',
-  (strftime('%s', 'now') * 1000), 
+  (strftime('%s', 'now') * 1000),
   (strftime('%s', 'now') * 1000)
 );
+
+COMMIT;
 ```
 
 ### Read Superadmins
@@ -61,14 +68,19 @@ Generate a new hash first, then run:
 ```sql
 UPDATE account 
 SET password = '<NEW_GENERATED_HASH>', updated_at = (strftime('%s', 'now') * 1000)
-WHERE user_id = (SELECT id FROM user WHERE email = 'admin@example.com');
+WHERE user_id = (SELECT id FROM user WHERE email = '<SUPERADMIN_EMAIL>');
 ```
 
-### Delete Superadmin
+### Delete All Superadmins and Invitations
 ```sql
--- This will cascade delete the account entry if configured, or delete manually:
-DELETE FROM account WHERE user_id = (SELECT id FROM user WHERE email = 'admin@example.com');
-DELETE FROM user WHERE email = 'admin@example.com';
+BEGIN TRANSACTION;
+
+DELETE FROM invitation;
+
+DELETE FROM user
+WHERE role = 'superadmin';
+
+COMMIT;
 ```
 
 ## 3. Security Notes

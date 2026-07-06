@@ -65,7 +65,31 @@ function getStatusVariant(
 }
 
 function getStatusLabel(status: string) {
+  if (status === "sent") return "Email sent"
+  if (status === "failed") return "Email not sent"
+  if (status === "skipped_no_email") return "No email recipient"
+  if (status === "pending") return "Email pending"
   return status.replaceAll("_", " ")
+}
+
+function getNotificationDescription(lead: IntakeLeadListItem) {
+  if (lead.picNotificationStatus === "sent") return null
+  if (lead.picNotificationStatus === "skipped_no_email") {
+    return "Lead saved. No PIC or center email is configured, so no email was sent."
+  }
+  if (lead.picNotificationStatus.startsWith("failed")) {
+    return `Lead saved. PIC email did not get through${
+      lead.picNotificationError ? `: ${lead.picNotificationError}` : "."
+    }`
+  }
+  if (lead.picNotificationStatus === "pending") {
+    return "Lead saved. PIC email notification is pending."
+  }
+  return null
+}
+
+function getNotificationDescriptionClass(status: string) {
+  return status === "pending" ? "text-muted-foreground" : "text-destructive"
 }
 
 export function IntakeLeadList({
@@ -157,8 +181,10 @@ export function IntakeLeadList({
               )}
               <span>Lead link expires {formatDateTime(lead.accessExpiresAt)}</span>
             </div>
-            {lead.picNotificationError && (
-              <p className="text-destructive">{lead.picNotificationError}</p>
+            {getNotificationDescription(lead) && (
+              <p className={getNotificationDescriptionClass(lead.picNotificationStatus)}>
+                {getNotificationDescription(lead)}
+              </p>
             )}
           </div>
         </div>

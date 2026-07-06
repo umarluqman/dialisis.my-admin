@@ -37,6 +37,79 @@ export const ensureAdminDatabaseSchema = () => {
 
 async function ensureSchema() {
   await client.execute(`
+    create table if not exists user (
+      id text primary key,
+      name text not null,
+      email text not null unique,
+      email_verified integer default 0 not null,
+      image text,
+      role text default 'pic' not null,
+      created_at integer default (cast(unixepoch('subsecond') * 1000 as integer)) not null,
+      updated_at integer default (cast(unixepoch('subsecond') * 1000 as integer)) not null
+    )
+  `)
+
+  await client.execute(`
+    create table if not exists session (
+      id text primary key,
+      expires_at integer not null,
+      token text not null unique,
+      created_at integer default (cast(unixepoch('subsecond') * 1000 as integer)) not null,
+      updated_at integer default (cast(unixepoch('subsecond') * 1000 as integer)) not null,
+      ip_address text,
+      user_agent text,
+      user_id text not null,
+      foreign key (user_id) references user(id) on delete cascade
+    )
+  `)
+  await client.execute("create index if not exists session_userId_idx on session (user_id)")
+
+  await client.execute(`
+    create table if not exists account (
+      id text primary key,
+      account_id text not null,
+      provider_id text not null,
+      user_id text not null,
+      access_token text,
+      refresh_token text,
+      id_token text,
+      access_token_expires_at integer,
+      refresh_token_expires_at integer,
+      scope text,
+      password text,
+      created_at integer default (cast(unixepoch('subsecond') * 1000 as integer)) not null,
+      updated_at integer default (cast(unixepoch('subsecond') * 1000 as integer)) not null,
+      foreign key (user_id) references user(id) on delete cascade
+    )
+  `)
+  await client.execute("create index if not exists account_userId_idx on account (user_id)")
+
+  await client.execute(`
+    create table if not exists verification (
+      id text primary key,
+      identifier text not null,
+      value text not null,
+      expires_at integer not null,
+      created_at integer default (cast(unixepoch('subsecond') * 1000 as integer)) not null,
+      updated_at integer default (cast(unixepoch('subsecond') * 1000 as integer)) not null
+    )
+  `)
+  await client.execute("create index if not exists verification_identifier_idx on verification (identifier)")
+
+  await client.execute(`
+    create table if not exists user_center_access (
+      id text primary key,
+      user_id text not null,
+      dialysis_center_id text not null,
+      created_at integer default (cast(unixepoch('subsecond') * 1000 as integer)) not null,
+      foreign key (user_id) references user(id) on delete cascade,
+      foreign key (dialysis_center_id) references DialysisCenter(id) on delete cascade
+    )
+  `)
+  await client.execute("create index if not exists userCenterAccess_userId_idx on user_center_access (user_id)")
+  await client.execute("create index if not exists userCenterAccess_dialysisCenterId_idx on user_center_access (dialysis_center_id)")
+
+  await client.execute(`
     create table if not exists CenterFaq (
       id text primary key not null,
       question text not null,

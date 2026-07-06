@@ -21,6 +21,8 @@ const getSecret = () => {
 };
 
 const hasExistingUser = async (email: string) => {
+  await ensureAdminDatabaseSchema();
+
   const [existingUser] = await db
     .select({ id: user.id })
     .from(user)
