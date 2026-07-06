@@ -8,6 +8,7 @@ import {
   updateCenter,
   getStates,
   getCurrentUserRole,
+  resolveGoogleMapsCoordinates,
 } from "@/core/functions/center-functions"
 import {
   getFaqsForCenter,
@@ -158,6 +159,8 @@ function CenterEditPage() {
   })
 
   const [formData, setFormData] = useState<CenterFormData>(EMPTY_CENTER_FORM_DATA)
+  const [isResolvingMap, setIsResolvingMap] = useState(false)
+  const [mapMessage, setMapMessage] = useState("")
 
   useEffect(() => {
     if (center) {
@@ -224,13 +227,55 @@ function CenterEditPage() {
   })
 
   const isSaving = updateMutation.isPending || createMutation.isPending
-  const saveButtonText = isSaving
+  const isSubmitDisabled = isSaving || isResolvingMap
+  const saveButtonText = isResolvingMap
+    ? "Finding map..."
+    : isSaving
     ? "Saving..."
     : isNewCenter
       ? "Create Center"
       : "Save Changes"
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const resolveMapCoordinates = async (value: string) => {
+    if (!value.trim()) return null
+
+    const directCoordinates = extractGoogleMapsCoordinates(value)
+    if (directCoordinates) {
+      setFormData((prev) => ({
+        ...prev,
+        latitude: directCoordinates.latitude,
+        longitude: directCoordinates.longitude,
+      }))
+      setMapMessage("Coordinates found.")
+      return directCoordinates
+    }
+
+    setIsResolvingMap(true)
+    setMapMessage("Finding coordinates...")
+
+    try {
+      const result = await resolveGoogleMapsCoordinates({ data: { value } })
+      if (result.coordinates) {
+        setFormData((prev) => ({
+          ...prev,
+          latitude: result.coordinates!.latitude,
+          longitude: result.coordinates!.longitude,
+        }))
+        setMapMessage("Coordinates found from Google Maps link.")
+        return result.coordinates
+      }
+
+      setMapMessage("Could not find coordinates from this link.")
+      return null
+    } catch {
+      setMapMessage("Could not resolve this Google Maps link.")
+      return null
+    } finally {
+      setIsResolvingMap(false)
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!formData.dialysisCenterName.trim()) {
@@ -243,12 +288,30 @@ function CenterEditPage() {
       return
     }
 
+    let submitData = formData
+    if (
+      formData.googleMapsEmbed.trim() &&
+      (formData.latitude == null || formData.longitude == null)
+    ) {
+      const coordinates = await resolveMapCoordinates(formData.googleMapsEmbed)
+      if (!coordinates) {
+        toast.error("Could not find map coordinates")
+        return
+      }
+
+      submitData = {
+        ...formData,
+        latitude: coordinates.latitude,
+        longitude: coordinates.longitude,
+      }
+    }
+
     if (isNewCenter) {
-      createMutation.mutate(formData)
+      createMutation.mutate(submitData)
       return
     }
 
-    updateMutation.mutate(formData)
+    updateMutation.mutate(submitData)
   }
 
   const handleInputChange = (
@@ -269,6 +332,13 @@ function CenterEditPage() {
       latitude: coordinates?.latitude ?? null,
       longitude: coordinates?.longitude ?? null,
     }))
+    setMapMessage(
+      coordinates
+        ? "Coordinates found."
+        : value.trim()
+          ? "Paste a Google Maps share link, embed, or coordinates."
+          : ""
+    )
   }
 
   if (centerLoading) {
@@ -307,7 +377,7 @@ function CenterEditPage() {
             <Button
               type="submit"
               form="center-form"
-              disabled={isSaving}
+              disabled={isSubmitDisabled}
               className="hidden h-10 gap-2 px-4 sm:inline-flex"
             >
               <Save className="size-4" />
@@ -542,13 +612,21 @@ function CenterEditPage() {
                     name="googleMapsEmbed"
                     value={formData.googleMapsEmbed}
                     onChange={handleGoogleMapsEmbedChange}
-                    placeholder="Paste Google Maps iframe or embed URL"
+                    onBlur={() => {
+                      if (
+                        formData.googleMapsEmbed.trim() &&
+                        (formData.latitude == null || formData.longitude == null)
+                      ) {
+                        void resolveMapCoordinates(formData.googleMapsEmbed)
+                      }
+                    }}
+                    placeholder="Paste Google Maps share link, iframe, or coordinates"
                     rows={4}
                   />
                   <p className="text-sm text-muted-foreground">
                     {formData.latitude != null && formData.longitude != null
                       ? `Waze coordinates: ${formData.latitude}, ${formData.longitude}`
-                      : "Paste embed to auto-fill Waze coordinates."}
+                      : mapMessage || "Paste a Google Maps link to auto-fill Waze coordinates."}
                   </p>
                 </Field>
                 <div className="grid gap-4 md:grid-cols-2">
@@ -772,7 +850,7 @@ function CenterEditPage() {
         <Button
           type="submit"
           form="center-form"
-          disabled={isSaving}
+          disabled={isSubmitDisabled}
           className="h-11 w-full gap-2"
         >
           <Save className="size-4" />

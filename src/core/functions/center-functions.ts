@@ -14,6 +14,10 @@ import {
   revalidatePublicCenterQuietly,
   type PublicCenterRevalidationInput,
 } from "@/lib/public-site-revalidation"
+import {
+  extractGoogleMapsCoordinates,
+  extractGoogleMapsUrl,
+} from "@/lib/google-maps-embed"
 import { getUserRole } from "@/lib/user-role"
 
 function slugifyCenterName(name: string) {
@@ -97,6 +101,53 @@ export const getCurrentUserRole = createServerFn({ method: "GET" })
     const { session } = context
     const role = await getUserRole(session.user.id)
     return { role }
+  })
+
+const ResolveGoogleMapsCoordinatesSchema = z.object({
+  value: z.string().trim().min(1).max(10000),
+})
+
+function isAllowedGoogleMapsUrl(value: string) {
+  try {
+    const url = new URL(value)
+    const hostname = url.hostname.toLowerCase()
+
+    if (hostname === "maps.app.goo.gl") return true
+    if (hostname === "goo.gl") return url.pathname.startsWith("/maps")
+    if (hostname === "maps.google.com") return true
+    if (hostname === "www.google.com" || hostname === "google.com") {
+      return url.pathname.startsWith("/maps")
+    }
+  } catch {
+    return false
+  }
+
+  return false
+}
+
+export const resolveGoogleMapsCoordinates = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .inputValidator(ResolveGoogleMapsCoordinatesSchema)
+  .handler(async ({ data }) => {
+    const directCoordinates = extractGoogleMapsCoordinates(data.value)
+    if (directCoordinates) {
+      return { coordinates: directCoordinates }
+    }
+
+    const url = extractGoogleMapsUrl(data.value)
+    if (!url || !isAllowedGoogleMapsUrl(url)) {
+      return { coordinates: null }
+    }
+
+    const response = await fetch(url, {
+      redirect: "follow",
+      headers: {
+        "user-agent": "Mozilla/5.0",
+      },
+    })
+
+    const coordinates = extractGoogleMapsCoordinates(response.url)
+    return { coordinates }
   })
 
 export const getCentersForUser = createServerFn({ method: "GET" })

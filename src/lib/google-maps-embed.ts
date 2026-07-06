@@ -42,6 +42,12 @@ function toValidCoordinates(latitude: number, longitude: number) {
   return null
 }
 
+export function extractGoogleMapsUrl(value: string) {
+  const src = extractSrc(value)
+  const urlMatch = src.match(/https?:\/\/[^\s"'<>]+/i)
+  return urlMatch?.[0] ?? null
+}
+
 export function extractGoogleMapsCoordinates(value: string): MapCoordinates | null {
   const src = extractSrc(value)
   const candidates = [src, tryDecode(src)]
@@ -57,6 +63,16 @@ export function extractGoogleMapsCoordinates(value: string): MapCoordinates | nu
       if (coordinates) return coordinates
     }
 
+    const placeDataMatch = candidate.match(
+      new RegExp(`!3d(${NUMBER_PATTERN})!4d(${NUMBER_PATTERN})`)
+    )
+    if (placeDataMatch) {
+      const latitude = Number(placeDataMatch[1])
+      const longitude = Number(placeDataMatch[2])
+      const coordinates = toValidCoordinates(latitude, longitude)
+      if (coordinates) return coordinates
+    }
+
     const atMatch = candidate.match(
       new RegExp(`@(${NUMBER_PATTERN}),(${NUMBER_PATTERN})`)
     )
@@ -68,7 +84,9 @@ export function extractGoogleMapsCoordinates(value: string): MapCoordinates | nu
     }
 
     const queryMatch = candidate.match(
-      new RegExp(`[?&](?:q|query)=(${NUMBER_PATTERN}),(${NUMBER_PATTERN})`)
+      new RegExp(
+        `[?&](?:q|query|ll|center|destination|daddr)=(${NUMBER_PATTERN}),(${NUMBER_PATTERN})`
+      )
     )
     if (queryMatch) {
       const latitude = Number(queryMatch[1])
