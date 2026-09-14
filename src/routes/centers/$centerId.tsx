@@ -6,6 +6,7 @@ import {
   getCenterById,
   createCenter,
   updateCenter,
+  deleteCenter,
   getStates,
   getCurrentUserRole,
   resolveGoogleMapsCoordinates,
@@ -56,8 +57,20 @@ import {
   Save,
   Settings2,
   Stethoscope,
+  Trash2,
   Users,
 } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 export const Route = createFileRoute("/centers/$centerId")({
   component: CenterEditPage,
@@ -208,6 +221,17 @@ function CenterEditPage() {
     onError: (error) => {
       toast.error(error.message || "Failed to update center")
     },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteCenter({ data: { id: centerId } }),
+    onSuccess: async () => {
+      toast.success("Center deleted")
+      await queryClient.invalidateQueries({ queryKey: ["centers"] })
+      await queryClient.invalidateQueries({ queryKey: ["allCenters"] })
+      navigate({ to: "/dashboard" })
+    },
+    onError: (error) => toast.error(error.message || "Failed to delete center"),
   })
 
   const createMutation = useMutation({
@@ -374,6 +398,40 @@ function CenterEditPage() {
                 {formData.dialysisCenterName || "Dialysis center details"}
               </p>
             </div>
+            {!isNewCenter && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="size-10 shrink-0 text-destructive hover:text-destructive"
+                    aria-label="Delete center"
+                    disabled={deleteMutation.isPending}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete this center?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This permanently removes {formData.dialysisCenterName || "this center"} along
+                      with its images, FAQs, operating hours and intake leads. This cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      variant="destructive"
+                      onClick={() => deleteMutation.mutate()}
+                    >
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
             <Button
               type="submit"
               form="center-form"

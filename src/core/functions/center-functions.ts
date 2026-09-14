@@ -435,3 +435,46 @@ export const getStates = createServerFn({ method: "GET" })
   .handler(async () => {
     return await db.select().from(state).orderBy(state.name)
   })
+
+const DeleteCenterSchema = z.object({
+  id: z.string().min(1),
+})
+
+export const deleteCenter = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .inputValidator(DeleteCenterSchema)
+  .handler(async ({ context, data }) => {
+    const { session } = context
+    const userId = session.user.id
+    const userRole = await getUserRole(userId)
+    await ensureAdminDatabaseSchema()
+
+    if (userRole !== "superadmin") {
+      const [access] = await db
+        .select()
+        .from(userCenterAccess)
+        .where(
+          and(
+            eq(userCenterAccess.userId, userId),
+            eq(userCenterAccess.dialysisCenterId, data.id)
+          )
+        )
+        .limit(1)
+
+      if (!access) {
+        throw new Error("Access denied")
+      }
+    }
+
+    const beforeCenter = await getPublicCenterSnapshot(data.id)
+
+    if (!beforeCenter) {
+      throw new Error("Center not found")
+    }
+
+    await db.delete(dialysisCenter).where(eq(dialysisCenter.id, data.id))
+
+    await revalidatePublicCenterChange({ before: beforeCenter })
+
+    return { success: true }
+  })
