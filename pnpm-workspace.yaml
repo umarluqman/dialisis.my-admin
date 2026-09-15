@@ -3,3 +3,5 @@ allowBuilds:
   msw: set this to true or false
   sharp: set this to true or false
   workerd: set this to true or false
+overrides:
+  seroval: ">=1.6.7"
