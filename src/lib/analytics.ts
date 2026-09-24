@@ -8,7 +8,7 @@ export function toMytDay(ms: number) {
   return new Date(ms + MYT_OFFSET_MS).toISOString().slice(0, 10)
 }
 
-function toDbDate(ms: number) {
+export function toDbDate(ms: number) {
   return new Date(ms).toISOString().replace("Z", "+00:00")
 }
 
@@ -24,6 +24,22 @@ export function getAnalyticsRange(period: AnalyticsPeriod, now = Date.now()) {
     days: Array.from({ length: period }, (_, index) =>
       toMytDay(startMs + index * DAY_MS)
     ),
+  }
+}
+
+export function clampRange(
+  range: ReturnType<typeof getAnalyticsRange>,
+  trackedSince: string
+) {
+  const trackedMs = Date.parse(trackedSince)
+  const sinceMs = Math.max(Date.parse(range.since), trackedMs)
+  const previousMs = Date.parse(range.previousSince)
+
+  return {
+    since: toDbDate(sinceMs),
+    previousSince: toDbDate(Math.max(previousMs, trackedMs)),
+    startDay: toMytDay(sinceMs),
+    comparable: previousMs >= trackedMs,
   }
 }
 

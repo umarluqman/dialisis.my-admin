@@ -28,14 +28,15 @@ export function LeadsView() {
         (v ?? "").toLowerCase().includes(query)
       )
   )
+  const counted = matching.filter((lead) => lead.quality !== "test")
   const counts = Object.fromEntries(LEAD_STATUSES.map((s) => [s, 0])) as Record<LeadStatus, number>
-  for (const lead of matching) counts[toLeadStatus(lead.status)]++
+  for (const lead of counted) counts[toLeadStatus(lead.status)]++
   const filtered = search.status
     ? matching.filter((lead) => toLeadStatus(lead.status) === search.status)
     : matching
 
   const chips: { value: LeadStatus | undefined; label: string; count: number }[] = [
-    { value: undefined, label: "All", count: matching.length },
+    { value: undefined, label: "All", count: counted.length },
     ...LEAD_STATUSES.map((s) => ({ value: s, label: LEAD_STATUS_LABELS[s], count: counts[s] })),
   ]
 

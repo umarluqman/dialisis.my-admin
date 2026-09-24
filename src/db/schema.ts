@@ -216,6 +216,8 @@ export const intakeLead = sqliteTable(
       mode: "timestamp_ms",
     }).notNull(),
     viewedAt: integer("viewedAt", { mode: "timestamp_ms" }),
+    status: text("status").default("new").notNull(),
+    statusUpdatedAt: text("statusUpdatedAt"),
     createdAt: integer("createdAt", { mode: "timestamp_ms" })
       .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
       .notNull(),

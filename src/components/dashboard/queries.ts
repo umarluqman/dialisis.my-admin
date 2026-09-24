@@ -4,7 +4,10 @@ import {
   getCurrentUserRole,
 } from "@/core/functions/center-functions"
 import { getAllCenters } from "@/core/functions/invitation-functions"
-import { getIntakeLeads } from "@/core/functions/intake-lead-functions"
+import {
+  getFollowUpLeads,
+  getIntakeLeads,
+} from "@/core/functions/intake-lead-functions"
 
 export const userRoleQuery = (userId: string | undefined) =>
   queryOptions({
@@ -28,4 +31,9 @@ export const LEAD_LIMIT = 100
 export const intakeLeadsQuery = queryOptions({
   queryKey: ["intakeLeads"],
   queryFn: () => getIntakeLeads({ data: { limit: LEAD_LIMIT } }),
+})
+
+export const followUpLeadsQuery = queryOptions({
+  queryKey: ["followUpLeads"],
+  queryFn: () => getFollowUpLeads(),
 })

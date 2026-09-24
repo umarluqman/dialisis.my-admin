@@ -6,6 +6,24 @@ const dayFormat = new Intl.DateTimeFormat("en-MY", {
   month: "short",
 })
 
+const mytDateTimeFormat = new Intl.DateTimeFormat("en-US", {
+  timeZone: "Asia/Kuala_Lumpur",
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+})
+
+export function formatMytDateTime(iso: string) {
+  const part = Object.fromEntries(
+    mytDateTimeFormat
+      .formatToParts(new Date(iso))
+      .map(({ type, value }) => [type, value])
+  )
+  return `${part.day} ${part.month} ${part.year}, ${part.hour}:${part.minute} ${part.dayPeriod}`
+}
+
 export function formatNumber(value: number) {
   return numberFormat.format(value)
 }

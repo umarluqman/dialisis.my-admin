@@ -8,15 +8,17 @@ import { AnalyticsView } from "@/components/analytics/analytics-view"
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar"
 import { CentersView } from "@/components/dashboard/centers-view"
 import { LeadsView } from "@/components/dashboard/leads-view"
+import { FollowUpView } from "@/components/dashboard/follow-up-view"
 import { InvitationsView } from "@/components/dashboard/invitations-view"
 import {
   centersQuery,
+  followUpLeadsQuery,
   intakeLeadsQuery,
   userRoleQuery,
 } from "@/components/dashboard/queries"
 import { LEAD_STATUSES, toLeadStatus } from "@/components/intake-lead-list"
 
-const DASHBOARD_TABS = ["analytics", "centers", "leads", "invitations"] as const
+const DASHBOARD_TABS = ["analytics", "centers", "leads", "follow-up", "invitations"] as const
 export type DashboardTab = (typeof DASHBOARD_TABS)[number]
 
 const searchSchema = z.object({
@@ -38,6 +40,7 @@ const TAB_TITLES: Record<DashboardTab, string> = {
   analytics: "Analytics",
   centers: "Dialysis Centers",
   leads: "Intake Leads",
+  "follow-up": "Needs follow-up",
   invitations: "Invitations",
 }
 
@@ -48,17 +51,22 @@ function DashboardPage() {
   const { data: userRole } = useQuery(userRoleQuery(session?.user?.id))
   const { data: centers } = useQuery({ ...centersQuery, enabled: !!session })
   const { data: leads } = useQuery({ ...intakeLeadsQuery, enabled: !!session })
+  const { data: followUpLeads } = useQuery({ ...followUpLeadsQuery, enabled: !!session })
 
   const isSuperadmin = userRole?.role === "superadmin"
   const tab =
     requestedTab === "invitations" && !isSuperadmin ? "analytics" : requestedTab
   const newLeadCount =
-    leads?.filter((lead) => toLeadStatus(lead.status) === "new").length ?? 0
+    leads?.filter(
+      (lead) => toLeadStatus(lead.status) === "new" && lead.quality !== "test"
+    ).length ?? 0
+  const followUpCount = followUpLeads?.length ?? 0
 
   const context: Record<DashboardTab, string | null> = {
     analytics: null,
     centers: centers ? `${centers.length} ${centers.length === 1 ? "center" : "centers"}` : null,
     leads: leads ? `${newLeadCount} new · ${leads.length} latest` : null,
+    "follow-up": followUpLeads ? `${followUpCount} to contact` : null,
     invitations: "Invite a PIC to manage centers",
   }
 
@@ -82,6 +90,7 @@ function DashboardPage() {
         user={session.user}
         role={userRole?.role}
         newLeadCount={newLeadCount}
+        followUpCount={followUpCount}
       />
       <SidebarInset>
         <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-3 border-b bg-background/95 px-4 backdrop-blur">
@@ -100,6 +109,7 @@ function DashboardPage() {
           {tab === "analytics" && <AnalyticsView />}
           {tab === "centers" && <CentersView isSuperadmin={isSuperadmin} />}
           {tab === "leads" && <LeadsView />}
+          {tab === "follow-up" && <FollowUpView />}
           {tab === "invitations" && <InvitationsView />}
         </div>
       </SidebarInset>

@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils"
 import { formatDay, formatNumber } from "./format"
 
-type Point = { day: string; value: number }
+type Point = { day: string; value: number | null }
 
 export function TrendChart({
   title,
@@ -14,9 +14,13 @@ export function TrendChart({
   points: Point[]
   barClassName: string
 }) {
-  const max = Math.max(...points.map((point) => point.value), 0)
-  const total = points.reduce((sum, point) => sum + point.value, 0)
-  const peak = points.find((point) => point.value === max)
+  const tracked = points.filter(
+    (point): point is { day: string; value: number } => point.value !== null
+  )
+  const untracked = points.length - tracked.length
+  const max = Math.max(...tracked.map((point) => point.value), 0)
+  const total = tracked.reduce((sum, point) => sum + point.value, 0)
+  const peak = tracked.find((point) => point.value === max)
   const summary =
     max === 0
       ? `${title}: no data in this period.`
@@ -38,7 +42,16 @@ export function TrendChart({
           points.length > 40 ? "gap-px" : "gap-1"
         )}
       >
-        {points.map((point) => (
+        {untracked > 0 && (
+          <div
+            title={`${formatDay(points[0].day)} – ${formatDay(points[untracked - 1].day)}: not tracked yet`}
+            className="flex h-full items-center justify-center overflow-hidden rounded-t-[3px] bg-muted/60 bg-[repeating-linear-gradient(135deg,var(--border)_0_1px,transparent_1px_7px)] px-1 text-center text-[11px] text-muted-foreground"
+            style={{ flexGrow: untracked, flexBasis: 0 }}
+          >
+            Not tracked yet
+          </div>
+        )}
+        {tracked.map((point) => (
           <div
             key={point.day}
             title={`${formatDay(point.day)}: ${formatNumber(point.value)} ${unit}`}

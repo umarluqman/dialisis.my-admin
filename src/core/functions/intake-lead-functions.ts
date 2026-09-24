@@ -1,11 +1,13 @@
 import { createServerFn } from "@tanstack/react-start"
 import { z } from "zod"
-import { and, desc, eq, inArray, sql, type SQL } from "drizzle-orm"
+import { and, desc, eq, inArray, not, sql, type SQL } from "drizzle-orm"
 import { db } from "@/db/connection"
 import { ensureAdminDatabaseSchema } from "@/db/ensure-schema"
 import { dialysisCenter, intakeLead, userCenterAccess } from "@/db/schema"
 import { authMiddleware } from "@/lib/middleware"
 import { getUserRole } from "@/lib/user-role"
+import { toDbDate } from "@/lib/analytics"
+import { getLeadQuality, leadDuplicateKey, testLeadSql } from "@/lib/lead-quality"
 
 async function getAccessibleCenterIds(userId: string) {
   const rows = await db
@@ -40,8 +42,24 @@ const leadFields = {
   picNotificationError: intakeLead.picNotificationError,
   accessExpiresAt: intakeLead.accessExpiresAt,
   viewedAt: intakeLead.viewedAt,
-  status: sql<string>`"IntakeLead"."status"`,
+  status: intakeLead.status,
   createdAt: intakeLead.createdAt,
+}
+
+function withQuality<T extends {
+  dialysisCenterId: string
+  phoneNumber: string
+  fullName: string
+  additionalNotes: string | null
+  status: string
+  createdAt: Date
+}>(lead: T, now: number) {
+  const scored = { ...lead, createdAt: lead.createdAt.toISOString() }
+  return {
+    ...lead,
+    quality: getLeadQuality(scored, now),
+    duplicateKey: leadDuplicateKey(scored),
+  }
 }
 
 export const getIntakeLeads = createServerFn({ method: "GET" })
@@ -50,6 +68,7 @@ export const getIntakeLeads = createServerFn({ method: "GET" })
   .handler(async ({ context, data }) => {
     await ensureAdminDatabaseSchema()
 
+    const now = Date.now()
     const { session } = context
     const userId = session.user.id
     const userRole = await getUserRole(userId)
@@ -74,7 +93,7 @@ export const getIntakeLeads = createServerFn({ method: "GET" })
     }
 
     if (conditions.length > 0) {
-      return await db
+      const rows = await db
         .select(leadFields)
         .from(intakeLead)
         .innerJoin(
@@ -84,9 +103,10 @@ export const getIntakeLeads = createServerFn({ method: "GET" })
         .where(and(...conditions))
         .orderBy(desc(intakeLead.createdAt))
         .limit(data.limit)
+      return rows.map((lead) => withQuality(lead, now))
     }
 
-    return await db
+    const rows = await db
       .select(leadFields)
       .from(intakeLead)
       .innerJoin(
@@ -95,4 +115,83 @@ export const getIntakeLeads = createServerFn({ method: "GET" })
       )
       .orderBy(desc(intakeLead.createdAt))
       .limit(data.limit)
+    return rows.map((lead) => withQuality(lead, now))
+  })
+
+export const getFollowUpLeads = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .handler(async ({ context }) => {
+    await ensureAdminDatabaseSchema()
+
+    const userId = context.session.user.id
+    const conditions: SQL[] = [eq(intakeLead.status, "new"), not(testLeadSql)]
+
+    if ((await getUserRole(userId)) !== "superadmin") {
+      const accessibleCenterIds = await getAccessibleCenterIds(userId)
+      if (accessibleCenterIds.length === 0) return []
+      conditions.push(inArray(intakeLead.dialysisCenterId, accessibleCenterIds))
+    }
+
+    const rows = await db
+      .select(leadFields)
+      .from(intakeLead)
+      .innerJoin(
+        dialysisCenter,
+        eq(intakeLead.dialysisCenterId, dialysisCenter.id)
+      )
+      .where(and(...conditions))
+      .orderBy(desc(intakeLead.createdAt))
+
+    const now = Date.now()
+    const groups = new Map<
+      string,
+      ReturnType<typeof withQuality<(typeof rows)[number]>> & { ids: string[] }
+    >()
+    for (const row of rows) {
+      const lead = withQuality(row, now)
+      const group = groups.get(lead.duplicateKey)
+      if (group) group.ids.push(lead.id)
+      else groups.set(lead.duplicateKey, { ...lead, ids: [lead.id] })
+    }
+
+    return [...groups.values()].flatMap((lead) =>
+      lead.quality === "invalid" || lead.quality === "stale"
+        ? [{ ...lead, reason: lead.quality }]
+        : []
+    )
+  })
+
+export const updateIntakeLeadStatus = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .inputValidator(
+    z.object({
+      ids: z.array(z.string().min(1)).min(1).max(50),
+      status: z.enum(["contacted", "booked", "rejected"]),
+    })
+  )
+  .handler(async ({ context, data }) => {
+    await ensureAdminDatabaseSchema()
+
+    const userId = context.session.user.id
+    const leads = await db
+      .select({ centerId: intakeLead.dialysisCenterId })
+      .from(intakeLead)
+      .where(inArray(intakeLead.id, data.ids))
+
+    if (leads.length !== new Set(data.ids).size) {
+      throw new Error("Lead not found")
+    }
+
+    if ((await getUserRole(userId)) !== "superadmin") {
+      const accessibleCenterIds = await getAccessibleCenterIds(userId)
+      if (leads.some((lead) => !accessibleCenterIds.includes(lead.centerId))) {
+        throw new Error("Access denied")
+      }
+    }
+
+    const now = toDbDate(Date.now())
+    await db
+      .update(intakeLead)
+      .set({ status: data.status, statusUpdatedAt: now, updatedAt: sql`${now}` })
+      .where(inArray(intakeLead.id, data.ids))
   })

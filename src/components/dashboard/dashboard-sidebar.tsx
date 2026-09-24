@@ -1,5 +1,12 @@
 import { Link, useNavigate } from "@tanstack/react-router"
-import { BarChart3, Building2, LogOut, MessageCircle, UserPlus } from "lucide-react"
+import {
+  BarChart3,
+  Building2,
+  LogOut,
+  MessageCircle,
+  PhoneCall,
+  UserPlus,
+} from "lucide-react"
 import { signOut } from "@/lib/auth-client"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -22,6 +29,7 @@ const NAV_ITEMS = [
   { tab: "analytics", label: "Analytics", icon: BarChart3 },
   { tab: "centers", label: "Centers", icon: Building2 },
   { tab: "leads", label: "Intake Leads", icon: MessageCircle },
+  { tab: "follow-up", label: "Needs follow-up", icon: PhoneCall },
   { tab: "invitations", label: "Invitations", icon: UserPlus, superadminOnly: true },
 ] as const
 
@@ -30,6 +38,7 @@ type DashboardSidebarProps = {
   user: { name: string; email: string }
   role: "pic" | "superadmin" | undefined
   newLeadCount: number
+  followUpCount: number
 }
 
 export function DashboardSidebar({
@@ -37,6 +46,7 @@ export function DashboardSidebar({
   user,
   role,
   newLeadCount,
+  followUpCount,
 }: DashboardSidebarProps) {
   const navigate = useNavigate()
   const { setOpenMobile } = useSidebar()
@@ -77,6 +87,14 @@ export function DashboardSidebar({
                     aria-label={`${newLeadCount} new leads`}
                   >
                     {newLeadCount}
+                  </SidebarMenuBadge>
+                )}
+                {tab === "follow-up" && followUpCount > 0 && (
+                  <SidebarMenuBadge
+                    className="bg-destructive/10 text-destructive"
+                    aria-label={`${followUpCount} leads need follow-up`}
+                  >
+                    {followUpCount}
                   </SidebarMenuBadge>
                 )}
               </SidebarMenuItem>

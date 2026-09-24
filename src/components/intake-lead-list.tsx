@@ -14,6 +14,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
+import type { LeadQuality } from "@/lib/lead-quality"
 import { cn } from "@/lib/utils"
 
 export const LEAD_STATUSES = ["new", "contacted", "booked", "rejected"] as const
@@ -57,6 +58,8 @@ export type IntakeLeadListItem = {
   viewedAt: Date | string | number | null
   status: string
   createdAt: Date | string | number
+  quality: LeadQuality
+  duplicateKey: string
 }
 
 const PAGE_SIZE = 25
@@ -90,7 +93,7 @@ function toDate(value: Date | string | number | null) {
   return Number.isNaN(date.getTime()) ? null : date
 }
 
-function formatDate(value: Date | string | number) {
+export function formatDate(value: Date | string | number) {
   const date = toDate(value)
   return date ? dateFormatter.format(date) : "-"
 }
@@ -100,7 +103,7 @@ function formatDateTime(value: Date | string | number | null) {
   return date ? dateTimeFormatter.format(date) : "-"
 }
 
-function formatAge(value: Date | string | number) {
+export function formatAge(value: Date | string | number) {
   const date = toDate(value)
   if (!date) return "-"
   const minutes = Math.max(0, Math.floor((Date.now() - date.getTime()) / 60000))
@@ -142,6 +145,12 @@ export function IntakeLeadList({
 }: IntakeLeadListProps) {
   const [visible, setVisible] = useState(PAGE_SIZE)
   const gridCols = showCenter ? GRID_WITH_CENTER : GRID_WITHOUT_CENTER
+  const seenKeys = new Set<string>()
+  const duplicateIds = new Set<string>()
+  for (const lead of leads) {
+    if (seenKeys.has(lead.duplicateKey)) duplicateIds.add(lead.id)
+    seenKeys.add(lead.duplicateKey)
+  }
 
   if (leads.length === 0) {
     return (
@@ -174,6 +183,7 @@ export function IntakeLeadList({
               lead={lead}
               showCenter={showCenter}
               gridCols={gridCols}
+              isDuplicate={duplicateIds.has(lead.id)}
             />
           ))}
         </ul>
@@ -196,14 +206,16 @@ function IntakeLeadRow({
   lead,
   showCenter,
   gridCols,
+  isDuplicate,
 }: {
   lead: IntakeLeadListItem
   showCenter: boolean
   gridCols: string
+  isDuplicate: boolean
 }) {
   const status = toLeadStatus(lead.status)
-  const isNew = status === "new"
-  const notificationIssue = getNotificationDescription(lead)
+  const isTest = lead.quality === "test"
+  const isNew = status === "new" && !isTest
   const notificationFailed = lead.picNotificationStatus.startsWith("failed")
 
   return (
@@ -218,10 +230,10 @@ function IntakeLeadRow({
           <CollapsibleTrigger className="flex min-w-0 flex-1 items-center gap-3 px-3 py-3 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset sm:px-4">
             <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]/lead:rotate-180" />
             <div className={cn("min-w-0 flex-1 sm:grid sm:items-center sm:gap-4", gridCols)}>
-              <div className="flex min-w-0 items-center gap-2">
+              <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                 <span
                   className={cn(
-                    "truncate text-sm",
+                    "max-w-full truncate text-sm",
                     isNew ? "font-semibold" : "font-medium"
                   )}
                 >
@@ -232,6 +244,20 @@ function IntakeLeadRow({
                     className="size-4 shrink-0 text-destructive"
                     aria-label="PIC email failed"
                   />
+                )}
+                {isTest ? (
+                  <Badge variant="outline" className="text-muted-foreground">Test</Badge>
+                ) : (
+                  lead.quality === "invalid" && (
+                    <Badge variant="outline" title="Submitted before the lead delivery fix on 24 Sep 2026">
+                      Before fix
+                    </Badge>
+                  )
+                )}
+                {isDuplicate && (
+                  <Badge variant="outline" className="text-muted-foreground" title="Same phone submitted to this center earlier the same day">
+                    Duplicate
+                  </Badge>
                 )}
               </div>
               {showCenter && (
@@ -279,57 +305,67 @@ function IntakeLeadRow({
         </div>
 
         <CollapsibleContent className="border-t bg-muted/30 px-4 py-4 text-sm sm:pl-11">
-          <dl className="grid gap-3 sm:grid-cols-3">
-            <Detail label="Phone">
-              <a className="underline-offset-4 hover:underline" href={`tel:${lead.phoneNumber}`}>
-                {lead.phoneNumber}
-              </a>
-            </Detail>
-            <Detail label="MyKad">{lead.myKadNumber}</Detail>
-            <Detail label="Submitted">{formatDateTime(lead.createdAt)}</Detail>
-            <Detail label="Address" className="sm:col-span-2">
-              {lead.homeAddress}
-            </Detail>
-            <Detail label="PIC viewed">
-              {lead.viewedAt ? formatDateTime(lead.viewedAt) : "Not yet"}
-            </Detail>
-            {lead.additionalNotes && (
-              <Detail label="Notes" className="sm:col-span-3">
-                {lead.additionalNotes}
-              </Detail>
-            )}
-          </dl>
-          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-muted-foreground">
-            {lead.labResultOriginalName && (
-              <span className="inline-flex items-center gap-1">
-                <FileText className="size-4" />
-                {lead.labResultOriginalName}
-              </span>
-            )}
-            <span>Lead link expires {formatDateTime(lead.accessExpiresAt)}</span>
-            <Button asChild size="sm" className="ml-auto">
-              <a href={lead.whatsappHandoffUrl} target="_blank" rel="noreferrer">
-                <MessageCircle />
-                WhatsApp
-                <ExternalLink />
-              </a>
-            </Button>
-          </div>
-          {notificationIssue && (
-            <p
-              className={cn(
-                "mt-3",
-                lead.picNotificationStatus === "pending"
-                  ? "text-muted-foreground"
-                  : "text-destructive"
-              )}
-            >
-              {notificationIssue}
-            </p>
-          )}
+          <IntakeLeadDetails lead={lead} />
         </CollapsibleContent>
       </li>
     </Collapsible>
+  )
+}
+
+export function IntakeLeadDetails({ lead }: { lead: IntakeLeadListItem }) {
+  const notificationIssue = getNotificationDescription(lead)
+
+  return (
+    <>
+      <dl className="grid gap-3 sm:grid-cols-3">
+        <Detail label="Phone">
+          <a className="underline-offset-4 hover:underline" href={`tel:${lead.phoneNumber}`}>
+            {lead.phoneNumber}
+          </a>
+        </Detail>
+        <Detail label="MyKad">{lead.myKadNumber}</Detail>
+        <Detail label="Submitted">{formatDateTime(lead.createdAt)}</Detail>
+        <Detail label="Address" className="sm:col-span-2">
+          {lead.homeAddress}
+        </Detail>
+        <Detail label="PIC viewed">
+          {lead.viewedAt ? formatDateTime(lead.viewedAt) : "Not yet"}
+        </Detail>
+        {lead.additionalNotes && (
+          <Detail label="Notes" className="sm:col-span-3">
+            {lead.additionalNotes}
+          </Detail>
+        )}
+      </dl>
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-muted-foreground">
+        {lead.labResultOriginalName && (
+          <span className="inline-flex items-center gap-1">
+            <FileText className="size-4" />
+            {lead.labResultOriginalName}
+          </span>
+        )}
+        <span>Lead link expires {formatDateTime(lead.accessExpiresAt)}</span>
+        <Button asChild size="sm" className="ml-auto">
+          <a href={lead.whatsappHandoffUrl} target="_blank" rel="noreferrer">
+            <MessageCircle />
+            WhatsApp
+            <ExternalLink />
+          </a>
+        </Button>
+      </div>
+      {notificationIssue && (
+        <p
+          className={cn(
+            "mt-3",
+            lead.picNotificationStatus === "pending"
+              ? "text-muted-foreground"
+              : "text-destructive"
+          )}
+        >
+          {notificationIssue}
+        </p>
+      )}
+    </>
   )
 }
 

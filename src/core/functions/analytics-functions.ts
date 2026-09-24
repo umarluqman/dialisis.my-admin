@@ -22,7 +22,20 @@ import {
 import { ensureAdminDatabaseSchema } from "@/db/ensure-schema"
 import { authMiddleware } from "@/lib/middleware"
 import { getUserRole } from "@/lib/user-role"
-import { describeSourcePage, getAnalyticsRange } from "@/lib/analytics"
+import {
+  clampRange,
+  describeSourcePage,
+  getAnalyticsRange,
+  toDbDate,
+} from "@/lib/analytics"
+import {
+  CONTACTS_TRACKED_SINCE,
+  LEAD_FIX_AT,
+  leadDuplicateKeySql,
+  STALE_AFTER_MS,
+  testLeadSql,
+  VIEWS_TRACKED_SINCE,
+} from "@/lib/lead-quality"
 
 const PeriodSchema = z.union([z.literal(7), z.literal(30), z.literal(90)])
 
@@ -35,6 +48,7 @@ type AnalyticsMetrics = {
   contactVisitors: number
   leads: number
   booked: number
+  followUp: number
 }
 
 const emptyMetrics = (): AnalyticsMetrics => ({
@@ -46,6 +60,7 @@ const emptyMetrics = (): AnalyticsMetrics => ({
   contactVisitors: 0,
   leads: 0,
   booked: 0,
+  followUp: 0,
 })
 
 function addMetrics(
@@ -107,9 +122,31 @@ const contactFields = {
   directions: total(sql`${contactClick.kind} = 'directions'`),
 }
 
-const leadFields = {
-  leads: count(),
-  booked: total(sql`status = 'booked'`),
+function getLeadQuery(since: string) {
+  const stale = sql`status = 'new' and ${intakeLead.createdAt} < ${toDbDate(Date.now() - STALE_AFTER_MS)}`
+  const uniqueLeads = (condition: ReturnType<typeof sql>) =>
+    sql<number>`count(distinct case when ${condition} then ${leadDuplicateKeySql} end)`.mapWith(
+      Number
+    )
+
+  return {
+    fields: {
+      leads: uniqueLeads(sql`not (${stale})`),
+      booked: uniqueLeads(sql`status = 'booked'`),
+      followUp: uniqueLeads(stale),
+    },
+    where: sql`${intakeLead.createdAt} >= ${since} and not ${testLeadSql}`,
+  }
+}
+
+function getTrackedRanges(period: z.infer<typeof PeriodSchema>) {
+  const range = getAnalyticsRange(period)
+  return {
+    range,
+    views: clampRange(range, VIEWS_TRACKED_SINCE),
+    contacts: clampRange(range, CONTACTS_TRACKED_SINCE),
+    leads: clampRange(range, LEAD_FIX_AT),
+  }
 }
 
 export const getAnalyticsOverview = createServerFn({ method: "GET" })
@@ -121,7 +158,9 @@ export const getAnalyticsOverview = createServerFn({ method: "GET" })
     await ensureAdminDatabaseSchema()
 
     const scope = await getCenterScope(context.session.user.id, data.centerId)
-    const range = getAnalyticsRange(data.period)
+    const { range, views: viewRange, contacts: contactRange, leads: leadRange } =
+      getTrackedRanges(data.period)
+    const leadQuery = getLeadQuery(leadRange.previousSince)
     const viewDay = mytDay(centerView.createdAt)
     const contactDay = mytDay(contactClick.createdAt)
     const leadDay = mytDay(intakeLead.createdAt)
@@ -133,7 +172,7 @@ export const getAnalyticsOverview = createServerFn({ method: "GET" })
         .where(
           and(
             scope.filter(centerView.dialysisCenterId),
-            gte(centerView.createdAt, range.previousSince)
+            gte(centerView.createdAt, viewRange.previousSince)
           )
         )
         .groupBy(viewDay),
@@ -149,19 +188,14 @@ export const getAnalyticsOverview = createServerFn({ method: "GET" })
         .where(
           and(
             scope.filter(contactClick.dialysisCenterId),
-            gte(contactClick.createdAt, range.previousSince)
+            gte(contactClick.createdAt, contactRange.previousSince)
           )
         )
         .groupBy(contactDay),
       db
-        .select({ day: leadDay, ...leadFields })
+        .select({ day: leadDay, ...leadQuery.fields })
         .from(intakeLead)
-        .where(
-          and(
-            scope.filter(intakeLead.dialysisCenterId),
-            sql`${intakeLead.createdAt} >= ${range.previousSince}`
-          )
-        )
+        .where(and(scope.filter(intakeLead.dialysisCenterId), leadQuery.where))
         .groupBy(leadDay),
       db
         .select({ path: contactClick.sourcePage, value: count() })
@@ -169,7 +203,7 @@ export const getAnalyticsOverview = createServerFn({ method: "GET" })
         .where(
           and(
             scope.filter(contactClick.dialysisCenterId),
-            gte(contactClick.createdAt, range.since),
+            gte(contactClick.createdAt, contactRange.since),
             isNotNull(contactClick.sourcePage)
           )
         )
@@ -213,7 +247,17 @@ export const getAnalyticsOverview = createServerFn({ method: "GET" })
     }
 
     return {
-      days: range.days,
+      startDay: contactRange.startDay,
+      endDay: range.days[range.days.length - 1],
+      trackedSince: {
+        views: VIEWS_TRACKED_SINCE,
+        contacts: CONTACTS_TRACKED_SINCE,
+      },
+      comparable: {
+        views: viewRange.comparable,
+        contacts: contactRange.comparable,
+        leads: leadRange.comparable,
+      },
       hasData: views.length + contacts.length + leads.length > 0,
       current,
       previous,
@@ -221,8 +265,11 @@ export const getAnalyticsOverview = createServerFn({ method: "GET" })
         const metrics = byDay.get(day)!
         return {
           day,
-          views: metrics.views,
-          contacts: metrics.call + metrics.whatsapp + metrics.directions,
+          views: day >= viewRange.startDay ? metrics.views : null,
+          contacts:
+            day >= contactRange.startDay
+              ? metrics.call + metrics.whatsapp + metrics.directions
+              : null,
         }
       }),
       sources: Array.from(sources.values())
@@ -239,7 +286,8 @@ export const getAnalyticsBranches = createServerFn({ method: "GET" })
 
     const userId = context.session.user.id
     const scope = await getCenterScope(userId)
-    const { since } = getAnalyticsRange(data.period)
+    const ranges = getTrackedRanges(data.period)
+    const leadQuery = getLeadQuery(ranges.leads.since)
 
     const [centers, views, contacts, leads] = await Promise.all([
       db
@@ -260,7 +308,7 @@ export const getAnalyticsBranches = createServerFn({ method: "GET" })
         .where(
           and(
             scope.filter(centerView.dialysisCenterId),
-            gte(centerView.createdAt, since)
+            gte(centerView.createdAt, ranges.views.since)
           )
         )
         .groupBy(centerView.dialysisCenterId),
@@ -276,19 +324,14 @@ export const getAnalyticsBranches = createServerFn({ method: "GET" })
         .where(
           and(
             scope.filter(contactClick.dialysisCenterId),
-            gte(contactClick.createdAt, since)
+            gte(contactClick.createdAt, ranges.contacts.since)
           )
         )
         .groupBy(contactClick.dialysisCenterId),
       db
-        .select({ centerId: intakeLead.dialysisCenterId, ...leadFields })
+        .select({ centerId: intakeLead.dialysisCenterId, ...leadQuery.fields })
         .from(intakeLead)
-        .where(
-          and(
-            scope.filter(intakeLead.dialysisCenterId),
-            sql`${intakeLead.createdAt} >= ${since}`
-          )
-        )
+        .where(and(scope.filter(intakeLead.dialysisCenterId), leadQuery.where))
         .groupBy(intakeLead.dialysisCenterId),
     ])
 

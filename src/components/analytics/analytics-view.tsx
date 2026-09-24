@@ -1,6 +1,8 @@
 import { useRef, useState, type ReactNode } from "react"
 import { useQuery } from "@tanstack/react-query"
+import { Link } from "@tanstack/react-router"
 import { ArrowLeft, ExternalLink } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -11,7 +13,13 @@ import {
 import { ANALYTICS_PERIODS, type AnalyticsPeriod } from "@/lib/analytics"
 import { cn } from "@/lib/utils"
 import { BranchList } from "./branch-list"
-import { contactRate, formatDay, formatNumber, formatRate } from "./format"
+import {
+  contactRate,
+  formatDay,
+  formatMytDateTime,
+  formatNumber,
+  formatRate,
+} from "./format"
 import { TrendChart } from "./trend-chart"
 
 const PUBLIC_SITE_URL = "https://www.dialisis.my"
@@ -84,6 +92,25 @@ export function AnalyticsView() {
 
   return (
     <div ref={topRef} className="scroll-mt-20 space-y-4">
+      {overview && (
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+          <Badge variant="outline" className="bg-card">
+            New feature
+          </Badge>
+          <span>
+            Page views tracked since{" "}
+            <span className="text-foreground tabular-nums">
+              {formatMytDateTime(overview.trackedSince.views)}
+            </span>
+            {" · "}
+            Contacts and leads since{" "}
+            <span className="text-foreground tabular-nums">
+              {formatMytDateTime(overview.trackedSince.contacts)}
+            </span>{" "}
+            (Malaysia time).
+          </span>
+        </p>
+      )}
       <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div className="min-w-0">
           {selected && isChain && (
@@ -107,7 +134,7 @@ export function AnalyticsView() {
                   ? [selected.town, selected.state].filter(Boolean).join(", ")
                   : `${formatNumber(branches.length)} centers`}
                 {overview &&
-                  ` · ${formatDay(overview.days[0])} – ${formatDay(overview.days[overview.days.length - 1])}`}
+                  ` · ${formatDay(overview.startDay)}${overview.startDay < overview.endDay ? ` – ${formatDay(overview.endDay)}` : ""}`}
               </p>
             </>
           ) : (
@@ -172,8 +199,10 @@ export function AnalyticsView() {
       <p className="max-w-3xl text-xs text-muted-foreground">
         Each visitor is counted once per center per day (Malaysia time). Page
         views include repeat visits on the same day; contacts count once per
-        visitor, method and day. Today is included, so its numbers are still
-        growing.
+        visitor, method and day. Intake leads exclude test submissions and
+        leads still marked new after 48 hours, and repeat forms from the same
+        phone on the same day count once. Today is included, so its numbers
+        are still growing.
       </p>
     </div>
   )
@@ -188,13 +217,14 @@ function Overview({
   overview: OverviewData
   period: AnalyticsPeriod
 }) {
-  const { current, previous } = overview
+  const { current, previous, comparable } = overview
   const contacts = current.call + current.whatsapp + current.directions
   const previousContacts =
     previous.call + previous.whatsapp + previous.directions
   const rate = contactRate(current.contactVisitors, current.visitors)
   const previousRate = contactRate(previous.contactVisitors, previous.visitors)
   const rateChange = Math.round((rate - previousRate) * 1000) / 10
+  const rateComparable = comparable.views && comparable.contacts
   const contactKinds = [
     { label: "WhatsApp", short: "WhatsApp", value: current.whatsapp },
     { label: "Phone call", short: "Call", value: current.call },
@@ -207,13 +237,19 @@ function Overview({
     <>
       <section aria-label="Summary">
         <p className="mb-2 text-sm text-muted-foreground">
-          Compared with the previous {period} days
+          {comparable.views
+            ? `Compared with the previous ${period} days`
+            : `Change vs the previous ${period} days appears once there's enough history`}
         </p>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
           <Kpi
             label="Page views"
             value={formatNumber(current.views)}
-            delta={<Delta current={current.views} previous={previous.views} />}
+            delta={
+              comparable.views && (
+                <Delta current={current.views} previous={previous.views} />
+              )
+            }
           >
             Times the center page was opened.
           </Kpi>
@@ -221,7 +257,9 @@ function Overview({
             label="Unique visitors"
             value={formatNumber(current.visitors)}
             delta={
-              <Delta current={current.visitors} previous={previous.visitors} />
+              comparable.views && (
+                <Delta current={current.visitors} previous={previous.visitors} />
+              )
             }
           >
             Different people viewing, per day.
@@ -229,7 +267,11 @@ function Overview({
           <Kpi
             label="Contacts"
             value={formatNumber(contacts)}
-            delta={<Delta current={contacts} previous={previousContacts} />}
+            delta={
+              comparable.contacts && (
+                <Delta current={contacts} previous={previousContacts} />
+              )
+            }
           >
             <span className="flex flex-wrap gap-x-3">
               {contactKinds.map((kind) => (
@@ -246,6 +288,7 @@ function Overview({
             label="Contact rate"
             value={formatRate(rate)}
             delta={
+              rateComparable &&
               previous.visitors > 0 && (
                 <DeltaText
                   change={rateChange}
@@ -260,12 +303,26 @@ function Overview({
             label="Intake leads"
             className="col-span-2 lg:col-span-1"
             value={formatNumber(current.leads)}
-            delta={<Delta current={current.leads} previous={previous.leads} />}
+            delta={
+              comparable.leads && (
+                <Delta current={current.leads} previous={previous.leads} />
+              )
+            }
           >
             <span className="tabular-nums text-foreground">
               {formatNumber(current.booked)}
             </span>{" "}
             booked
+            {current.followUp > 0 && (
+              <Link
+                to="/dashboard"
+                search={{ tab: "follow-up" }}
+                className="mt-1 block text-xs underline underline-offset-2 hover:text-foreground"
+              >
+                Excludes {formatNumber(current.followUp)} awaiting{" "}
+                <span className="whitespace-nowrap">follow-up</span>
+              </Link>
+            )}
           </Kpi>
         </div>
       </section>
