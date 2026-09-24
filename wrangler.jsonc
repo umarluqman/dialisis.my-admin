@@ -7,7 +7,7 @@
   "vars": {
     "MY_VAR": "Hello from Cloudflare",
     "VITE_BASE_URL": "https://admin.dialisis.my",
-    "BOOTSTRAP_SUPERADMIN_EMAILS": "umarluqman.78@gmail.com"
+    "BOOTSTRAP_SUPERADMIN_EMAILS": "umarluqman.78@gmail.com,hitamsemut79@gmail.com"
   },
   "env": {
     "preview": {
