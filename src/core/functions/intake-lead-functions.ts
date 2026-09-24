@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start"
 import { z } from "zod"
-import { and, desc, eq, inArray, type SQL } from "drizzle-orm"
+import { and, desc, eq, inArray, sql, type SQL } from "drizzle-orm"
 import { db } from "@/db/connection"
 import { ensureAdminDatabaseSchema } from "@/db/ensure-schema"
 import { dialysisCenter, intakeLead, userCenterAccess } from "@/db/schema"
@@ -40,6 +40,7 @@ const leadFields = {
   picNotificationError: intakeLead.picNotificationError,
   accessExpiresAt: intakeLead.accessExpiresAt,
   viewedAt: intakeLead.viewedAt,
+  status: sql<string>`"IntakeLead"."status"`,
   createdAt: intakeLead.createdAt,
 }
 
