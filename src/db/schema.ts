@@ -3,6 +3,7 @@ import {
   text,
   integer,
   index,
+  uniqueIndex,
   real,
 } from "drizzle-orm/sqlite-core"
 import { sql, relations } from "drizzle-orm"
@@ -271,6 +272,55 @@ export const invitation = sqliteTable(
     index("invitation_token_idx").on(table.token),
     index("invitation_email_idx").on(table.email),
     index("invitation_createdBy_idx").on(table.createdBy),
+  ]
+)
+
+export const centerView = sqliteTable(
+  "CenterView",
+  {
+    id: text("id").primaryKey(),
+    dialysisCenterId: text("dialysisCenterId")
+      .notNull()
+      .references(() => dialysisCenter.id, { onDelete: "cascade" }),
+    visitorKey: text("visitorKey").notNull(),
+    count: integer("count").default(1).notNull(),
+    createdAt: text("createdAt").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  },
+  (table) => [
+    uniqueIndex("CenterView_dialysisCenterId_visitorKey_key").on(
+      table.dialysisCenterId,
+      table.visitorKey
+    ),
+    index("CenterView_dialysisCenterId_createdAt_idx").on(
+      table.dialysisCenterId,
+      table.createdAt
+    ),
+  ]
+)
+
+export const contactClick = sqliteTable(
+  "ContactClick",
+  {
+    id: text("id").primaryKey(),
+    dialysisCenterId: text("dialysisCenterId")
+      .notNull()
+      .references(() => dialysisCenter.id, { onDelete: "cascade" }),
+    kind: text("kind", { enum: ["call", "whatsapp", "directions"] }).notNull(),
+    visitorKey: text("visitorKey").notNull(),
+    count: integer("count").default(1).notNull(),
+    sourcePage: text("sourcePage"),
+    createdAt: text("createdAt").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  },
+  (table) => [
+    uniqueIndex("ContactClick_dialysisCenterId_kind_visitorKey_key").on(
+      table.dialysisCenterId,
+      table.kind,
+      table.visitorKey
+    ),
+    index("ContactClick_dialysisCenterId_createdAt_idx").on(
+      table.dialysisCenterId,
+      table.createdAt
+    ),
   ]
 )
 

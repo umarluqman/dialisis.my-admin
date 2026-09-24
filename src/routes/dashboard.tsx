@@ -1,174 +1,66 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router"
-import { signOut, useSession } from "@/lib/auth-client"
-import { Button } from "@/components/ui/button"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import { useQuery } from "@tanstack/react-query"
+import { z } from "zod"
+import { useSession } from "@/lib/auth-client"
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+import { Separator } from "@/components/ui/separator"
+import { AnalyticsView } from "@/components/analytics/analytics-view"
+import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar"
+import { CentersView } from "@/components/dashboard/centers-view"
+import { LeadsView } from "@/components/dashboard/leads-view"
+import { InvitationsView } from "@/components/dashboard/invitations-view"
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { useQuery, useMutation } from "@tanstack/react-query"
-import {
-  getCentersForUser,
-  getCurrentUserRole,
-} from "@/core/functions/center-functions"
-import {
-  getAllCenters,
-  createInvitation,
-} from "@/core/functions/invitation-functions"
-import { getIntakeLeads } from "@/core/functions/intake-lead-functions"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Label } from "@/components/ui/label"
-import { Input } from "@/components/ui/input"
-import { IntakeLeadList } from "@/components/intake-lead-list"
-import { useState } from "react"
-import { toast } from "sonner"
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarHeader,
-  SidebarFooter,
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar"
-import { Building2, MessageCircle, UserPlus, Search, LogOut } from "lucide-react"
+  centersQuery,
+  intakeLeadsQuery,
+  userRoleQuery,
+} from "@/components/dashboard/queries"
+import { LEAD_STATUSES, toLeadStatus } from "@/components/intake-lead-list"
+
+const DASHBOARD_TABS = ["analytics", "centers", "leads", "invitations"] as const
+export type DashboardTab = (typeof DASHBOARD_TABS)[number]
+
+const searchSchema = z.object({
+  tab: z.enum(DASHBOARD_TABS).optional().catch(undefined),
+  q: z.string().optional().catch(undefined),
+  state: z.string().optional().catch(undefined),
+  sector: z.string().optional().catch(undefined),
+  featured: z.boolean().optional().catch(undefined),
+  sort: z.enum(["asc", "desc"]).optional().catch(undefined),
+  status: z.enum(LEAD_STATUSES).optional().catch(undefined),
+})
 
 export const Route = createFileRoute("/dashboard")({
+  validateSearch: (search) => searchSchema.parse(search),
   component: DashboardPage,
 })
 
+const TAB_TITLES: Record<DashboardTab, string> = {
+  analytics: "Analytics",
+  centers: "Dialysis Centers",
+  leads: "Intake Leads",
+  invitations: "Invitations",
+}
+
 function DashboardPage() {
   const navigate = useNavigate()
+  const { tab: requestedTab = "analytics" } = Route.useSearch()
   const { data: session, isPending: sessionPending } = useSession()
-  const [activeTab, setActiveTab] = useState<"centers" | "leads" | "invitations">("centers")
-  const [searchQuery, setSearchQuery] = useState("")
-  const [leadSearchQuery, setLeadSearchQuery] = useState("")
-  const [inviteSearchQuery, setInviteSearchQuery] = useState("")
-  const [inviteEmail, setInviteEmail] = useState("")
-  const [selectedCenters, setSelectedCenters] = useState<string[]>([])
-  const [generatedLink, setGeneratedLink] = useState<string | null>(null)
+  const { data: userRole } = useQuery(userRoleQuery(session?.user?.id))
+  const { data: centers } = useQuery({ ...centersQuery, enabled: !!session })
+  const { data: leads } = useQuery({ ...intakeLeadsQuery, enabled: !!session })
 
-  const { data: userRole } = useQuery({
-    queryKey: ["userRole", session?.user?.id],
-    queryFn: () => getCurrentUserRole(),
-    enabled: !!session,
-  })
+  const isSuperadmin = userRole?.role === "superadmin"
+  const tab =
+    requestedTab === "invitations" && !isSuperadmin ? "analytics" : requestedTab
+  const newLeadCount =
+    leads?.filter((lead) => toLeadStatus(lead.status) === "new").length ?? 0
 
-  const { data: allCenters, isLoading: allCentersLoading } = useQuery({
-    queryKey: ["allCenters"],
-    queryFn: () => getAllCenters(),
-    enabled: userRole?.role === "superadmin",
-  })
-
-  const {
-    data: centers,
-    isLoading: centersLoading,
-    error: centersError,
-  } = useQuery({
-    queryKey: ["centers"],
-    queryFn: () => getCentersForUser(),
-    enabled: !!session,
-  })
-
-  const {
-    data: intakeLeads,
-    isLoading: intakeLeadsLoading,
-    error: intakeLeadsError,
-  } = useQuery({
-    queryKey: ["intakeLeads"],
-    queryFn: () => getIntakeLeads({ data: { limit: 50 } }),
-    enabled: !!session,
-  })
-
-  const createInvitationMutation = useMutation({
-    mutationFn: (data: { email: string; centerIds: string[] }) =>
-      createInvitation({ data: { ...data, expiresInDays: 7 } }),
-    onSuccess: (data) => {
-      const link = `${window.location.origin}/auth/sign-up?invite=${data.token}`
-      setGeneratedLink(link)
-      toast.success("Invitation link generated successfully")
-    },
-    onError: (error) => {
-      toast.error(error.message || "Failed to generate invitation")
-    },
-  })
-
-  const handleGenerateLink = () => {
-    if (!inviteEmail.trim()) {
-      toast.error("Please enter the PIC email")
-      return
-    }
-    if (selectedCenters.length === 0) {
-      toast.error("Please select at least one center")
-      return
-    }
-    createInvitationMutation.mutate({
-      email: inviteEmail,
-      centerIds: selectedCenters,
-    })
+  const context: Record<DashboardTab, string | null> = {
+    analytics: null,
+    centers: centers ? `${centers.length} ${centers.length === 1 ? "center" : "centers"}` : null,
+    leads: leads ? `${newLeadCount} new · ${leads.length} latest` : null,
+    invitations: "Invite a PIC to manage centers",
   }
-
-  const handleCopyLink = async () => {
-    if (!generatedLink) return
-    await navigator.clipboard.writeText(generatedLink)
-    toast.success("Link copied to clipboard")
-  }
-
-  const toggleCenter = (centerId: string) => {
-    setSelectedCenters((prev) =>
-      prev.includes(centerId)
-        ? prev.filter((id) => id !== centerId)
-        : [...prev, centerId]
-    )
-    setGeneratedLink(null)
-  }
-
-  const handleInviteEmailChange = (value: string) => {
-    setInviteEmail(value)
-    setGeneratedLink(null)
-  }
-
-  const handleSignOut = async () => {
-    await signOut()
-    navigate({ to: "/auth/sign-in" })
-  }
-
-  const centersList = Array.isArray(centers) ? centers : []
-  const allCentersList = Array.isArray(allCenters) ? allCenters : []
-  const intakeLeadsList = Array.isArray(intakeLeads) ? intakeLeads : []
-
-  const filteredCenters = centersList.filter((center) => {
-    const query = searchQuery.toLowerCase()
-    return (
-      (center.dialysisCenterName ?? "").toLowerCase().includes(query) ||
-      (center.town ?? "").toLowerCase().includes(query) ||
-      (center.address ?? "").toLowerCase().includes(query)
-    )
-  })
-
-  const filteredIntakeLeads = intakeLeadsList.filter((lead) => {
-    const query = leadSearchQuery.toLowerCase()
-    return (
-      (lead.fullName ?? "").toLowerCase().includes(query) ||
-      (lead.centerName ?? "").toLowerCase().includes(query) ||
-      (lead.phoneNumber ?? "").toLowerCase().includes(query) ||
-      (lead.myKadNumber ?? "").toLowerCase().includes(query)
-    )
-  })
-
-  const activeTabTitle =
-    activeTab === "centers"
-      ? "Dialysis Centers"
-      : activeTab === "leads"
-        ? "Intake Leads"
-        : "Generate Invitations"
 
   if (sessionPending) {
     return (
@@ -185,332 +77,30 @@ function DashboardPage() {
 
   return (
     <SidebarProvider>
-      <Sidebar className="border-r">
-        <SidebarHeader>
-          <h2 className="px-2 text-lg font-semibold">Menu</h2>
-        </SidebarHeader>
-        <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupLabel>Navigation</SidebarGroupLabel>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  isActive={activeTab === "centers"}
-                  onClick={() => setActiveTab("centers")}
-                >
-                  <Building2 />
-                  <span>Dialysis Centers</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  isActive={activeTab === "leads"}
-                  onClick={() => setActiveTab("leads")}
-                >
-                  <MessageCircle />
-                  <span>Intake Leads</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              {userRole?.role === "superadmin" && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    isActive={activeTab === "invitations"}
-                    onClick={() => setActiveTab("invitations")}
-                  >
-                    <UserPlus />
-                    <span>Invitations</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
-            </SidebarMenu>
-          </SidebarGroup>
-        </SidebarContent>
-        <SidebarFooter>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton onClick={handleSignOut}>
-                <LogOut />
-                <span>Sign Out</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarFooter>
-      </Sidebar>
+      <DashboardSidebar
+        activeTab={tab}
+        user={session.user}
+        role={userRole?.role}
+        newLeadCount={newLeadCount}
+      />
       <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+        <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-3 border-b bg-background/95 px-4 backdrop-blur">
           <SidebarTrigger className="-ml-1" />
-          <div className="flex-1">
-            <h1 className="text-xl font-semibold">
-              {activeTabTitle}
-            </h1>
+          <Separator orientation="vertical" className="data-[orientation=vertical]:h-5 data-[orientation=vertical]:self-center" />
+          <div className="flex min-w-0 items-baseline gap-3">
+            <h1 className="truncate text-base font-semibold">{TAB_TITLES[tab]}</h1>
+            {context[tab] && (
+              <span className="truncate text-sm text-muted-foreground tabular-nums">
+                {context[tab]}
+              </span>
+            )}
           </div>
         </header>
-        <div className="flex flex-1 flex-col gap-4 p-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Welcome back!</CardTitle>
-              <CardDescription>
-                You are signed in as {session.user?.name} ({session.user?.email})
-              </CardDescription>
-            </CardHeader>
-          </Card>
-
-          {activeTab === "centers" ? (
-            <div className="space-y-4">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder="Search centers by name, town, or address..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
-                {userRole?.role === "superadmin" && (
-                  <Button asChild>
-                    <Link
-                      to="/centers/$centerId"
-                      params={{ centerId: "new" }}
-                    >
-                      Add Center
-                    </Link>
-                  </Button>
-                )}
-              </div>
-
-              {centersError ? (
-                <Card>
-                  <CardContent className="py-8 text-center">
-                    <p className="text-destructive">
-                      {centersError.message || "Failed to load dialysis centers."}
-                    </p>
-                  </CardContent>
-                </Card>
-              ) : centersLoading ? (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {[...Array(3)].map((_, i) => (
-                    <Card key={i} className="animate-pulse">
-                      <CardHeader>
-                        <div className="h-5 w-3/4 rounded bg-muted" />
-                        <div className="h-4 w-1/2 rounded bg-muted" />
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2">
-                          <div className="h-4 w-full rounded bg-muted" />
-                          <div className="h-4 w-2/3 rounded bg-muted" />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              ) : !filteredCenters.length ? (
-                <Card>
-                  <CardContent className="py-8 text-center">
-                    <p className="text-muted-foreground">
-                      {searchQuery
-                        ? "No centers match your search."
-                        : "No dialysis centers assigned to you yet."}
-                    </p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {filteredCenters.map((center) => (
-                    <Link
-                      key={center.id}
-                      to="/centers/$centerId"
-                      params={{ centerId: center.id }}
-                      className="block transition-transform hover:scale-[1.02]"
-                    >
-                      <Card className="h-full cursor-pointer overflow-hidden transition-shadow hover:ring-2 hover:ring-primary/20">
-                        {center.featured && center.images?.[0] && (
-                          <div className="relative aspect-video w-full overflow-hidden">
-                            <img
-                              src={center.images[0].url}
-                              alt={center.images[0].altText || center.dialysisCenterName || "Dialysis center"}
-                              className="h-full w-full object-cover"
-                            />
-                          </div>
-                        )}
-                        <CardHeader>
-                          <CardTitle className="line-clamp-1">
-                            {center.dialysisCenterName || "Unnamed center"}
-                          </CardTitle>
-                          <CardDescription className="flex items-center gap-2">
-                            <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-medium">
-                              {center.sector || "Center"}
-                            </span>
-                            {center.featured && (
-                              <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                                Featured
-                              </span>
-                            )}
-                            {center.state?.name && (
-                              <span className="text-xs">{center.state.name}</span>
-                            )}
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-1 text-sm text-muted-foreground">
-                            <p className="line-clamp-1">{center.town}</p>
-                            <p className="line-clamp-2">{center.address}</p>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-          ) : activeTab === "leads" ? (
-            <div className="space-y-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Search leads by patient, center, phone, or MyKad..."
-                  value={leadSearchQuery}
-                  onChange={(e) => setLeadSearchQuery(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-
-              {intakeLeadsError ? (
-                <Card>
-                  <CardContent className="py-8 text-center">
-                    <p className="text-destructive">
-                      {intakeLeadsError.message || "Failed to load intake leads."}
-                    </p>
-                  </CardContent>
-                </Card>
-              ) : intakeLeadsLoading ? (
-                <div className="space-y-3">
-                  {[...Array(3)].map((_, i) => (
-                    <div
-                      key={i}
-                      className="h-36 animate-pulse rounded-lg border bg-muted/30"
-                    />
-                  ))}
-                </div>
-              ) : (
-                <IntakeLeadList
-                  leads={filteredIntakeLeads}
-                  emptyMessage={
-                    leadSearchQuery
-                      ? "No intake leads match your search."
-                      : "No intake leads yet."
-                  }
-                />
-              )}
-            </div>
-          ) : (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  Generate PIC Invitation
-                  {selectedCenters.length > 0 && (
-                    <span className="rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">
-                      {selectedCenters.length} selected
-                    </span>
-                  )}
-                </CardTitle>
-                <CardDescription>
-                  Select centers to assign to the new PIC user
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="inviteEmail">PIC Email</Label>
-                  <Input
-                    id="inviteEmail"
-                    type="email"
-                    placeholder="pic@example.com"
-                    value={inviteEmail}
-                    onChange={(e) => handleInviteEmailChange(e.target.value)}
-                  />
-                </div>
-
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder="Search centers..."
-                    value={inviteSearchQuery}
-                    onChange={(e) => setInviteSearchQuery(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
-                {allCentersLoading ? (
-                  <div className="space-y-2">
-                    {[...Array(3)].map((_, i) => (
-                      <div
-                        key={i}
-                        className="h-6 w-full animate-pulse rounded bg-muted"
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="max-h-64 space-y-2 overflow-y-auto">
-                    {allCentersList
-                      .filter((center) => {
-                        const query = inviteSearchQuery.toLowerCase()
-                        return (
-                          (center.dialysisCenterName ?? "").toLowerCase().includes(query) ||
-                          (center.town ?? "").toLowerCase().includes(query) ||
-                          (center.stateName ?? "").toLowerCase().includes(query)
-                        )
-                      })
-                      .map((center) => (
-                        <div key={center.id} className="flex items-center gap-3">
-                          <Checkbox
-                            id={center.id}
-                            checked={selectedCenters.includes(center.id)}
-                            onCheckedChange={() => toggleCenter(center.id)}
-                          />
-                          <Label
-                            htmlFor={center.id}
-                            className="cursor-pointer text-sm"
-                          >
-                            {center.dialysisCenterName}
-                            {center.stateName && (
-                              <span className="ml-2 text-muted-foreground">
-                                ({center.stateName})
-                              </span>
-                            )}
-                          </Label>
-                        </div>
-                      ))}
-                  </div>
-                )}
-
-                <div className="flex gap-2">
-                  <Button
-                    onClick={handleGenerateLink}
-                    disabled={
-                      !inviteEmail.trim() ||
-                      selectedCenters.length === 0 ||
-                      createInvitationMutation.isPending
-                    }
-                  >
-                    {createInvitationMutation.isPending
-                      ? "Generating..."
-                      : "Generate Link"}
-                  </Button>
-                </div>
-
-                {generatedLink && (
-                  <div className="space-y-2">
-                    <Label>Invitation Link</Label>
-                    <div className="flex gap-2">
-                      <Input value={generatedLink} readOnly className="flex-1" />
-                      <Button variant="outline" onClick={handleCopyLink}>
-                        Copy
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+        <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">
+          {tab === "analytics" && <AnalyticsView />}
+          {tab === "centers" && <CentersView isSuperadmin={isSuperadmin} />}
+          {tab === "leads" && <LeadsView />}
+          {tab === "invitations" && <InvitationsView />}
         </div>
       </SidebarInset>
     </SidebarProvider>
