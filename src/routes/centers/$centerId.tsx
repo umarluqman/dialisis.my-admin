@@ -56,6 +56,7 @@ import {
   Clock,
   CreditCard,
   FileQuestion,
+  ListChecks,
   MapPin,
   MessageCircle,
   Phone,
@@ -115,6 +116,10 @@ type CenterFormData = {
   hepatitisBay: string
   benefits: string
   featured: boolean
+  fees: string
+  sessionSlots: string
+  languages: string
+  panels: string
   whatsappPicName: string
   whatsappPicPhoneNumber: string
 }
@@ -145,6 +150,10 @@ const EMPTY_CENTER_FORM_DATA: CenterFormData = {
   hepatitisBay: "",
   benefits: "",
   featured: false,
+  fees: "",
+  sessionSlots: "",
+  languages: "",
+  panels: "",
   whatsappPicName: "",
   whatsappPicPhoneNumber: "",
 }
@@ -208,6 +217,10 @@ function CenterEditPage() {
         hepatitisBay: center.hepatitisBay ?? "",
         benefits: center.benefits ?? "",
         featured: center.featured ?? false,
+        fees: center.fees ?? "",
+        sessionSlots: center.sessionSlots ?? "",
+        languages: center.languages ?? "",
+        panels: center.panels ?? "",
         whatsappPicName: center.whatsappPicName ?? "",
         whatsappPicPhoneNumber: center.whatsappPicPhoneNumber ?? "",
       })
@@ -856,6 +869,68 @@ function CenterEditPage() {
                     rows={3}
                   />
                 </Field>
+              </FieldGroup>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="gap-2 px-4 py-4 sm:px-6">
+              <div className="flex items-center gap-3">
+                <ListChecks className="size-5 text-primary" />
+                <div>
+                  <CardTitle className="text-base sm:text-lg">Listing Details</CardTitle>
+                  <CardDescription>What families ask before they call</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
+              <FieldGroup className="gap-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Field>
+                    <FieldLabel htmlFor="fees">Fees</FieldLabel>
+                    <Textarea
+                      id="fees"
+                      name="fees"
+                      value={formData.fees}
+                      onChange={handleInputChange}
+                      placeholder="e.g., RM180 per session, EPO extra"
+                      rows={3}
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="sessionSlots">Session Slots</FieldLabel>
+                    <Textarea
+                      id="sessionSlots"
+                      name="sessionSlots"
+                      value={formData.sessionSlots}
+                      onChange={handleInputChange}
+                      placeholder="e.g., Morning 7am, Afternoon 12pm, Evening 5pm"
+                      rows={3}
+                    />
+                  </Field>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Field>
+                    <FieldLabel htmlFor="languages">Languages Spoken</FieldLabel>
+                    <Input
+                      id="languages"
+                      name="languages"
+                      value={formData.languages}
+                      onChange={handleInputChange}
+                      placeholder="e.g., Malay, English, Mandarin, Tamil"
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="panels">Panels Accepted</FieldLabel>
+                    <Input
+                      id="panels"
+                      name="panels"
+                      value={formData.panels}
+                      onChange={handleInputChange}
+                      placeholder="e.g., PERKESO, JPA, AIA"
+                    />
+                  </Field>
+                </div>
               </FieldGroup>
             </CardContent>
           </Card>

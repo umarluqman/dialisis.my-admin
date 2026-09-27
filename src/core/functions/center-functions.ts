@@ -290,6 +290,10 @@ const CreateCenterSchema = z.object({
   hepatitisBay: z.string(),
   benefits: z.string(),
   featured: z.boolean().default(false),
+  fees: z.string().default(""),
+  sessionSlots: z.string().default(""),
+  languages: z.string().default(""),
+  panels: z.string().default(""),
   whatsappPicName: z.string().default(""),
   whatsappPicPhoneNumber: z.string().default(""),
 })
@@ -337,6 +341,10 @@ export const createCenter = createServerFn({ method: "POST" })
       hepatitisBay: data.hepatitisBay,
       benefits: data.benefits,
       featured: data.featured,
+      fees: data.fees.trim() || null,
+      sessionSlots: data.sessionSlots.trim() || null,
+      languages: data.languages.trim() || null,
+      panels: data.panels.trim() || null,
       whatsappPicName: data.whatsappPicName.trim() || null,
       whatsappPicPhoneNumber: data.whatsappPicPhoneNumber.trim() || null,
     })
@@ -375,6 +383,10 @@ const UpdateCenterSchema = z.object({
     town: z.string().optional(),
     stateId: z.string().min(1).optional(),
     featured: z.boolean().optional(),
+    fees: z.string().nullable().optional(),
+    sessionSlots: z.string().nullable().optional(),
+    languages: z.string().nullable().optional(),
+    panels: z.string().nullable().optional(),
     whatsappPicName: z.string().nullable().optional(),
     whatsappPicPhoneNumber: z.string().nullable().optional(),
   }),
@@ -412,8 +424,16 @@ export const updateCenter = createServerFn({ method: "POST" })
       ...data.data,
     }
 
-    if ("googleMapsEmbed" in updateData) {
-      updateData.googleMapsEmbed = updateData.googleMapsEmbed?.trim() || null
+    for (const key of [
+      "googleMapsEmbed",
+      "fees",
+      "sessionSlots",
+      "languages",
+      "panels",
+    ] as const) {
+      if (key in updateData) {
+        updateData[key] = updateData[key]?.trim() || null
+      }
     }
 
     if (userRole !== "superadmin") {
