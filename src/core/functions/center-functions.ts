@@ -1,12 +1,13 @@
 import { createServerFn } from "@tanstack/react-start"
 import { z } from "zod"
-import { eq, and, inArray, ne, count } from "drizzle-orm"
+import { eq, and, inArray, ne, count, lte, gt } from "drizzle-orm"
 import { db } from "@/db/connection"
 import {
   dialysisCenter,
   userCenterAccess,
   state,
   centerImage,
+  featuredSlot,
 } from "@/db/schema"
 import { ensureAdminDatabaseSchema } from "@/db/ensure-schema"
 import { authMiddleware } from "@/lib/middleware"
@@ -138,22 +139,37 @@ export const getCentersForUser = createServerFn({ method: "GET" })
 
     const centerIds = centersData.map((row) => row.DialysisCenter.id)
 
-    const images =
+    const now = toDbDate(Date.now())
+    const [images, activeSlots] =
       centerIds.length > 0
-        ? await db
-            .select()
-            .from(centerImage)
-            .where(
-              and(
-                eq(centerImage.isActive, true),
-                inArray(centerImage.dialysisCenterId, centerIds)
+        ? await Promise.all([
+            db
+              .select()
+              .from(centerImage)
+              .where(
+                and(
+                  eq(centerImage.isActive, true),
+                  inArray(centerImage.dialysisCenterId, centerIds)
+                )
               )
-            )
-            .orderBy(centerImage.displayOrder)
-        : []
+              .orderBy(centerImage.displayOrder),
+            db
+              .select({ centerId: featuredSlot.dialysisCenterId })
+              .from(featuredSlot)
+              .where(
+                and(
+                  inArray(featuredSlot.dialysisCenterId, centerIds),
+                  lte(featuredSlot.startsAt, now),
+                  gt(featuredSlot.endsAt, now)
+                )
+              ),
+          ])
+        : [[], []]
+    const featuredIds = new Set(activeSlots.map((slot) => slot.centerId))
 
     return centersData.map((row) => ({
       ...row.DialysisCenter,
+      featuredNow: featuredIds.has(row.DialysisCenter.id),
       state: row.State,
       images: images.filter(
         (img) => img.dialysisCenterId === row.DialysisCenter.id
@@ -240,7 +256,6 @@ const CreateCenterSchema = z.object({
   units: z.string(),
   hepatitisBay: z.string(),
   benefits: z.string(),
-  featured: z.boolean().default(false),
   fees: z.string().default(""),
   sessionSlots: z.string().default(""),
   languages: z.string().default(""),
@@ -291,7 +306,6 @@ export const createCenter = createServerFn({ method: "POST" })
       units: data.units,
       hepatitisBay: data.hepatitisBay,
       benefits: data.benefits,
-      featured: data.featured,
       fees: data.fees.trim() || null,
       sessionSlots: data.sessionSlots.trim() || null,
       languages: data.languages.trim() || null,
@@ -333,7 +347,6 @@ const UpdateCenterSchema = z.object({
     benefits: z.string().nullable().optional(),
     town: z.string().optional(),
     stateId: z.string().min(1).optional(),
-    featured: z.boolean().optional(),
     fees: z.string().nullable().optional(),
     sessionSlots: z.string().nullable().optional(),
     languages: z.string().nullable().optional(),
@@ -385,10 +398,6 @@ export const updateCenter = createServerFn({ method: "POST" })
       if (key in updateData) {
         updateData[key] = updateData[key]?.trim() || null
       }
-    }
-
-    if (userRole !== "superadmin") {
-      delete updateData.featured
     }
 
     await db

@@ -39,16 +39,15 @@ export function CentersView({ isSuperadmin }: { isSuperadmin: boolean }) {
             (v ?? "").toLowerCase().includes(query)
           )) &&
         (!search.state || c.state?.name === search.state) &&
-        (!search.sector || c.sector === search.sector) &&
-        (!search.featured || c.featured)
+        (!search.sector || c.sector === search.sector)
     )
     .sort((a, b) =>
       (a.dialysisCenterName ?? "").localeCompare(b.dialysisCenterName ?? "") *
       (search.sort === "desc" ? -1 : 1)
     )
 
-  const hasFilters = !!(query || search.state || search.sector || search.featured)
-  const filterKey = [query, search.state, search.sector, search.featured, search.sort].join("|")
+  const hasFilters = !!(query || search.state || search.sector)
+  const filterKey = [query, search.state, search.sector, search.sort].join("|")
 
   return (
     <div className="space-y-4">
@@ -82,14 +81,6 @@ export function CentersView({ isSuperadmin }: { isSuperadmin: boolean }) {
             />
           )}
           <Button
-            variant={search.featured ? "secondary" : "outline"}
-            className="h-9"
-            aria-pressed={!!search.featured}
-            onClick={() => setSearch({ featured: search.featured ? undefined : true })}
-          >
-            Featured
-          </Button>
-          <Button
             variant="outline"
             size="icon"
             className="size-9"
@@ -120,7 +111,7 @@ export function CentersView({ isSuperadmin }: { isSuperadmin: boolean }) {
             size="sm"
             className="h-auto p-0"
             onClick={() =>
-              setSearch({ q: undefined, state: undefined, sector: undefined, featured: undefined })
+              setSearch({ q: undefined, state: undefined, sector: undefined })
             }
           >
             Clear filters
@@ -201,7 +192,7 @@ function CenterList({ centers }: { centers: Center[] }) {
                           Verified
                         </Badge>
                       )}
-                      {center.featured && <Badge variant="secondary" className="shrink-0">Featured</Badge>}
+                      {center.featuredNow && <Badge variant="secondary" className="shrink-0">Featured</Badge>}
                     </div>
                     <p className="truncate text-xs text-muted-foreground md:hidden">
                       {[location, center.sector].filter(Boolean).join(" · ") || "-"}

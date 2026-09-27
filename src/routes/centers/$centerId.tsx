@@ -61,7 +61,6 @@ import {
   MessageCircle,
   Phone,
   Save,
-  Settings2,
   Stethoscope,
   Trash2,
   Users,
@@ -115,7 +114,6 @@ type CenterFormData = {
   units: string
   hepatitisBay: string
   benefits: string
-  featured: boolean
   fees: string
   sessionSlots: string
   languages: string
@@ -149,7 +147,6 @@ const EMPTY_CENTER_FORM_DATA: CenterFormData = {
   units: "",
   hepatitisBay: "",
   benefits: "",
-  featured: false,
   fees: "",
   sessionSlots: "",
   languages: "",
@@ -216,7 +213,6 @@ function CenterEditPage() {
         units: center.units ?? "",
         hepatitisBay: center.hepatitisBay ?? "",
         benefits: center.benefits ?? "",
-        featured: center.featured ?? false,
         fees: center.fees ?? "",
         sessionSlots: center.sessionSlots ?? "",
         languages: center.languages ?? "",
@@ -934,37 +930,6 @@ function CenterEditPage() {
               </FieldGroup>
             </CardContent>
           </Card>
-
-          {userRole?.role === "superadmin" && (
-            <Card>
-              <CardHeader className="gap-2 px-4 py-4 sm:px-6">
-                <div className="flex items-center gap-3">
-                  <Settings2 className="size-5 text-primary" />
-                  <div>
-                    <CardTitle className="text-base sm:text-lg">Display Settings</CardTitle>
-                    <CardDescription>Control how this center appears on the website</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
-                <Field orientation="horizontal">
-                  <div className="flex items-center gap-3">
-                    <Switch
-                      id="featured"
-                      checked={formData.featured}
-                      onCheckedChange={(checked) =>
-                        setFormData((prev) => ({ ...prev, featured: checked }))
-                      }
-                    />
-                    <Label htmlFor="featured">Featured Center</Label>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Featured centers are highlighted on the homepage
-                  </p>
-                </Field>
-              </CardContent>
-            </Card>
-          )}
         </form>
 
         {isNewCenter ? (

@@ -37,7 +37,6 @@ const searchSchema = z.object({
   q: z.string().optional().catch(undefined),
   state: z.string().optional().catch(undefined),
   sector: z.string().optional().catch(undefined),
-  featured: z.boolean().optional().catch(undefined),
   sort: z.enum(["asc", "desc"]).optional().catch(undefined),
   status: z.enum(LEAD_STATUSES).optional().catch(undefined),
 })
