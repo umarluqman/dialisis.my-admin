@@ -11,6 +11,7 @@ import { LeadsView } from "@/components/dashboard/leads-view"
 import { FollowUpView } from "@/components/dashboard/follow-up-view"
 import { InvitationsView } from "@/components/dashboard/invitations-view"
 import { FeaturedView } from "@/components/dashboard/featured-view"
+import { SalesView } from "@/components/dashboard/sales-view"
 import {
   centersQuery,
   followUpLeadsQuery,
@@ -25,10 +26,11 @@ const DASHBOARD_TABS = [
   "leads",
   "follow-up",
   "featured",
+  "sales",
   "invitations",
 ] as const
 export type DashboardTab = (typeof DASHBOARD_TABS)[number]
-const SUPERADMIN_TABS: DashboardTab[] = ["featured", "invitations"]
+const SUPERADMIN_TABS: DashboardTab[] = ["featured", "sales", "invitations"]
 
 const searchSchema = z.object({
   tab: z.enum(DASHBOARD_TABS).optional().catch(undefined),
@@ -51,6 +53,7 @@ const TAB_TITLES: Record<DashboardTab, string> = {
   leads: "Intake Leads",
   "follow-up": "Needs follow-up",
   featured: "Featured slots",
+  sales: "Sales pipeline",
   invitations: "Invitations",
 }
 
@@ -78,6 +81,7 @@ function DashboardPage() {
     leads: leads ? `${newLeadCount} new · ${leads.length} latest` : null,
     "follow-up": followUpLeads ? `${followUpCount} to contact` : null,
     featured: "One centre per town and per state",
+    sales: "Contacted → demo → pilot → paid",
     invitations: "Invite a PIC to manage centers",
   }
 
@@ -122,6 +126,7 @@ function DashboardPage() {
           {tab === "leads" && <LeadsView />}
           {tab === "follow-up" && <FollowUpView />}
           {tab === "featured" && <FeaturedView />}
+          {tab === "sales" && <SalesView />}
           {tab === "invitations" && <InvitationsView />}
         </div>
       </SidebarInset>

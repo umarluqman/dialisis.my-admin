@@ -5,6 +5,7 @@ import {
 } from "@/core/functions/center-functions"
 import { getAllCenters } from "@/core/functions/invitation-functions"
 import { getFeaturedSlots } from "@/core/functions/featured-slot-functions"
+import { getSalesProspects } from "@/core/functions/sales-functions"
 import {
   getFollowUpLeads,
   getIntakeLeads,
@@ -42,4 +43,9 @@ export const followUpLeadsQuery = queryOptions({
 export const featuredSlotsQuery = queryOptions({
   queryKey: ["featuredSlots"],
   queryFn: () => getFeaturedSlots(),
+})
+
+export const salesProspectsQuery = queryOptions({
+  queryKey: ["salesProspects"],
+  queryFn: () => getSalesProspects(),
 })

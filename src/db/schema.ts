@@ -7,6 +7,7 @@ import {
   real,
 } from "drizzle-orm/sqlite-core"
 import { sql, relations } from "drizzle-orm"
+import { SALES_STAGES } from "@/lib/sales"
 
 export const user = sqliteTable("user", {
   id: text("id").primaryKey(),
@@ -283,6 +284,42 @@ export const invitation = sqliteTable(
     index("invitation_token_idx").on(table.token),
     index("invitation_email_idx").on(table.email),
     index("invitation_createdBy_idx").on(table.createdBy),
+  ]
+)
+
+export const salesProspect = sqliteTable(
+  "sales_prospect",
+  {
+    id: text("id").primaryKey(),
+    organization: text("organization").notNull(),
+    dialysisCenterId: text("dialysis_center_id").references(
+      () => dialysisCenter.id,
+      { onDelete: "set null" }
+    ),
+    contactName: text("contact_name"),
+    phone: text("phone"),
+    stage: text("stage", { enum: SALES_STAGES }).default("contacted").notNull(),
+    lostReason: text("lost_reason"),
+    notes: text("notes"),
+    nextFollowUpAt: integer("next_follow_up_at", { mode: "timestamp_ms" }),
+    demoAt: integer("demo_at", { mode: "timestamp_ms" }),
+    pilotAt: integer("pilot_at", { mode: "timestamp_ms" }),
+    paidAt: integer("paid_at", { mode: "timestamp_ms" }),
+    lostAt: integer("lost_at", { mode: "timestamp_ms" }),
+    createdBy: text("created_by")
+      .notNull()
+      .references(() => user.id),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+      .notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("salesProspect_stage_idx").on(table.stage),
+    index("salesProspect_dialysisCenterId_idx").on(table.dialysisCenterId),
   ]
 )
 
@@ -594,5 +631,16 @@ export const featuredSlotRelations = relations(featuredSlot, ({ one }) => ({
   dialysisCenter: one(dialysisCenter, {
     fields: [featuredSlot.dialysisCenterId],
     references: [dialysisCenter.id],
+  }),
+}))
+
+export const salesProspectRelations = relations(salesProspect, ({ one }) => ({
+  dialysisCenter: one(dialysisCenter, {
+    fields: [salesProspect.dialysisCenterId],
+    references: [dialysisCenter.id],
+  }),
+  creator: one(user, {
+    fields: [salesProspect.createdBy],
+    references: [user.id],
   }),
 }))
