@@ -37,6 +37,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { toMytDay } from "@/lib/analytics"
+import { citiesForState, isCenterInTown } from "@/lib/cities"
 import { addYear, endOfMytDay, startOfMytDay, toMytDayInput } from "@/lib/plan"
 import { centersQuery, featuredSlotsQuery } from "./queries"
 
@@ -171,8 +172,11 @@ function CreateSlotCard() {
   const [endsOn, setEndsOn] = useState(addYear(today))
 
   const inState = centers.filter((center) => center.stateId === stateId)
-  const towns = [...new Set(inState.map((center) => center.town).filter(Boolean))].sort()
-  const candidates = inState.filter((center) => scope === "state" || center.town === town)
+  const stateName = states.find((state) => state.id === stateId)?.name ?? ""
+  const towns = citiesForState(stateName)
+  const candidates = inState.filter(
+    (center) => scope === "state" || (town && isCenterInTown(center, town))
+  )
 
   const createMutation = useMutation({
     mutationFn: () =>
@@ -260,7 +264,7 @@ function CreateSlotCard() {
               <FieldLabel htmlFor="slot-town">Town</FieldLabel>
               <Select
                 value={town}
-                disabled={!stateId}
+                disabled={towns.length === 0}
                 onValueChange={(value) => {
                   setTown(value)
                   setCenterId("")
@@ -293,7 +297,7 @@ function CreateSlotCard() {
                 {candidates.map((center) => (
                   <SelectItem key={center.id} value={center.id}>
                     {center.dialysisCenterName}
-                    {scope === "state" && center.town ? ` · ${center.town}` : ""}
+                    {center.town ? ` · ${center.town}` : ""}
                   </SelectItem>
                 ))}
               </SelectContent>

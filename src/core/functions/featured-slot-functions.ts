@@ -1,10 +1,11 @@
 import { createServerFn } from "@tanstack/react-start"
 import { z } from "zod"
-import { and, desc, eq, gt, lt } from "drizzle-orm"
+import { and, desc, eq, gt, lt, sql } from "drizzle-orm"
 import { db } from "@/db/connection"
 import { dialysisCenter, featuredSlot, state } from "@/db/schema"
 import { authMiddleware } from "@/lib/middleware"
 import { toDbDate } from "@/lib/analytics"
+import { citiesForState, isCenterInTown } from "@/lib/cities"
 import { revalidateCenter, requireSuperadmin } from "@/lib/center-admin"
 
 export const getFeaturedSlots = createServerFn({ method: "GET" })
@@ -48,7 +49,7 @@ export const createFeaturedSlot = createServerFn({ method: "POST" })
     await requireSuperadmin(context.session.user.id)
 
     const town = data.scope === "town" ? data.town.trim() : ""
-    const startsAt = toDbDate(Date.parse(data.startsAt))
+    const startsAt = toDbDate(Math.max(Date.parse(data.startsAt), Date.now()))
     const endsAt = toDbDate(Date.parse(data.endsAt))
 
     if (data.scope === "town" && !town) {
@@ -61,18 +62,25 @@ export const createFeaturedSlot = createServerFn({ method: "POST" })
     const [center] = await db
       .select({
         stateId: dialysisCenter.stateId,
+        stateName: state.name,
         town: dialysisCenter.town,
+        address: dialysisCenter.address,
+        addressWithUnit: dialysisCenter.addressWithUnit,
         plan: dialysisCenter.plan,
         planEndsAt: dialysisCenter.planEndsAt,
       })
       .from(dialysisCenter)
+      .leftJoin(state, eq(dialysisCenter.stateId, state.id))
       .where(eq(dialysisCenter.id, data.dialysisCenterId))
       .limit(1)
 
     if (!center) {
       throw new Error("Center not found")
     }
-    if (center.stateId !== data.stateId || (town && center.town !== town)) {
+    if (town && !citiesForState(center.stateName ?? "").includes(town)) {
+      throw new Error("Pick a town from the public town pages")
+    }
+    if (center.stateId !== data.stateId || (town && !isCenterInTown(center, town))) {
       throw new Error("Center is not in this location")
     }
 
@@ -84,7 +92,7 @@ export const createFeaturedSlot = createServerFn({ method: "POST" })
         and(
           eq(featuredSlot.scope, data.scope),
           eq(featuredSlot.stateId, data.stateId),
-          eq(featuredSlot.town, town),
+          sql`lower(${featuredSlot.town}) = lower(${town})`,
           lt(featuredSlot.startsAt, endsAt),
           gt(featuredSlot.endsAt, startsAt)
         )

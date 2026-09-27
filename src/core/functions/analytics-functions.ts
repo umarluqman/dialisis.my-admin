@@ -28,6 +28,7 @@ import { ensureAdminDatabaseSchema } from "@/db/ensure-schema"
 import { authMiddleware } from "@/lib/middleware"
 import { getUserRole } from "@/lib/user-role"
 import { requireSuperadmin } from "@/lib/center-admin"
+import { isCenterInTown, townForCenter } from "@/lib/cities"
 import {
   clampRange,
   describeSourcePage,
@@ -299,6 +300,11 @@ export const getAnalyticsOverview = createServerFn({ method: "GET" })
     }
   })
 
+function inTownSql(town: string) {
+  const pattern = `%${town}%`
+  return sql`(${dialysisCenter.town} like ${pattern} or ${dialysisCenter.address} like ${pattern} or ${dialysisCenter.addressWithUnit} like ${pattern})`
+}
+
 export const getTownComparison = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .inputValidator(z.object({ period: PeriodSchema, centerId: z.string().min(1) }))
@@ -307,17 +313,22 @@ export const getTownComparison = createServerFn({ method: "GET" })
     const { views: viewRange } = getTrackedRanges(data.period)
 
     const [center] = await db
-      .select({ stateId: dialysisCenter.stateId, town: dialysisCenter.town })
+      .select({
+        stateId: dialysisCenter.stateId,
+        stateName: state.name,
+        town: dialysisCenter.town,
+        address: dialysisCenter.address,
+        addressWithUnit: dialysisCenter.addressWithUnit,
+      })
       .from(dialysisCenter)
+      .leftJoin(state, eq(dialysisCenter.stateId, state.id))
       .where(eq(dialysisCenter.id, data.centerId))
       .limit(1)
 
-    if (!center?.town) return null
+    const town = center && townForCenter(center, center.stateName ?? "")
+    if (!town) return null
 
-    const inTown = and(
-      eq(dialysisCenter.stateId, center.stateId),
-      sql`lower(${dialysisCenter.town}) = lower(${center.town})`
-    )
+    const inTown = and(eq(dialysisCenter.stateId, center.stateId), inTownSql(town))
 
     const [[{ centers }], rows] = await Promise.all([
       db.select({ centers: count() }).from(dialysisCenter).where(inTown),
@@ -333,7 +344,7 @@ export const getTownComparison = createServerFn({ method: "GET" })
 
     const townViews = rows.reduce((sum, row) => sum + row.views, 0)
     return {
-      town: center.town,
+      town,
       centers,
       views: rows.find((row) => row.centerId === data.centerId)?.views ?? 0,
       townAverage: townViews / centers,
@@ -364,37 +375,28 @@ export const getLocationDemand = createServerFn({ method: "GET" })
       db
         .select({
           stateId: dialysisCenter.stateId,
-          town: sql<string>`lower(${dialysisCenter.town})`,
-          centers: count(),
+          town: dialysisCenter.town,
+          address: dialysisCenter.address,
+          addressWithUnit: dialysisCenter.addressWithUnit,
         })
-        .from(dialysisCenter)
-        .groupBy(dialysisCenter.stateId, sql`lower(${dialysisCenter.town})`),
+        .from(dialysisCenter),
       db
-        .select({
-          stateId: featuredSlot.stateId,
-          town: sql<string>`lower(${featuredSlot.town})`,
-        })
+        .select({ stateId: featuredSlot.stateId, town: featuredSlot.town })
         .from(featuredSlot)
         .where(and(lte(featuredSlot.startsAt, now), gt(featuredSlot.endsAt, now))),
     ])
 
-    const townKey = (stateId: string, town: string) => `${stateId}|${town.toLowerCase()}`
-    const centersByTown = new Map(
-      centers.map((row) => [townKey(row.stateId, row.town), row.centers])
-    )
-    const centersByState = new Map<string, number>()
-    for (const row of centers) {
-      centersByState.set(row.stateId, (centersByState.get(row.stateId) ?? 0) + row.centers)
-    }
-    const takenSlots = new Set(slots.map((slot) => townKey(slot.stateId, slot.town)))
+    const slotKey = (stateId: string, town: string) => `${stateId}|${town.toLowerCase()}`
+    const takenSlots = new Set(slots.map((slot) => slotKey(slot.stateId, slot.town)))
 
     return views
       .map((row) => ({
         ...row,
-        centers: row.town
-          ? (centersByTown.get(townKey(row.stateId, row.town)) ?? 0)
-          : (centersByState.get(row.stateId) ?? 0),
-        slotTaken: takenSlots.has(townKey(row.stateId, row.town)),
+        centers: centers.filter(
+          (center) =>
+            center.stateId === row.stateId && (!row.town || isCenterInTown(center, row.town))
+        ).length,
+        slotTaken: takenSlots.has(slotKey(row.stateId, row.town)),
       }))
       .sort((a, b) => b.views - a.views)
   })
