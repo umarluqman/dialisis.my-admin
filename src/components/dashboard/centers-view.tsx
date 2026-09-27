@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import type { getCentersForUser } from "@/core/functions/center-functions"
+import { isPlanActive } from "@/lib/plan"
 import { centersQuery } from "./queries"
 
 const PAGE_SIZE = 50
@@ -194,7 +195,13 @@ function CenterList({ centers }: { centers: Center[] }) {
                       <span className="truncate text-sm font-medium">
                         {center.dialysisCenterName || "Unnamed center"}
                       </span>
-                      {center.featured && <Badge className="shrink-0">Featured</Badge>}
+                      {isPlanActive(center) && <Badge className="shrink-0">Pro</Badge>}
+                      {center.verifiedAt && (
+                        <Badge variant="outline" className="shrink-0">
+                          Verified
+                        </Badge>
+                      )}
+                      {center.featured && <Badge variant="secondary" className="shrink-0">Featured</Badge>}
                     </div>
                     <p className="truncate text-xs text-muted-foreground md:hidden">
                       {[location, center.sector].filter(Boolean).join(" · ") || "-"}

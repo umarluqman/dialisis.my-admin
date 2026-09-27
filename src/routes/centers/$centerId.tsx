@@ -10,6 +10,8 @@ import {
   getStates,
   getCurrentUserRole,
   resolveGoogleMapsCoordinates,
+  getEarlybirdSeats,
+  updateCenterPlan,
 } from "@/core/functions/center-functions"
 import {
   getFaqsForCenter,
@@ -24,6 +26,7 @@ import {
 import { getIntakeLeads } from "@/core/functions/intake-lead-functions"
 import { useSession } from "@/lib/auth-client"
 import { extractGoogleMapsCoordinates } from "@/lib/google-maps-embed"
+import { endOfMytDay, isPlanActive, toMytDayInput } from "@/lib/plan"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -49,7 +52,9 @@ import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import {
   ArrowLeft,
   Building2,
+  BadgeCheck,
   Clock,
+  CreditCard,
   FileQuestion,
   MapPin,
   MessageCircle,
@@ -898,6 +903,12 @@ function CenterEditPage() {
           </Card>
         ) : (
           <>
+            {userRole?.role === "superadmin" && center && (
+              <PlanSection
+                key={[center.plan, center.planEndsAt, center.earlybird, center.verifiedAt].join("|")}
+                center={center}
+              />
+            )}
             <IntakeLeadsSection centerId={centerId} />
             <OperatingHoursSection centerId={centerId} />
             <FaqSection centerId={centerId} />
@@ -942,6 +953,141 @@ const DEFAULT_HOURS: HourEntry[] = Array.from({ length: 7 }, (_, i) => ({
   closeTime: "22:00",
   isClosed: false,
 }))
+
+type CenterData = Awaited<ReturnType<typeof getCenterById>>
+
+function PlanSection({ center }: { center: CenterData }) {
+  const queryClient = useQueryClient()
+  const [plan, setPlan] = useState(center.plan)
+  const [planEndsOn, setPlanEndsOn] = useState(toMytDayInput(center.planEndsAt))
+  const [earlybird, setEarlybird] = useState(center.earlybird)
+
+  const { data: seats } = useQuery({
+    queryKey: ["earlybirdSeats"],
+    queryFn: () => getEarlybirdSeats(),
+  })
+
+  const saveMutation = useMutation({
+    mutationFn: (data: Omit<Parameters<typeof updateCenterPlan>[0]["data"], "id">) =>
+      updateCenterPlan({ data: { id: center.id, ...data } }),
+    onSuccess: () => {
+      toast.success("Plan updated")
+      queryClient.invalidateQueries({ queryKey: ["center", center.id] })
+      queryClient.invalidateQueries({ queryKey: ["centers"] })
+      queryClient.invalidateQueries({ queryKey: ["earlybirdSeats"] })
+    },
+    onError: (error) => toast.error(error.message || "Failed to update plan"),
+  })
+
+  const seatsFull = !!seats && seats.used >= seats.total && !center.earlybird
+  const active = isPlanActive(center)
+
+  return (
+    <Card>
+      <CardHeader className="px-4 py-4 sm:px-6">
+        <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+          <CreditCard className="size-5 text-primary" />
+          Plan
+          {active ? (
+            <Badge>Pro</Badge>
+          ) : (
+            <Badge variant="secondary">
+              {center.plan === "pro" ? "Pro expired" : "Asas"}
+            </Badge>
+          )}
+          {center.verifiedAt && (
+            <Badge variant="outline">
+              <BadgeCheck />
+              Verified
+            </Badge>
+          )}
+        </CardTitle>
+        <CardDescription>Superadmin only. Changes go live on the public site.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4 px-4 pb-4 sm:px-6 sm:pb-6">
+        <div className="grid gap-4 md:grid-cols-2">
+          <Field>
+            <FieldLabel htmlFor="plan">Plan</FieldLabel>
+            <Select value={plan} onValueChange={(value) => setPlan(value as typeof plan)}>
+              <SelectTrigger id="plan" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="asas">Asas (free)</SelectItem>
+                <SelectItem value="pro">Pro</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="planEndsOn">Plan ends on</FieldLabel>
+            <Input
+              id="planEndsOn"
+              type="date"
+              value={planEndsOn}
+              onChange={(e) => setPlanEndsOn(e.target.value)}
+            />
+            <p className="text-sm text-muted-foreground">
+              Last day of Pro (Malaysia time). Leave empty for no end date.
+            </p>
+          </Field>
+        </div>
+        <Field orientation="horizontal">
+          <div className="flex items-center gap-3">
+            <Switch
+              id="earlybird"
+              checked={earlybird}
+              disabled={seatsFull && !earlybird}
+              onCheckedChange={setEarlybird}
+            />
+            <Label htmlFor="earlybird">Earlybird</Label>
+          </div>
+          <p className="text-sm text-muted-foreground tabular-nums">
+            {seats
+              ? `${seats.used} / ${seats.total} earlybird seats used${seatsFull ? " · full" : ""}`
+              : "Loading seats..."}
+          </p>
+        </Field>
+        <div className="flex flex-col gap-2 border-t pt-4 sm:flex-row sm:items-center">
+          <Button
+            onClick={() =>
+              saveMutation.mutate({
+                plan,
+                planEndsAt: planEndsOn ? endOfMytDay(planEndsOn) : null,
+                earlybird,
+                verified: !!center.verifiedAt,
+              })
+            }
+            disabled={saveMutation.isPending}
+            className="h-10"
+          >
+            {saveMutation.isPending ? "Saving..." : "Save plan"}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() =>
+              saveMutation.mutate({
+                plan: center.plan,
+                planEndsAt: center.planEndsAt,
+                earlybird: center.earlybird,
+                verified: !center.verifiedAt,
+              })
+            }
+            disabled={saveMutation.isPending}
+            className="h-10"
+          >
+            <BadgeCheck className="size-4" />
+            {center.verifiedAt ? "Unverify" : "Mark verified"}
+          </Button>
+          {center.verifiedAt && (
+            <span className="text-sm text-muted-foreground">
+              Verified on {toMytDayInput(center.verifiedAt)}
+            </span>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
 
 function IntakeLeadsSection({ centerId }: { centerId: string }) {
   const { data: leads = [], isLoading } = useQuery({

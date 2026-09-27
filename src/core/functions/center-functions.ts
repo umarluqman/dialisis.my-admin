@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start"
 import { z } from "zod"
-import { eq, and, inArray } from "drizzle-orm"
+import { eq, and, inArray, ne, count } from "drizzle-orm"
 import { db } from "@/db/connection"
 import {
   dialysisCenter,
@@ -19,6 +19,8 @@ import {
   extractGoogleMapsUrl,
 } from "@/lib/google-maps-embed"
 import { getUserRole } from "@/lib/user-role"
+import { toDbDate } from "@/lib/analytics"
+import { EARLYBIRD_SEATS } from "@/lib/plan"
 
 function slugifyCenterName(name: string) {
   return name
@@ -475,6 +477,86 @@ export const deleteCenter = createServerFn({ method: "POST" })
     await db.delete(dialysisCenter).where(eq(dialysisCenter.id, data.id))
 
     await revalidatePublicCenterChange({ before: beforeCenter })
+
+    return { success: true }
+  })
+
+async function requireSuperadmin(userId: string) {
+  if ((await getUserRole(userId)) !== "superadmin") {
+    throw new Error("Only superadmins can manage plans")
+  }
+}
+
+async function countEarlybirdSeats(excludeCenterId?: string) {
+  const [row] = await db
+    .select({ used: count() })
+    .from(dialysisCenter)
+    .where(
+      and(
+        eq(dialysisCenter.earlybird, true),
+        excludeCenterId ? ne(dialysisCenter.id, excludeCenterId) : undefined
+      )
+    )
+  return row.used
+}
+
+export const getEarlybirdSeats = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .handler(async ({ context }) => {
+    await requireSuperadmin(context.session.user.id)
+    return { used: await countEarlybirdSeats(), total: EARLYBIRD_SEATS }
+  })
+
+const UpdateCenterPlanSchema = z.object({
+  id: z.string().min(1),
+  plan: z.enum(["asas", "pro"]),
+  planEndsAt: z.string().nullable(),
+  earlybird: z.boolean(),
+  verified: z.boolean(),
+})
+
+export const updateCenterPlan = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .inputValidator(UpdateCenterPlanSchema)
+  .handler(async ({ context, data }) => {
+    await requireSuperadmin(context.session.user.id)
+
+    const [center] = await db
+      .select({
+        earlybird: dialysisCenter.earlybird,
+        verifiedAt: dialysisCenter.verifiedAt,
+      })
+      .from(dialysisCenter)
+      .where(eq(dialysisCenter.id, data.id))
+      .limit(1)
+
+    if (!center) {
+      throw new Error("Center not found")
+    }
+
+    if (
+      data.earlybird &&
+      !center.earlybird &&
+      (await countEarlybirdSeats(data.id)) >= EARLYBIRD_SEATS
+    ) {
+      throw new Error(`All ${EARLYBIRD_SEATS} earlybird seats are taken`)
+    }
+
+    await db
+      .update(dialysisCenter)
+      .set({
+        plan: data.plan,
+        planEndsAt: data.planEndsAt,
+        earlybird: data.earlybird,
+        verifiedAt: data.verified
+          ? (center.verifiedAt ?? toDbDate(Date.now()))
+          : null,
+        updatedAt: new Date(),
+      })
+      .where(eq(dialysisCenter.id, data.id))
+
+    const snapshot = await getPublicCenterSnapshot(data.id)
+    await revalidatePublicCenterChange({ before: snapshot, after: snapshot })
 
     return { success: true }
   })
