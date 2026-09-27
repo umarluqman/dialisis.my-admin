@@ -83,6 +83,14 @@ export const dialysisCenter = sqliteTable(
       .references(() => state.id),
     town: text("town").default("").notNull(),
     featured: integer("featured", { mode: "boolean" }).default(false).notNull(),
+    plan: text("plan", { enum: ["asas", "pro"] }).default("asas").notNull(),
+    planEndsAt: text("planEndsAt"),
+    earlybird: integer("earlybird", { mode: "boolean" }).default(false).notNull(),
+    verifiedAt: text("verifiedAt"),
+    fees: text("fees"),
+    sessionSlots: text("sessionSlots"),
+    languages: text("languages"),
+    panels: text("panels"),
     createdAt: integer("createdAt", { mode: "timestamp_ms" })
       .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
       .notNull(),
@@ -101,6 +109,7 @@ export const dialysisCenter = sqliteTable(
     index("dialysisCenter_address_idx").on(table.address),
     index("dialysisCenter_dialysisCenterName_idx").on(table.dialysisCenterName),
     index("dialysisCenter_slug_idx").on(table.slug),
+    index("DialysisCenter_plan_idx").on(table.plan),
   ]
 )
 
@@ -326,6 +335,84 @@ export const contactClick = sqliteTable(
   ]
 )
 
+export const locationView = sqliteTable(
+  "LocationView",
+  {
+    id: text("id").primaryKey(),
+    stateId: text("stateId")
+      .notNull()
+      .references(() => state.id, { onDelete: "cascade" }),
+    town: text("town").default("").notNull(),
+    visitorKey: text("visitorKey").notNull(),
+    count: integer("count").default(1).notNull(),
+    createdAt: text("createdAt").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  },
+  (table) => [
+    uniqueIndex("LocationView_stateId_town_visitorKey_key").on(
+      table.stateId,
+      table.town,
+      table.visitorKey
+    ),
+    index("LocationView_stateId_town_createdAt_idx").on(
+      table.stateId,
+      table.town,
+      table.createdAt
+    ),
+  ]
+)
+
+export const featuredEvent = sqliteTable(
+  "FeaturedEvent",
+  {
+    id: text("id").primaryKey(),
+    dialysisCenterId: text("dialysisCenterId")
+      .notNull()
+      .references(() => dialysisCenter.id, { onDelete: "cascade" }),
+    kind: text("kind", { enum: ["impression", "click"] }).notNull(),
+    sourcePage: text("sourcePage").default("").notNull(),
+    visitorKey: text("visitorKey").notNull(),
+    count: integer("count").default(1).notNull(),
+    createdAt: text("createdAt").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  },
+  (table) => [
+    uniqueIndex(
+      "FeaturedEvent_dialysisCenterId_kind_sourcePage_visitorKey_key"
+    ).on(table.dialysisCenterId, table.kind, table.sourcePage, table.visitorKey),
+    index("FeaturedEvent_dialysisCenterId_createdAt_idx").on(
+      table.dialysisCenterId,
+      table.createdAt
+    ),
+  ]
+)
+
+export const featuredSlot = sqliteTable(
+  "FeaturedSlot",
+  {
+    id: text("id").primaryKey(),
+    scope: text("scope", { enum: ["town", "state"] }).notNull(),
+    stateId: text("stateId")
+      .notNull()
+      .references(() => state.id),
+    town: text("town").default("").notNull(),
+    dialysisCenterId: text("dialysisCenterId")
+      .notNull()
+      .references(() => dialysisCenter.id, { onDelete: "cascade" }),
+    startsAt: text("startsAt").notNull(),
+    endsAt: text("endsAt").notNull(),
+    createdAt: text("createdAt").default(sql`CURRENT_TIMESTAMP`).notNull(),
+    updatedAt: text("updatedAt").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  },
+  (table) => [
+    index("FeaturedSlot_scope_stateId_town_endsAt_idx").on(
+      table.scope,
+      table.stateId,
+      table.town,
+      table.endsAt
+    ),
+    index("FeaturedSlot_dialysisCenterId_idx").on(table.dialysisCenterId),
+  ]
+)
+
 export const session = sqliteTable(
   "session",
   {
@@ -419,6 +506,8 @@ export const accountRelations = relations(account, ({ one }) => ({
 
 export const stateRelations = relations(state, ({ many }) => ({
   dialysisCenters: many(dialysisCenter),
+  locationViews: many(locationView),
+  featuredSlots: many(featuredSlot),
 }))
 
 export const dialysisCenterRelations = relations(
@@ -433,6 +522,8 @@ export const dialysisCenterRelations = relations(
     operatingHours: many(centerOperatingHour),
     userAccess: many(userCenterAccess),
     intakeLeads: many(intakeLead),
+    featuredEvents: many(featuredEvent),
+    featuredSlots: many(featuredSlot),
   })
 )
 
@@ -480,3 +571,28 @@ export const userCenterAccessRelations = relations(
     }),
   })
 )
+
+export const locationViewRelations = relations(locationView, ({ one }) => ({
+  state: one(state, {
+    fields: [locationView.stateId],
+    references: [state.id],
+  }),
+}))
+
+export const featuredEventRelations = relations(featuredEvent, ({ one }) => ({
+  dialysisCenter: one(dialysisCenter, {
+    fields: [featuredEvent.dialysisCenterId],
+    references: [dialysisCenter.id],
+  }),
+}))
+
+export const featuredSlotRelations = relations(featuredSlot, ({ one }) => ({
+  state: one(state, {
+    fields: [featuredSlot.stateId],
+    references: [state.id],
+  }),
+  dialysisCenter: one(dialysisCenter, {
+    fields: [featuredSlot.dialysisCenterId],
+    references: [dialysisCenter.id],
+  }),
+}))
