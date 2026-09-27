@@ -121,7 +121,7 @@ function DashboardPage() {
           </div>
         </header>
         <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">
-          {tab === "analytics" && <AnalyticsView />}
+          {tab === "analytics" && <AnalyticsView isSuperadmin={isSuperadmin} />}
           {tab === "centers" && <CentersView isSuperadmin={isSuperadmin} />}
           {tab === "leads" && <LeadsView />}
           {tab === "follow-up" && <FollowUpView />}

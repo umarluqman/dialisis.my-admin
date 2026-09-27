@@ -9,10 +9,12 @@ import { Skeleton } from "@/components/ui/skeleton"
 import {
   getAnalyticsBranches,
   getAnalyticsOverview,
+  getTownComparison,
 } from "@/core/functions/analytics-functions"
 import { ANALYTICS_PERIODS, type AnalyticsPeriod } from "@/lib/analytics"
 import { cn } from "@/lib/utils"
 import { BranchList } from "./branch-list"
+import { LocationDemand } from "./location-demand"
 import {
   contactRate,
   formatDay,
@@ -24,7 +26,7 @@ import { TrendChart } from "./trend-chart"
 
 const PUBLIC_SITE_URL = "https://www.dialisis.my"
 
-export function AnalyticsView() {
+export function AnalyticsView({ isSuperadmin }: { isSuperadmin: boolean }) {
   const [period, setPeriod] = useState<AnalyticsPeriod>(30)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const topRef = useRef<HTMLDivElement>(null)
@@ -192,9 +194,13 @@ export function AnalyticsView() {
         <Overview overview={overview} period={period} />
       )}
 
+      {selected && <TownComparison centerId={selected.id} period={period} />}
+
       {isChain && !selected && branches && (
         <BranchList branches={branches} onSelect={selectBranch} />
       )}
+
+      {isSuperadmin && !selected && <LocationDemand period={period} />}
 
       <p className="max-w-3xl text-xs text-muted-foreground">
         Each visitor is counted once per center per day (Malaysia time). Page
@@ -231,6 +237,7 @@ function Overview({
     { label: "Directions", short: "Directions", value: current.directions },
   ]
   const contactMax = Math.max(...contactKinds.map((kind) => kind.value))
+  const { impressions, clicks } = overview.featured
   const sourceMax = overview.sources[0]?.value ?? 0
 
   return (
@@ -392,7 +399,73 @@ function Overview({
           </CardContent>
         </Card>
       </div>
+
+      {impressions + clicks > 0 && (
+        <Card>
+          <CardContent>
+            <h3 className="text-base font-medium">Featured placement</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Visitors who saw the featured card on location pages, and who opened it.
+            </p>
+            <dl className="mt-4 grid grid-cols-3 gap-4">
+              {[
+                { label: "Impressions", value: formatNumber(impressions) },
+                { label: "Clicks", value: formatNumber(clicks) },
+                { label: "Click rate", value: formatRate(impressions > 0 ? clicks / impressions : 0) },
+              ].map((stat) => (
+                <div key={stat.label}>
+                  <dt className="text-sm text-muted-foreground">{stat.label}</dt>
+                  <dd className="text-2xl font-semibold tabular-nums">{stat.value}</dd>
+                </div>
+              ))}
+            </dl>
+          </CardContent>
+        </Card>
+      )}
     </>
+  )
+}
+
+function TownComparison({
+  centerId,
+  period,
+}: {
+  centerId: string
+  period: AnalyticsPeriod
+}) {
+  const { data } = useQuery({
+    queryKey: ["analytics", "town", period, centerId],
+    queryFn: () => getTownComparison({ data: { period, centerId } }),
+  })
+
+  if (!data) return null
+
+  const average = Math.round(data.townAverage)
+  const change =
+    data.townAverage > 0
+      ? Math.round(((data.views - data.townAverage) / data.townAverage) * 100)
+      : null
+
+  return (
+    <Card>
+      <CardContent>
+        <h3 className="text-base font-medium">Compared with {data.town}</h3>
+        <p className="mt-1 text-muted-foreground">
+          <span className="font-medium text-foreground tabular-nums">
+            {formatNumber(data.views)}
+          </span>{" "}
+          page views vs a town average of{" "}
+          <span className="font-medium text-foreground tabular-nums">
+            {formatNumber(average)}
+          </span>{" "}
+          across {formatNumber(data.centers)} centers
+          {change !== null &&
+            (change === 0
+              ? " (on par)."
+              : ` (${Math.abs(change)}% ${change > 0 ? "above" : "below"}).`)}
+        </p>
+      </CardContent>
+    </Card>
   )
 }
 

@@ -4,8 +4,10 @@ import {
   and,
   count,
   eq,
+  gt,
   gte,
   inArray,
+  lte,
   isNotNull,
   sql,
   type Column,
@@ -15,13 +17,17 @@ import {
   centerView,
   contactClick,
   dialysisCenter,
+  featuredEvent,
+  featuredSlot,
   intakeLead,
+  locationView,
   state,
   userCenterAccess,
 } from "@/db/schema"
 import { ensureAdminDatabaseSchema } from "@/db/ensure-schema"
 import { authMiddleware } from "@/lib/middleware"
 import { getUserRole } from "@/lib/user-role"
+import { requireSuperadmin } from "./center-functions"
 import {
   clampRange,
   describeSourcePage,
@@ -116,6 +122,11 @@ const viewFields = {
   visitors: count(),
 }
 
+const featuredFields = {
+  impressions: total(sql`${featuredEvent.kind} = 'impression'`),
+  clicks: total(sql`${featuredEvent.kind} = 'click'`),
+}
+
 const contactFields = {
   call: total(sql`${contactClick.kind} = 'call'`),
   whatsapp: total(sql`${contactClick.kind} = 'whatsapp'`),
@@ -165,7 +176,7 @@ export const getAnalyticsOverview = createServerFn({ method: "GET" })
     const contactDay = mytDay(contactClick.createdAt)
     const leadDay = mytDay(intakeLead.createdAt)
 
-    const [views, contacts, leads, sourceRows] = await Promise.all([
+    const [views, contacts, leads, sourceRows, [featured]] = await Promise.all([
       db
         .select({ day: viewDay, ...viewFields })
         .from(centerView)
@@ -208,6 +219,15 @@ export const getAnalyticsOverview = createServerFn({ method: "GET" })
           )
         )
         .groupBy(contactClick.sourcePage),
+      db
+        .select(featuredFields)
+        .from(featuredEvent)
+        .where(
+          and(
+            scope.filter(featuredEvent.dialysisCenterId),
+            gte(featuredEvent.createdAt, range.since)
+          )
+        ),
     ])
 
     const current = emptyMetrics()
@@ -275,8 +295,113 @@ export const getAnalyticsOverview = createServerFn({ method: "GET" })
       sources: Array.from(sources.values())
         .sort((a, b) => b.value - a.value)
         .slice(0, 5),
+      featured,
     }
   })
+
+export const getTownComparison = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .inputValidator(z.object({ period: PeriodSchema, centerId: z.string().min(1) }))
+  .handler(async ({ context, data }) => {
+    await getCenterScope(context.session.user.id, data.centerId)
+    const { views: viewRange } = getTrackedRanges(data.period)
+
+    const [center] = await db
+      .select({ stateId: dialysisCenter.stateId, town: dialysisCenter.town })
+      .from(dialysisCenter)
+      .where(eq(dialysisCenter.id, data.centerId))
+      .limit(1)
+
+    if (!center?.town) return null
+
+    const inTown = and(
+      eq(dialysisCenter.stateId, center.stateId),
+      sql`lower(${dialysisCenter.town}) = lower(${center.town})`
+    )
+
+    const [[{ centers }], rows] = await Promise.all([
+      db.select({ centers: count() }).from(dialysisCenter).where(inTown),
+      db
+        .select({ centerId: centerView.dialysisCenterId, views: viewFields.views })
+        .from(centerView)
+        .innerJoin(dialysisCenter, eq(centerView.dialysisCenterId, dialysisCenter.id))
+        .where(and(inTown, gte(centerView.createdAt, viewRange.since)))
+        .groupBy(centerView.dialysisCenterId),
+    ])
+
+    if (centers < 2) return null
+
+    const townViews = rows.reduce((sum, row) => sum + row.views, 0)
+    return {
+      town: center.town,
+      centers,
+      views: rows.find((row) => row.centerId === data.centerId)?.views ?? 0,
+      townAverage: townViews / centers,
+    }
+  })
+
+export const getLocationDemand = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .inputValidator(z.object({ period: PeriodSchema }))
+  .handler(async ({ context, data }) => {
+    await requireSuperadmin(context.session.user.id)
+    const { since } = getAnalyticsRange(data.period)
+    const now = toDbDate(Date.now())
+
+    const [views, centers, slots] = await Promise.all([
+      db
+        .select({
+          stateId: locationView.stateId,
+          stateName: state.name,
+          town: locationView.town,
+          views: total(sql`${locationView.count}`),
+          visitors: count(),
+        })
+        .from(locationView)
+        .innerJoin(state, eq(locationView.stateId, state.id))
+        .where(gte(locationView.createdAt, since))
+        .groupBy(locationView.stateId, locationView.town),
+      db
+        .select({
+          stateId: dialysisCenter.stateId,
+          town: sql<string>`lower(${dialysisCenter.town})`,
+          centers: count(),
+        })
+        .from(dialysisCenter)
+        .groupBy(dialysisCenter.stateId, sql`lower(${dialysisCenter.town})`),
+      db
+        .select({
+          stateId: featuredSlot.stateId,
+          town: sql<string>`lower(${featuredSlot.town})`,
+        })
+        .from(featuredSlot)
+        .where(and(lte(featuredSlot.startsAt, now), gt(featuredSlot.endsAt, now))),
+    ])
+
+    const townKey = (stateId: string, town: string) => `${stateId}|${town.toLowerCase()}`
+    const centersByTown = new Map(
+      centers.map((row) => [townKey(row.stateId, row.town), row.centers])
+    )
+    const centersByState = new Map<string, number>()
+    for (const row of centers) {
+      centersByState.set(row.stateId, (centersByState.get(row.stateId) ?? 0) + row.centers)
+    }
+    const takenSlots = new Set(slots.map((slot) => townKey(slot.stateId, slot.town)))
+
+    return views
+      .map((row) => ({
+        ...row,
+        centers: row.town
+          ? (centersByTown.get(townKey(row.stateId, row.town)) ?? 0)
+          : (centersByState.get(row.stateId) ?? 0),
+        slotTaken: takenSlots.has(townKey(row.stateId, row.town)),
+      }))
+      .sort((a, b) => b.views - a.views)
+  })
+
+export type LocationDemandRow = Awaited<
+  ReturnType<typeof getLocationDemand>
+>[number]
 
 export const getAnalyticsBranches = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
