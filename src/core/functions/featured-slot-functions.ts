@@ -5,7 +5,7 @@ import { db } from "@/db/connection"
 import { dialysisCenter, featuredSlot, state } from "@/db/schema"
 import { authMiddleware } from "@/lib/middleware"
 import { toDbDate } from "@/lib/analytics"
-import { revalidateCenter, requireSuperadmin } from "./center-functions"
+import { revalidateCenter, requireSuperadmin } from "@/lib/center-admin"
 
 export const getFeaturedSlots = createServerFn({ method: "GET" })
   .middleware([authMiddleware])

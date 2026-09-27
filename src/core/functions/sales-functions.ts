@@ -6,7 +6,7 @@ import { dialysisCenter, salesProspect } from "@/db/schema"
 import { SALES_STAGES } from "@/lib/sales"
 import { ensureAdminDatabaseSchema } from "@/db/ensure-schema"
 import { authMiddleware } from "@/lib/middleware"
-import { requireSuperadmin } from "./center-functions"
+import { requireSuperadmin } from "@/lib/center-admin"
 
 export const getSalesProspects = createServerFn({ method: "GET" })
   .middleware([authMiddleware])

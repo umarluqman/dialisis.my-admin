@@ -27,7 +27,7 @@ import {
 import { ensureAdminDatabaseSchema } from "@/db/ensure-schema"
 import { authMiddleware } from "@/lib/middleware"
 import { getUserRole } from "@/lib/user-role"
-import { requireSuperadmin } from "./center-functions"
+import { requireSuperadmin } from "@/lib/center-admin"
 import {
   clampRange,
   describeSourcePage,

@@ -11,9 +11,11 @@ import {
 import { ensureAdminDatabaseSchema } from "@/db/ensure-schema"
 import { authMiddleware } from "@/lib/middleware"
 import {
-  revalidatePublicCenterQuietly,
-  type PublicCenterRevalidationInput,
-} from "@/lib/public-site-revalidation"
+  getPublicCenterSnapshot,
+  requireSuperadmin,
+  revalidateCenter,
+  revalidatePublicCenterChange,
+} from "@/lib/center-admin"
 import {
   extractGoogleMapsCoordinates,
   extractGoogleMapsUrl,
@@ -49,57 +51,6 @@ async function generateUniqueCenterSlug(name: string) {
     slug = `${baseSlug}-${suffix}`
     suffix += 1
   }
-}
-
-type PublicCenterSnapshot = {
-  slug: string
-  town: string
-  stateName: string | null
-}
-
-async function getPublicCenterSnapshot(
-  id: string
-): Promise<PublicCenterSnapshot | undefined> {
-  const [center] = await db
-    .select({
-      slug: dialysisCenter.slug,
-      town: dialysisCenter.town,
-      stateName: state.name,
-    })
-    .from(dialysisCenter)
-    .leftJoin(state, eq(dialysisCenter.stateId, state.id))
-    .where(eq(dialysisCenter.id, id))
-    .limit(1)
-
-  return center
-}
-
-async function revalidatePublicCenterChange({
-  before,
-  after,
-}: {
-  before?: PublicCenterSnapshot
-  after?: PublicCenterSnapshot
-}) {
-  const center = after ?? before
-
-  if (!center) return
-
-  const payload: PublicCenterRevalidationInput = {
-    slug: after?.slug ?? before?.slug,
-    oldSlug: before?.slug,
-    stateName: after?.stateName,
-    town: after?.town,
-    oldStateName: before?.stateName,
-    oldTown: before?.town,
-  }
-
-  await revalidatePublicCenterQuietly(payload)
-}
-
-export async function revalidateCenter(id: string) {
-  const snapshot = await getPublicCenterSnapshot(id)
-  await revalidatePublicCenterChange({ before: snapshot, after: snapshot })
 }
 
 export const getCurrentUserRole = createServerFn({ method: "GET" })
@@ -505,12 +456,6 @@ export const deleteCenter = createServerFn({ method: "POST" })
 
     return { success: true }
   })
-
-export async function requireSuperadmin(userId: string) {
-  if ((await getUserRole(userId)) !== "superadmin") {
-    throw new Error("Superadmin only")
-  }
-}
 
 async function countEarlybirdSeats(excludeCenterId?: string) {
   const [row] = await db
