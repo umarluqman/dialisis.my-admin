@@ -1,6 +1,6 @@
 import { useRef, useState, type ReactNode } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { Link } from "@tanstack/react-router"
+import { Link, useNavigate, useSearch } from "@tanstack/react-router"
 import { ArrowLeft, ExternalLink } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -11,11 +11,23 @@ import {
   getAnalyticsOverview,
   getTownComparison,
 } from "@/core/functions/analytics-functions"
-import { ANALYTICS_PERIODS, type AnalyticsPeriod } from "@/lib/analytics"
+import {
+  CONTACT_KINDS,
+  CONTACT_LABELS,
+  DEFAULT_PRESET,
+  isValidRange,
+  presetRange,
+  rangeLength,
+  SOURCE_LABELS,
+  toMytDay,
+  type AnalyticsRange,
+} from "@/lib/analytics"
 import { cn } from "@/lib/utils"
+import { AnalyticsFilters, type AnalyticsSearch } from "./analytics-filters"
 import { BranchList } from "./branch-list"
 import { LocationDemand } from "./location-demand"
 import {
+  CONTACT_COLORS,
   contactRate,
   formatDay,
   formatMytDateTime,
@@ -26,24 +38,44 @@ import { TrendChart } from "./trend-chart"
 
 const PUBLIC_SITE_URL = "https://www.dialisis.my"
 
+const uniqueSorted = (values: string[]) =>
+  Array.from(new Set(values)).filter(Boolean).sort()
+
 export function AnalyticsView({ isSuperadmin }: { isSuperadmin: boolean }) {
-  const [period, setPeriod] = useState<AnalyticsPeriod>(30)
+  const { days, from, to, state, town, contact, source } = useSearch({
+    from: "/dashboard",
+  })
+  const navigate = useNavigate({ from: "/dashboard" })
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const topRef = useRef<HTMLDivElement>(null)
 
+  const filters: AnalyticsSearch = { days, from, to, state, town, contact, source }
+  const customRange = from && to && isValidRange({ from, to }) ? { from, to } : null
+  const range = customRange ?? presetRange(days ?? DEFAULT_PRESET)
+  const contactFilter = { contact, source }
+  const location = selectedId ? {} : { state, town }
+
+  const updateFilters = (patch: AnalyticsSearch) =>
+    navigate({ search: (prev) => ({ ...prev, ...patch }), resetScroll: false })
+
   const branchesQuery = useQuery({
-    queryKey: ["analytics", "branches", period],
-    queryFn: () => getAnalyticsBranches({ data: { period } }),
+    queryKey: ["analytics", "branches", range, contactFilter],
+    queryFn: () => getAnalyticsBranches({ data: { ...range, ...contactFilter } }),
     placeholderData: (previous) => previous,
   })
   const overviewQuery = useQuery({
-    queryKey: ["analytics", "overview", period, selectedId],
+    queryKey: ["analytics", "overview", range, contactFilter, location, selectedId],
     queryFn: () =>
       getAnalyticsOverview({
-        data: { period, centerId: selectedId ?? undefined },
+        data: {
+          ...range,
+          ...contactFilter,
+          ...location,
+          centerId: selectedId ?? undefined,
+        },
       }),
     placeholderData: (previous, previousQuery) =>
-      previousQuery?.queryKey[3] === selectedId ? previous : undefined,
+      previousQuery?.queryKey[5] === selectedId ? previous : undefined,
   })
 
   const branches = branchesQuery.data
@@ -52,6 +84,17 @@ export function AnalyticsView({ isSuperadmin }: { isSuperadmin: boolean }) {
   const selected =
     branches?.find((branch) => branch.id === selectedId) ??
     (branches?.length === 1 ? branches[0] : null)
+
+  const states = selected ? [] : uniqueSorted(branches?.map((branch) => branch.state) ?? [])
+  const stateBranches =
+    branches?.filter((branch) => !state || branch.state === state) ?? []
+  const towns =
+    selected || (!state && states.length > 1)
+      ? []
+      : uniqueSorted(stateBranches.map((branch) => branch.town))
+  const visibleBranches = stateBranches.filter(
+    (branch) => !town || branch.town === town
+  )
 
   const selectBranch = (id: string | null) => {
     setSelectedId(id)
@@ -92,6 +135,8 @@ export function AnalyticsView({ isSuperadmin }: { isSuperadmin: boolean }) {
     )
   }
 
+  const isFiltered = Object.values(filters).some((value) => value !== undefined)
+
   return (
     <div ref={topRef} className="scroll-mt-20 space-y-4">
       {overview && (
@@ -113,102 +158,120 @@ export function AnalyticsView({ isSuperadmin }: { isSuperadmin: boolean }) {
           </span>
         </p>
       )}
-      <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div className="min-w-0">
-          {selected && isChain && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => selectBranch(null)}
-              className="mb-3"
+      <header className="min-w-0">
+        {selected && isChain && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => selectBranch(null)}
+            className="mb-3"
+          >
+            <ArrowLeft />
+            All centers
+          </Button>
+        )}
+        {branches ? (
+          <>
+            <h2 className="text-2xl font-semibold tracking-tight">
+              {selected ? selected.name : "Visitor analytics"}
+            </h2>
+            <p className="mt-1 text-sm tabular-nums text-muted-foreground">
+              {selected
+                ? [selected.town, selected.state].filter(Boolean).join(", ")
+                : `${formatNumber(visibleBranches.length)} centers${
+                    town || state ? ` in ${[town, state].filter(Boolean).join(", ")}` : ""
+                  }`}
+              {overview &&
+                ` · ${formatDay(overview.startDay)}${overview.startDay < overview.endDay ? ` – ${formatDay(overview.endDay)}` : ""}`}
+            </p>
+          </>
+        ) : (
+          <>
+            <Skeleton className="h-8 w-56" />
+            <Skeleton className="mt-2 h-4 w-40" />
+          </>
+        )}
+        {selected && (
+          <Button variant="link" asChild className="mt-1 h-auto px-0 text-foreground underline">
+            <a
+              href={`${PUBLIC_SITE_URL}/${selected.slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
             >
-              <ArrowLeft />
-              All centers
-            </Button>
-          )}
-          {branches ? (
-            <>
-              <h2 className="text-2xl font-semibold tracking-tight">
-                {selected ? selected.name : "Visitor analytics"}
-              </h2>
-              <p className="mt-1 text-sm tabular-nums text-muted-foreground">
-                {selected
-                  ? [selected.town, selected.state].filter(Boolean).join(", ")
-                  : `${formatNumber(branches.length)} centers`}
-                {overview &&
-                  ` · ${formatDay(overview.startDay)}${overview.startDay < overview.endDay ? ` – ${formatDay(overview.endDay)}` : ""}`}
-              </p>
-            </>
-          ) : (
-            <>
-              <Skeleton className="h-8 w-56" />
-              <Skeleton className="mt-2 h-4 w-40" />
-            </>
-          )}
-          {selected && (
-            <Button variant="link" asChild className="mt-1 h-auto px-0 text-foreground underline">
-              <a
-                href={`${PUBLIC_SITE_URL}/${selected.slug}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                View public page
-                <ExternalLink />
-              </a>
-            </Button>
-          )}
-        </div>
-        <div
-          role="group"
-          aria-label="Reporting period"
-          className="flex shrink-0 gap-1 rounded-lg border bg-card p-1"
-        >
-          {ANALYTICS_PERIODS.map((days) => (
-            <Button
-              key={days}
-              variant={days === period ? "secondary" : "ghost"}
-              aria-pressed={days === period}
-              onClick={() => setPeriod(days)}
-              className="h-9 flex-1 px-4 md:flex-none"
-            >
-              {days} days
-            </Button>
-          ))}
-        </div>
+              View public page
+              <ExternalLink />
+            </a>
+          </Button>
+        )}
       </header>
+
+      <AnalyticsFilters
+        search={filters}
+        range={range}
+        activePreset={customRange ? null : (days ?? DEFAULT_PRESET)}
+        minDay={overview && toMytDay(Date.parse(overview.trackedSince.contacts))}
+        states={states}
+        towns={towns}
+        onChange={updateFilters}
+      />
 
       {!overview ? (
         <OverviewSkeleton />
       ) : !overview.hasData ? (
         <Card>
           <CardContent>
-            <h3 className="text-lg font-medium">No visitor data yet</h3>
-            <p className="mt-1 max-w-2xl text-muted-foreground">
-              Tracking started recently. Page views and contacts for{" "}
-              {selected ? "this center" : "your centers"} will appear here as
-              visitors arrive on dialisis.my. Check back in a few days.
-            </p>
+            {isFiltered ? (
+              <>
+                <h3 className="text-lg font-medium">Nothing matches these filters</h3>
+                <p className="mt-1 max-w-2xl text-muted-foreground">
+                  No page views, contacts or leads for this date range and filter
+                  combination. Try a longer range or reset the filters.
+                </p>
+              </>
+            ) : (
+              <>
+                <h3 className="text-lg font-medium">No visitor data yet</h3>
+                <p className="mt-1 max-w-2xl text-muted-foreground">
+                  Tracking started recently. Page views and contacts for{" "}
+                  {selected ? "this center" : "your centers"} will appear here as
+                  visitors arrive on dialisis.my. Check back in a few days.
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
       ) : (
-        <Overview overview={overview} period={period} />
+        <div
+          className={cn(
+            "space-y-4 transition-opacity",
+            overviewQuery.isPlaceholderData && "opacity-60"
+          )}
+        >
+          <Overview
+            overview={overview}
+            range={range}
+            filters={filters}
+            onFilter={updateFilters}
+          />
+        </div>
       )}
 
-      {selected && <TownComparison centerId={selected.id} period={period} />}
+      {selected && <TownComparison centerId={selected.id} range={range} />}
 
       {isChain && !selected && branches && (
-        <BranchList branches={branches} onSelect={selectBranch} />
+        <BranchList branches={visibleBranches} onSelect={selectBranch} />
       )}
 
-      {isSuperadmin && !selected && <LocationDemand period={period} />}
+      {isSuperadmin && !selected && <LocationDemand range={range} state={state} />}
 
       <p className="max-w-3xl text-xs text-muted-foreground">
         Each visitor is counted once per center per day (Malaysia time). Page
         views include repeat visits on the same day; contacts count once per
         visitor, method and day. Intake leads exclude test submissions and
         leads still marked new after 48 hours, and repeat forms from the same
-        phone on the same day count once. Today is included, so its numbers
-        are still growing.
+        phone on the same day count once. Contact type and source page filters
+        narrow contacts and contact rate only; page views and leads aren't tied
+        to either. Today is included, so its numbers are still growing.
       </p>
     </div>
   )
@@ -218,10 +281,14 @@ type OverviewData = Awaited<ReturnType<typeof getAnalyticsOverview>>
 
 function Overview({
   overview,
-  period,
+  range,
+  filters,
+  onFilter,
 }: {
   overview: OverviewData
-  period: AnalyticsPeriod
+  range: AnalyticsRange
+  filters: AnalyticsSearch
+  onFilter: (patch: AnalyticsSearch) => void
 }) {
   const { current, previous, comparable } = overview
   const contacts = current.call + current.whatsapp + current.directions
@@ -231,12 +298,15 @@ function Overview({
   const previousRate = contactRate(previous.contactVisitors, previous.visitors)
   const rateChange = Math.round((rate - previousRate) * 1000) / 10
   const rateComparable = comparable.views && comparable.contacts
-  const contactKinds = [
-    { label: "WhatsApp", short: "WhatsApp", value: current.whatsapp },
-    { label: "Phone call", short: "Call", value: current.call },
-    { label: "Directions", short: "Directions", value: current.directions },
-  ]
+  const contactKinds = CONTACT_KINDS.map((kind) => ({
+    kind,
+    label: CONTACT_LABELS[kind],
+    short: kind === "call" ? "Call" : CONTACT_LABELS[kind],
+    value: current[kind],
+  }))
   const contactMax = Math.max(...contactKinds.map((kind) => kind.value))
+  const length = rangeLength(range)
+  const previousLabel = length === 1 ? "the previous day" : `the previous ${length} days`
   const { impressions, clicks } = overview.featured
   const sourceMax = overview.sources[0]?.value ?? 0
 
@@ -245,8 +315,8 @@ function Overview({
       <section aria-label="Summary">
         <p className="mb-2 text-sm text-muted-foreground">
           {comparable.views
-            ? `Compared with the previous ${period} days`
-            : `Change vs the previous ${period} days appears once there's enough history`}
+            ? `Compared with ${previousLabel}`
+            : `Change vs ${previousLabel} appears once there's enough history`}
         </p>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
           <Kpi
@@ -336,27 +406,12 @@ function Overview({
 
       <Card>
         <CardContent>
-          <h3 className="text-base font-medium">Daily trend</h3>
-          <div className="mt-4 grid gap-8 lg:grid-cols-2">
-            <TrendChart
-              title="Page views"
-              unit="views"
-              barClassName="bg-primary"
-              points={overview.daily.map((point) => ({
-                day: point.day,
-                value: point.views,
-              }))}
-            />
-            <TrendChart
-              title="Contacts"
-              unit="contacts"
-              barClassName="bg-chart-4"
-              points={overview.daily.map((point) => ({
-                day: point.day,
-                value: point.contacts,
-              }))}
-            />
-          </div>
+          <h3 className="mb-4 text-base font-medium">Daily trend</h3>
+          <TrendChart
+            points={overview.daily}
+            contact={filters.contact}
+            onSelectDay={(day) => onFilter({ from: day, to: day, days: undefined })}
+          />
         </CardContent>
       </Card>
 
@@ -364,13 +419,21 @@ function Overview({
         <Card>
           <CardContent>
             <h3 className="text-base font-medium">How visitors made contact</h3>
-            <ul className="mt-4 space-y-4">
+            <p className="mt-1 text-sm text-muted-foreground">Select one to filter.</p>
+            <ul className="mt-3 space-y-1">
               {contactKinds.map((kind) => (
                 <BarRow
-                  key={kind.label}
+                  key={kind.kind}
                   label={kind.label}
                   value={kind.value}
                   max={contactMax}
+                  barClassName={CONTACT_COLORS[kind.kind]}
+                  pressed={filters.contact === kind.kind}
+                  onClick={() =>
+                    onFilter({
+                      contact: filters.contact === kind.kind ? undefined : kind.kind,
+                    })
+                  }
                 />
               ))}
             </ul>
@@ -384,17 +447,27 @@ function Overview({
                 No contacts in this period yet.
               </p>
             ) : (
-              <ul className="mt-4 space-y-4">
-                {overview.sources.map((source) => (
-                  <BarRow
-                    key={`${source.label}|${source.sub}`}
-                    label={source.label}
-                    sub={source.sub}
-                    value={source.value}
-                    max={sourceMax}
-                  />
-                ))}
-              </ul>
+              <>
+                <p className="mt-1 text-sm text-muted-foreground">Select one to filter.</p>
+                <ul className="mt-3 space-y-1">
+                  {overview.sources.map((source) => (
+                    <BarRow
+                      key={`${source.key}|${source.sub}`}
+                      label={SOURCE_LABELS[source.key]}
+                      sub={source.sub}
+                      value={source.value}
+                      max={sourceMax}
+                      barClassName="bg-chart-4"
+                      pressed={filters.source === source.key}
+                      onClick={() =>
+                        onFilter({
+                          source: filters.source === source.key ? undefined : source.key,
+                        })
+                      }
+                    />
+                  ))}
+                </ul>
+              </>
             )}
           </CardContent>
         </Card>
@@ -428,14 +501,14 @@ function Overview({
 
 function TownComparison({
   centerId,
-  period,
+  range,
 }: {
   centerId: string
-  period: AnalyticsPeriod
+  range: AnalyticsRange
 }) {
   const { data } = useQuery({
-    queryKey: ["analytics", "town", period, centerId],
-    queryFn: () => getTownComparison({ data: { period, centerId } }),
+    queryKey: ["analytics", "town", range, centerId],
+    queryFn: () => getTownComparison({ data: { ...range, centerId } }),
   })
 
   if (!data) return null
@@ -530,31 +603,47 @@ function BarRow({
   sub,
   value,
   max,
+  barClassName,
+  pressed,
+  onClick,
 }: {
   label: string
   sub?: string
   value: number
   max: number
+  barClassName: string
+  pressed: boolean
+  onClick: () => void
 }) {
   return (
     <li>
-      <div className="flex items-baseline justify-between gap-3">
-        <span className="min-w-0">
-          <span className="font-medium">{label}</span>
-          {sub && (
-            <span className="block truncate text-xs text-muted-foreground">
-              {sub}
-            </span>
-          )}
+      <button
+        type="button"
+        aria-pressed={pressed}
+        onClick={onClick}
+        className={cn(
+          "-mx-2 block w-[calc(100%+1rem)] rounded-lg px-2 py-2 text-left transition-colors hover:bg-muted/60 focus-visible:bg-muted/60 focus-visible:outline-none",
+          pressed && "bg-muted"
+        )}
+      >
+        <span className="flex items-baseline justify-between gap-3">
+          <span className="min-w-0">
+            <span className="font-medium">{label}</span>
+            {sub && (
+              <span className="block truncate text-xs text-muted-foreground">
+                {sub}
+              </span>
+            )}
+          </span>
+          <span className="text-sm tabular-nums">{formatNumber(value)}</span>
         </span>
-        <span className="text-sm tabular-nums">{formatNumber(value)}</span>
-      </div>
-      <div aria-hidden="true" className="mt-1.5 h-1.5 rounded-full bg-muted">
-        <div
-          className="h-full rounded-full bg-chart-4"
-          style={{ width: max > 0 ? `${(value / max) * 100}%` : 0 }}
-        />
-      </div>
+        <span aria-hidden="true" className="mt-1.5 block h-1.5 rounded-full bg-muted">
+          <span
+            className={cn("block h-full rounded-full", barClassName)}
+            style={{ width: max > 0 ? `${(value / max) * 100}%` : 0 }}
+          />
+        </span>
+      </button>
     </li>
   )
 }

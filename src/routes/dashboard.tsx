@@ -19,6 +19,7 @@ import {
   userRoleQuery,
 } from "@/components/dashboard/queries"
 import { LEAD_STATUSES, toLeadStatus } from "@/components/intake-lead-list"
+import { ANALYTICS_PRESETS, CONTACT_KINDS, SOURCE_KEYS } from "@/lib/analytics"
 
 const DASHBOARD_TABS = [
   "analytics",
@@ -39,6 +40,12 @@ const searchSchema = z.object({
   sector: z.string().optional().catch(undefined),
   sort: z.enum(["asc", "desc"]).optional().catch(undefined),
   status: z.enum(LEAD_STATUSES).optional().catch(undefined),
+  days: z.literal(ANALYTICS_PRESETS).optional().catch(undefined),
+  from: z.string().optional().catch(undefined),
+  to: z.string().optional().catch(undefined),
+  town: z.string().optional().catch(undefined),
+  contact: z.enum(CONTACT_KINDS).optional().catch(undefined),
+  source: z.enum(SOURCE_KEYS).optional().catch(undefined),
 })
 
 export const Route = createFileRoute("/dashboard")({

@@ -4,22 +4,31 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { getLocationDemand } from "@/core/functions/analytics-functions"
-import type { AnalyticsPeriod } from "@/lib/analytics"
+import type { AnalyticsRange } from "@/lib/analytics"
 import { cn } from "@/lib/utils"
 import { formatNumber } from "./format"
 
 const INITIAL_LIMIT = 20
 const COLUMNS = "grid-cols-[minmax(0,1fr)_repeat(3,4.5rem)] md:grid-cols-[minmax(0,1fr)_repeat(3,6rem)_6rem]"
 
-export function LocationDemand({ period }: { period: AnalyticsPeriod }) {
+export function LocationDemand({
+  range,
+  state,
+}: {
+  range: AnalyticsRange
+  state?: string
+}) {
   const [level, setLevel] = useState<"town" | "state">("town")
   const [showAll, setShowAll] = useState(false)
   const { data = [], isLoading } = useQuery({
-    queryKey: ["analytics", "locations", period],
-    queryFn: () => getLocationDemand({ data: { period } }),
+    queryKey: ["analytics", "locations", range],
+    queryFn: () => getLocationDemand({ data: range }),
   })
 
-  const rows = data.filter((row) => (level === "town" ? row.town : !row.town))
+  const rows = data.filter(
+    (row) =>
+      (level === "town" ? row.town : !row.town) && (!state || row.stateName === state)
+  )
   const visible = showAll ? rows : rows.slice(0, INITIAL_LIMIT)
 
   return (

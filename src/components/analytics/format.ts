@@ -1,3 +1,5 @@
+import type { ContactKind } from "@/lib/analytics"
+
 const numberFormat = new Intl.NumberFormat("en-MY")
 
 const dayFormat = new Intl.DateTimeFormat("en-MY", {
@@ -5,6 +7,20 @@ const dayFormat = new Intl.DateTimeFormat("en-MY", {
   day: "numeric",
   month: "short",
 })
+
+const longDayFormat = new Intl.DateTimeFormat("en-MY", {
+  timeZone: "UTC",
+  weekday: "short",
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+})
+
+export const CONTACT_COLORS: Record<ContactKind, string> = {
+  whatsapp: "bg-series-1",
+  call: "bg-series-2",
+  directions: "bg-series-3",
+}
 
 const mytDateTimeFormat = new Intl.DateTimeFormat("en-US", {
   timeZone: "Asia/Kuala_Lumpur",
@@ -30,6 +46,10 @@ export function formatNumber(value: number) {
 
 export function formatDay(day: string) {
   return dayFormat.format(new Date(`${day}T00:00:00Z`))
+}
+
+export function formatLongDay(day: string) {
+  return longDayFormat.format(new Date(`${day}T00:00:00Z`))
 }
 
 export function contactRate(contactVisitors: number, visitors: number) {

@@ -3,13 +3,6 @@ import { ChevronRight, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import type { AnalyticsBranch } from "@/core/functions/analytics-functions"
 import { cn } from "@/lib/utils"
 import { contactRate, formatNumber, formatRate } from "./format"
@@ -23,7 +16,6 @@ const SORTS = [
 
 type SortKey = (typeof SORTS)[number]["value"]
 
-const ALL_STATES = "all"
 const INITIAL_LIMIT = 10
 const COLUMNS = "md:grid-cols-[minmax(0,1fr)_repeat(4,6.5rem)_1.25rem]"
 
@@ -46,18 +38,10 @@ export function BranchList({
   onSelect: (id: string) => void
 }) {
   const [query, setQuery] = useState("")
-  const [stateFilter, setStateFilter] = useState(ALL_STATES)
   const [sort, setSort] = useState<SortKey>("views")
   const [attentionOnly, setAttentionOnly] = useState(false)
   const [showAll, setShowAll] = useState(false)
 
-  const states = useMemo(
-    () =>
-      Array.from(new Set(branches.map((branch) => branch.state)))
-        .filter(Boolean)
-        .sort(),
-    [branches]
-  )
   const attentionCount = branches.filter(attentionLabel).length
 
   const filtered = useMemo(() => {
@@ -68,17 +52,14 @@ export function BranchList({
           (!needle ||
             branch.name.toLowerCase().includes(needle) ||
             branch.town.toLowerCase().includes(needle)) &&
-          (stateFilter === ALL_STATES || branch.state === stateFilter) &&
           (!attentionOnly || attentionLabel(branch))
       )
       .sort(
         (a, b) => sortValue(b, sort) - sortValue(a, sort) || b.views - a.views
       )
-  }, [branches, query, stateFilter, sort, attentionOnly])
+  }, [branches, query, sort, attentionOnly])
 
-  const isFiltering = Boolean(
-    query.trim() || stateFilter !== ALL_STATES || attentionOnly
-  )
+  const isFiltering = Boolean(query.trim() || attentionOnly)
   const visible =
     showAll || isFiltering ? filtered : filtered.slice(0, INITIAL_LIMIT)
   const max = Math.max(...filtered.map((branch) => sortValue(branch, sort)), 0)
@@ -96,40 +77,20 @@ export function BranchList({
           </p>
         </div>
 
-        <div className="mt-4 grid gap-2 md:grid-cols-[1fr_auto]">
-          <label className="relative block">
-            <span className="sr-only">Search centers</span>
-            <Search
-              aria-hidden="true"
-              className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
-            />
-            <Input
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search by name or town"
-              className="h-10 pl-9"
-            />
-          </label>
-          {states.length > 1 && (
-            <Select value={stateFilter} onValueChange={setStateFilter}>
-              <SelectTrigger
-                aria-label="Filter by state"
-                className="h-10! w-full md:w-52"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent position="popper">
-                <SelectItem value={ALL_STATES}>All states</SelectItem>
-                {states.map((name) => (
-                  <SelectItem key={name} value={name}>
-                    {name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
+        <label className="relative mt-4 block">
+          <span className="sr-only">Search centers</span>
+          <Search
+            aria-hidden="true"
+            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+          />
+          <Input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search by name or town"
+            className="h-10 pl-9"
+          />
+        </label>
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <span className="mr-1 text-sm text-muted-foreground">Sort by</span>

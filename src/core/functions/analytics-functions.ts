@@ -7,10 +7,12 @@ import {
   gt,
   gte,
   inArray,
+  lt,
   lte,
   isNotNull,
   sql,
   type Column,
+  type SQL,
 } from "drizzle-orm"
 import { db } from "@/db/connection"
 import {
@@ -31,9 +33,14 @@ import { requireSuperadmin } from "@/lib/center-admin"
 import { isCenterInTown, townForCenter } from "@/lib/cities"
 import {
   clampRange,
+  CONTACT_KINDS,
   describeSourcePage,
   getAnalyticsRange,
+  isValidRange,
+  SOURCE_KEYS,
   toDbDate,
+  type AnalyticsRange,
+  type SourceKey,
 } from "@/lib/analytics"
 import {
   CONTACTS_TRACKED_SINCE,
@@ -44,7 +51,19 @@ import {
   VIEWS_TRACKED_SINCE,
 } from "@/lib/lead-quality"
 
-const PeriodSchema = z.union([z.literal(7), z.literal(30), z.literal(90)])
+const rangeFields = { from: z.string(), to: z.string() }
+const contactFilterFields = {
+  contact: z.enum(CONTACT_KINDS).optional(),
+  source: z.enum(SOURCE_KEYS).optional(),
+}
+const withValidRange = <T extends AnalyticsRange>(schema: z.ZodType<T>) =>
+  schema.refine(isValidRange, "Invalid date range")
+
+type ContactFilter = {
+  contact?: (typeof CONTACT_KINDS)[number]
+  source?: SourceKey
+}
+type LocationFilter = { state?: string; town?: string }
 
 type AnalyticsMetrics = {
   views: number
@@ -79,7 +98,11 @@ function addMetrics(
   }
 }
 
-async function getCenterScope(userId: string, centerId?: string) {
+async function getCenterScope(
+  userId: string,
+  centerId?: string,
+  location: LocationFilter = {}
+) {
   const role = await getUserRole(userId)
 
   if (centerId) {
@@ -103,13 +126,23 @@ async function getCenterScope(userId: string, centerId?: string) {
     return { role, filter: (column: Column) => eq(column, centerId) }
   }
 
+  const inLocation = and(
+    location.state
+      ? inArray(
+          dialysisCenter.stateId,
+          db.select({ id: state.id }).from(state).where(eq(state.name, location.state))
+        )
+      : undefined,
+    location.town ? eq(dialysisCenter.town, location.town) : undefined
+  )
   const centerIds =
     role === "superadmin"
-      ? db.select({ id: dialysisCenter.id }).from(dialysisCenter)
+      ? db.select({ id: dialysisCenter.id }).from(dialysisCenter).where(inLocation)
       : db
           .select({ id: userCenterAccess.dialysisCenterId })
           .from(userCenterAccess)
-          .where(eq(userCenterAccess.userId, userId))
+          .innerJoin(dialysisCenter, eq(userCenterAccess.dialysisCenterId, dialysisCenter.id))
+          .where(and(eq(userCenterAccess.userId, userId), inLocation))
 
   return { role, filter: (column: Column) => inArray(column, centerIds) }
 }
@@ -134,7 +167,30 @@ const contactFields = {
   directions: total(sql`${contactClick.kind} = 'directions'`),
 }
 
-function getLeadQuery(since: string) {
+function sourceSql(source: SourceKey) {
+  const page = contactClick.sourcePage
+  const known: Record<Exclude<SourceKey, "other">, SQL> = {
+    home: sql`${page} = '/'`,
+    map: sql`${page} = '/peta'`,
+    center: sql`${page} <> '/' and substr(${page}, 2) in (select ${dialysisCenter.slug} from ${dialysisCenter})`,
+    chain: sql`${page} like '/rangkaian%'`,
+    location: sql`${page} like '/lokasi%'`,
+  }
+  if (source !== "other") return known[source]
+  return sql`${page} is not null and not (${sql.join(
+    Object.values(known).map((condition) => sql`(${condition})`),
+    sql` or `
+  )})`
+}
+
+function contactFilterSql({ contact, source }: ContactFilter) {
+  return and(
+    contact ? eq(contactClick.kind, contact) : undefined,
+    source ? sourceSql(source) : undefined
+  )
+}
+
+function getLeadQuery(since: string, until: string) {
   const stale = sql`status = 'new' and ${intakeLead.createdAt} < ${toDbDate(Date.now() - STALE_AFTER_MS)}`
   const uniqueLeads = (condition: ReturnType<typeof sql>) =>
     sql<number>`count(distinct case when ${condition} then ${leadDuplicateKeySql} end)`.mapWith(
@@ -147,12 +203,12 @@ function getLeadQuery(since: string) {
       booked: uniqueLeads(sql`status = 'booked'`),
       followUp: uniqueLeads(stale),
     },
-    where: sql`${intakeLead.createdAt} >= ${since} and not ${testLeadSql}`,
+    where: sql`${intakeLead.createdAt} >= ${since} and ${intakeLead.createdAt} < ${until} and not ${testLeadSql}`,
   }
 }
 
-function getTrackedRanges(period: z.infer<typeof PeriodSchema>) {
-  const range = getAnalyticsRange(period)
+function getTrackedRanges(input: AnalyticsRange) {
+  const range = getAnalyticsRange(input)
   return {
     range,
     views: clampRange(range, VIEWS_TRACKED_SINCE),
@@ -164,15 +220,24 @@ function getTrackedRanges(period: z.infer<typeof PeriodSchema>) {
 export const getAnalyticsOverview = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .inputValidator(
-    z.object({ period: PeriodSchema, centerId: z.string().min(1).optional() })
+    withValidRange(
+      z.object({
+        ...rangeFields,
+        ...contactFilterFields,
+        centerId: z.string().min(1).optional(),
+        state: z.string().min(1).optional(),
+        town: z.string().min(1).optional(),
+      })
+    )
   )
   .handler(async ({ context, data }) => {
     await ensureAdminDatabaseSchema()
 
-    const scope = await getCenterScope(context.session.user.id, data.centerId)
+    const scope = await getCenterScope(context.session.user.id, data.centerId, data)
     const { range, views: viewRange, contacts: contactRange, leads: leadRange } =
-      getTrackedRanges(data.period)
-    const leadQuery = getLeadQuery(leadRange.previousSince)
+      getTrackedRanges(data)
+    const leadQuery = getLeadQuery(leadRange.previousSince, range.until)
+    const contactFilter = contactFilterSql(data)
     const viewDay = mytDay(centerView.createdAt)
     const contactDay = mytDay(contactClick.createdAt)
     const leadDay = mytDay(intakeLead.createdAt)
@@ -184,7 +249,8 @@ export const getAnalyticsOverview = createServerFn({ method: "GET" })
         .where(
           and(
             scope.filter(centerView.dialysisCenterId),
-            gte(centerView.createdAt, viewRange.previousSince)
+            gte(centerView.createdAt, viewRange.previousSince),
+            lt(centerView.createdAt, range.until)
           )
         )
         .groupBy(viewDay),
@@ -200,7 +266,9 @@ export const getAnalyticsOverview = createServerFn({ method: "GET" })
         .where(
           and(
             scope.filter(contactClick.dialysisCenterId),
-            gte(contactClick.createdAt, contactRange.previousSince)
+            gte(contactClick.createdAt, contactRange.previousSince),
+            lt(contactClick.createdAt, range.until),
+            contactFilter
           )
         )
         .groupBy(contactDay),
@@ -216,7 +284,9 @@ export const getAnalyticsOverview = createServerFn({ method: "GET" })
           and(
             scope.filter(contactClick.dialysisCenterId),
             gte(contactClick.createdAt, contactRange.since),
-            isNotNull(contactClick.sourcePage)
+            lt(contactClick.createdAt, range.until),
+            isNotNull(contactClick.sourcePage),
+            contactFilter
           )
         )
         .groupBy(contactClick.sourcePage),
@@ -226,7 +296,8 @@ export const getAnalyticsOverview = createServerFn({ method: "GET" })
         .where(
           and(
             scope.filter(featuredEvent.dialysisCenterId),
-            gte(featuredEvent.createdAt, range.since)
+            gte(featuredEvent.createdAt, range.since),
+            lt(featuredEvent.createdAt, range.until)
           )
         ),
     ])
@@ -257,14 +328,14 @@ export const getAnalyticsOverview = createServerFn({ method: "GET" })
 
     const sources = new Map<
       string,
-      { label: string; sub?: string; value: number }
+      { key: SourceKey; sub?: string; value: number }
     >()
     for (const row of sourceRows) {
       const source = describeSourcePage(row.path!, centerSlugs)
-      const key = `${source.label}|${source.sub ?? ""}`
-      const group = sources.get(key) ?? { ...source, value: 0 }
+      const id = `${source.key}|${source.sub ?? ""}`
+      const group = sources.get(id) ?? { ...source, value: 0 }
       group.value += row.value
-      sources.set(key, group)
+      sources.set(id, group)
     }
 
     return {
@@ -284,13 +355,16 @@ export const getAnalyticsOverview = createServerFn({ method: "GET" })
       previous,
       daily: range.days.map((day) => {
         const metrics = byDay.get(day)!
+        const viewsTracked = day >= viewRange.startDay
+        const contactsTracked = day >= contactRange.startDay
         return {
           day,
-          views: day >= viewRange.startDay ? metrics.views : null,
-          contacts:
-            day >= contactRange.startDay
-              ? metrics.call + metrics.whatsapp + metrics.directions
-              : null,
+          views: viewsTracked ? metrics.views : null,
+          visitors: viewsTracked ? metrics.visitors : null,
+          whatsapp: contactsTracked ? metrics.whatsapp : null,
+          call: contactsTracked ? metrics.call : null,
+          directions: contactsTracked ? metrics.directions : null,
+          leads: day >= leadRange.startDay ? metrics.leads : null,
         }
       }),
       sources: Array.from(sources.values())
@@ -307,10 +381,12 @@ function inTownSql(town: string) {
 
 export const getTownComparison = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
-  .inputValidator(z.object({ period: PeriodSchema, centerId: z.string().min(1) }))
+  .inputValidator(
+    withValidRange(z.object({ ...rangeFields, centerId: z.string().min(1) }))
+  )
   .handler(async ({ context, data }) => {
     await getCenterScope(context.session.user.id, data.centerId)
-    const { views: viewRange } = getTrackedRanges(data.period)
+    const { range, views: viewRange } = getTrackedRanges(data)
 
     const [center] = await db
       .select({
@@ -336,7 +412,13 @@ export const getTownComparison = createServerFn({ method: "GET" })
         .select({ centerId: centerView.dialysisCenterId, views: viewFields.views })
         .from(centerView)
         .innerJoin(dialysisCenter, eq(centerView.dialysisCenterId, dialysisCenter.id))
-        .where(and(inTown, gte(centerView.createdAt, viewRange.since)))
+        .where(
+          and(
+            inTown,
+            gte(centerView.createdAt, viewRange.since),
+            lt(centerView.createdAt, range.until)
+          )
+        )
         .groupBy(centerView.dialysisCenterId),
     ])
 
@@ -353,10 +435,10 @@ export const getTownComparison = createServerFn({ method: "GET" })
 
 export const getLocationDemand = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
-  .inputValidator(z.object({ period: PeriodSchema }))
+  .inputValidator(withValidRange(z.object(rangeFields)))
   .handler(async ({ context, data }) => {
     await requireSuperadmin(context.session.user.id)
-    const { since } = getAnalyticsRange(data.period)
+    const { since, until } = getAnalyticsRange(data)
     const now = toDbDate(Date.now())
 
     const [views, centers, slots] = await Promise.all([
@@ -370,7 +452,7 @@ export const getLocationDemand = createServerFn({ method: "GET" })
         })
         .from(locationView)
         .innerJoin(state, eq(locationView.stateId, state.id))
-        .where(gte(locationView.createdAt, since))
+        .where(and(gte(locationView.createdAt, since), lt(locationView.createdAt, until)))
         .groupBy(locationView.stateId, locationView.town),
       db
         .select({
@@ -407,14 +489,17 @@ export type LocationDemandRow = Awaited<
 
 export const getAnalyticsBranches = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
-  .inputValidator(z.object({ period: PeriodSchema }))
+  .inputValidator(
+    withValidRange(z.object({ ...rangeFields, ...contactFilterFields }))
+  )
   .handler(async ({ context, data }) => {
     await ensureAdminDatabaseSchema()
 
     const userId = context.session.user.id
     const scope = await getCenterScope(userId)
-    const ranges = getTrackedRanges(data.period)
-    const leadQuery = getLeadQuery(ranges.leads.since)
+    const ranges = getTrackedRanges(data)
+    const { until } = ranges.range
+    const leadQuery = getLeadQuery(ranges.leads.since, until)
 
     const [centers, views, contacts, leads] = await Promise.all([
       db
@@ -435,7 +520,8 @@ export const getAnalyticsBranches = createServerFn({ method: "GET" })
         .where(
           and(
             scope.filter(centerView.dialysisCenterId),
-            gte(centerView.createdAt, ranges.views.since)
+            gte(centerView.createdAt, ranges.views.since),
+            lt(centerView.createdAt, until)
           )
         )
         .groupBy(centerView.dialysisCenterId),
@@ -451,7 +537,9 @@ export const getAnalyticsBranches = createServerFn({ method: "GET" })
         .where(
           and(
             scope.filter(contactClick.dialysisCenterId),
-            gte(contactClick.createdAt, ranges.contacts.since)
+            gte(contactClick.createdAt, ranges.contacts.since),
+            lt(contactClick.createdAt, until),
+            contactFilterSql(data)
           )
         )
         .groupBy(contactClick.dialysisCenterId),
