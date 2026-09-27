@@ -19,3 +19,13 @@ export function endOfMytDay(day: string) {
 export function toMytDayInput(value: string | null) {
   return value ? toMytDay(Date.parse(value)) : ""
 }
+
+export function startOfMytDay(day: string) {
+  return toDbDate(Date.parse(`${day}T00:00:00+08:00`))
+}
+
+export function addYear(day: string) {
+  const date = new Date(`${day}T00:00:00Z`)
+  date.setUTCFullYear(date.getUTCFullYear() + 1)
+  return date.toISOString().slice(0, 10)
+}

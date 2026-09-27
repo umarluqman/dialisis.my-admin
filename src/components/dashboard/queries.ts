@@ -4,6 +4,7 @@ import {
   getCurrentUserRole,
 } from "@/core/functions/center-functions"
 import { getAllCenters } from "@/core/functions/invitation-functions"
+import { getFeaturedSlots } from "@/core/functions/featured-slot-functions"
 import {
   getFollowUpLeads,
   getIntakeLeads,
@@ -36,4 +37,9 @@ export const intakeLeadsQuery = queryOptions({
 export const followUpLeadsQuery = queryOptions({
   queryKey: ["followUpLeads"],
   queryFn: () => getFollowUpLeads(),
+})
+
+export const featuredSlotsQuery = queryOptions({
+  queryKey: ["featuredSlots"],
+  queryFn: () => getFeaturedSlots(),
 })

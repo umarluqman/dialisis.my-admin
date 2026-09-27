@@ -97,6 +97,11 @@ async function revalidatePublicCenterChange({
   await revalidatePublicCenterQuietly(payload)
 }
 
+export async function revalidateCenter(id: string) {
+  const snapshot = await getPublicCenterSnapshot(id)
+  await revalidatePublicCenterChange({ before: snapshot, after: snapshot })
+}
+
 export const getCurrentUserRole = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .handler(async ({ context }) => {
@@ -481,9 +486,9 @@ export const deleteCenter = createServerFn({ method: "POST" })
     return { success: true }
   })
 
-async function requireSuperadmin(userId: string) {
+export async function requireSuperadmin(userId: string) {
   if ((await getUserRole(userId)) !== "superadmin") {
-    throw new Error("Only superadmins can manage plans")
+    throw new Error("Superadmin only")
   }
 }
 
@@ -555,8 +560,7 @@ export const updateCenterPlan = createServerFn({ method: "POST" })
       })
       .where(eq(dialysisCenter.id, data.id))
 
-    const snapshot = await getPublicCenterSnapshot(data.id)
-    await revalidatePublicCenterChange({ before: snapshot, after: snapshot })
+    await revalidateCenter(data.id)
 
     return { success: true }
   })

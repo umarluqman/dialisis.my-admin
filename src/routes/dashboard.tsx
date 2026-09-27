@@ -10,6 +10,7 @@ import { CentersView } from "@/components/dashboard/centers-view"
 import { LeadsView } from "@/components/dashboard/leads-view"
 import { FollowUpView } from "@/components/dashboard/follow-up-view"
 import { InvitationsView } from "@/components/dashboard/invitations-view"
+import { FeaturedView } from "@/components/dashboard/featured-view"
 import {
   centersQuery,
   followUpLeadsQuery,
@@ -18,8 +19,16 @@ import {
 } from "@/components/dashboard/queries"
 import { LEAD_STATUSES, toLeadStatus } from "@/components/intake-lead-list"
 
-const DASHBOARD_TABS = ["analytics", "centers", "leads", "follow-up", "invitations"] as const
+const DASHBOARD_TABS = [
+  "analytics",
+  "centers",
+  "leads",
+  "follow-up",
+  "featured",
+  "invitations",
+] as const
 export type DashboardTab = (typeof DASHBOARD_TABS)[number]
+const SUPERADMIN_TABS: DashboardTab[] = ["featured", "invitations"]
 
 const searchSchema = z.object({
   tab: z.enum(DASHBOARD_TABS).optional().catch(undefined),
@@ -41,6 +50,7 @@ const TAB_TITLES: Record<DashboardTab, string> = {
   centers: "Dialysis Centers",
   leads: "Intake Leads",
   "follow-up": "Needs follow-up",
+  featured: "Featured slots",
   invitations: "Invitations",
 }
 
@@ -55,7 +65,7 @@ function DashboardPage() {
 
   const isSuperadmin = userRole?.role === "superadmin"
   const tab =
-    requestedTab === "invitations" && !isSuperadmin ? "analytics" : requestedTab
+    SUPERADMIN_TABS.includes(requestedTab) && !isSuperadmin ? "analytics" : requestedTab
   const newLeadCount =
     leads?.filter(
       (lead) => toLeadStatus(lead.status) === "new" && lead.quality !== "test"
@@ -67,6 +77,7 @@ function DashboardPage() {
     centers: centers ? `${centers.length} ${centers.length === 1 ? "center" : "centers"}` : null,
     leads: leads ? `${newLeadCount} new · ${leads.length} latest` : null,
     "follow-up": followUpLeads ? `${followUpCount} to contact` : null,
+    featured: "One centre per town and per state",
     invitations: "Invite a PIC to manage centers",
   }
 
@@ -110,6 +121,7 @@ function DashboardPage() {
           {tab === "centers" && <CentersView isSuperadmin={isSuperadmin} />}
           {tab === "leads" && <LeadsView />}
           {tab === "follow-up" && <FollowUpView />}
+          {tab === "featured" && <FeaturedView />}
           {tab === "invitations" && <InvitationsView />}
         </div>
       </SidebarInset>

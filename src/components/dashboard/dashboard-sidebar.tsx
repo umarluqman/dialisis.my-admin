@@ -5,6 +5,7 @@ import {
   LogOut,
   MessageCircle,
   PhoneCall,
+  Star,
   UserPlus,
 } from "lucide-react"
 import { signOut } from "@/lib/auth-client"
@@ -30,6 +31,7 @@ const NAV_ITEMS = [
   { tab: "centers", label: "Centers", icon: Building2 },
   { tab: "leads", label: "Intake Leads", icon: MessageCircle },
   { tab: "follow-up", label: "Needs follow-up", icon: PhoneCall },
+  { tab: "featured", label: "Featured slots", icon: Star, superadminOnly: true },
   { tab: "invitations", label: "Invitations", icon: UserPlus, superadminOnly: true },
 ] as const
 
