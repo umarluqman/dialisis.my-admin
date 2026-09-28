@@ -53,7 +53,6 @@ export const dialysisCenter = sqliteTable(
     address: text("address").default("").notNull(),
     addressWithUnit: text("addressWithUnit").default("").notNull(),
     tel: text("tel").default("").notNull(),
-    fax: text("fax"),
     panelNephrologist: text("panelNephrologist"),
     centreManager: text("centreManager"),
     centreCoordinator: text("centreCoordinator"),
@@ -102,14 +101,7 @@ export const dialysisCenter = sqliteTable(
   },
   (table) => [
     index("dialysisCenter_sector_idx").on(table.sector),
-    index("dialysisCenter_title_idx").on(table.title),
     index("dialysisCenter_town_idx").on(table.town),
-    index("dialysisCenter_units_idx").on(table.units),
-    index("dialysisCenter_drInCharge_idx").on(table.drInCharge),
-    index("dialysisCenter_addressWithUnit_idx").on(table.addressWithUnit),
-    index("dialysisCenter_address_idx").on(table.address),
-    index("dialysisCenter_dialysisCenterName_idx").on(table.dialysisCenterName),
-    index("dialysisCenter_slug_idx").on(table.slug),
     index("DialysisCenter_plan_idx").on(table.plan),
   ]
 )

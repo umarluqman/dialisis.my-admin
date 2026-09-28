@@ -96,7 +96,6 @@ type CenterFormData = {
   description: string
   tel: string
   phoneNumber: string
-  fax: string
   email: string
   website: string
   address: string
@@ -129,7 +128,6 @@ const EMPTY_CENTER_FORM_DATA: CenterFormData = {
   description: "",
   tel: "",
   phoneNumber: "",
-  fax: "",
   email: "",
   website: "",
   address: "",
@@ -195,7 +193,6 @@ function CenterEditPage() {
         description: center.description ?? "",
         tel: center.tel ?? "",
         phoneNumber: center.phoneNumber ?? "",
-        fax: center.fax ?? "",
         email: center.email ?? "",
         website: center.website ?? "",
         address: center.address ?? "",
@@ -557,17 +554,6 @@ function CenterEditPage() {
                   </Field>
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
-                  <Field>
-                    <FieldLabel htmlFor="fax">Fax</FieldLabel>
-                    <Input
-                      inputMode="tel"
-                      id="fax"
-                      name="fax"
-                      value={formData.fax}
-                      onChange={handleInputChange}
-                      placeholder="Enter fax number"
-                    />
-                  </Field>
                   <Field>
                     <FieldLabel htmlFor="email">Email</FieldLabel>
                     <Input
