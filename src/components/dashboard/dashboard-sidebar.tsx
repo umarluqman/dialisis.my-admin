@@ -14,7 +14,6 @@ import { stopPreview } from "@/core/functions/preview-functions"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme"
-import { LocaleToggle } from "@/components/locale-toggle"
 import {
   Sidebar,
   SidebarContent,
@@ -161,7 +160,6 @@ export function DashboardSidebar({
             </div>
             <p className="truncate text-xs text-muted-foreground">{user.email}</p>
           </div>
-          <LocaleToggle />
           <ThemeToggle variant="ghost" size="sm" align="end" />
           <Button
             variant="ghost"

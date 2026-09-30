@@ -12,6 +12,7 @@ import { FollowUpView } from "@/components/dashboard/follow-up-view"
 import { InvitationsView } from "@/components/dashboard/invitations-view"
 import { FeaturedView } from "@/components/dashboard/featured-view"
 import { SalesView } from "@/components/dashboard/sales-view"
+import { LocaleToggle } from "@/components/locale-toggle"
 import { PreviewBanner } from "@/components/dashboard/preview-banner"
 import {
   centersQuery,
@@ -174,6 +175,7 @@ function DashboardPage() {
                 </span>
               )}
             </div>
+            <LocaleToggle className="ml-auto shrink-0" />
           </header>
         </div>
         <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">

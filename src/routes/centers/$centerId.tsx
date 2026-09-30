@@ -1,3 +1,4 @@
+import { LocaleToggle } from "@/components/locale-toggle"
 import { PreviewBanner } from "@/components/dashboard/preview-banner"
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
@@ -727,6 +728,7 @@ function CenterEditPage() {
                 {formData.dialysisCenterName || t.centerDetails}
               </p>
             </div>
+            <LocaleToggle className="shrink-0" />
             {!isNewCenter && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
