@@ -10,6 +10,7 @@ import {
   UserPlus,
 } from "lucide-react"
 import { signOut } from "@/lib/auth-client"
+import { stopPreview } from "@/core/functions/preview-functions"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme"
@@ -26,6 +27,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import type { DashboardTab } from "@/routes/dashboard"
+import { PreviewPicker } from "./preview-picker"
 
 const NAV_ITEMS = [
   { tab: "analytics", label: "Analytics", icon: BarChart3 },
@@ -41,6 +43,7 @@ type DashboardSidebarProps = {
   activeTab: DashboardTab
   user: { name: string; email: string }
   role: "pic" | "superadmin" | undefined
+  hiddenTabs: DashboardTab[]
   newLeadCount: number
   followUpCount: number
 }
@@ -49,6 +52,7 @@ export function DashboardSidebar({
   activeTab,
   user,
   role,
+  hiddenTabs,
   newLeadCount,
   followUpCount,
 }: DashboardSidebarProps) {
@@ -56,6 +60,7 @@ export function DashboardSidebar({
   const { setOpenMobile } = useSidebar()
 
   const handleSignOut = async () => {
+    await stopPreview()
     await signOut()
     navigate({ to: "/auth/sign-in" })
   }
@@ -72,7 +77,9 @@ export function DashboardSidebar({
         <SidebarGroup>
           <SidebarMenu>
             {NAV_ITEMS.filter(
-              (item) => !("superadminOnly" in item) || role === "superadmin"
+              (item) =>
+                (!("superadminOnly" in item) || role === "superadmin") &&
+                !hiddenTabs.includes(item.tab)
             ).map(({ tab, label, icon: Icon }) => (
               <SidebarMenuItem key={tab}>
                 <SidebarMenuButton asChild isActive={activeTab === tab}>
@@ -103,6 +110,7 @@ export function DashboardSidebar({
                 )}
               </SidebarMenuItem>
             ))}
+            {role === "superadmin" && <PreviewPicker />}
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>

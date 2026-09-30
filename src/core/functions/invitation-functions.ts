@@ -11,7 +11,7 @@ import {
 } from "@/db/schema"
 import { ensureAdminDatabaseSchema } from "@/db/ensure-schema"
 import { authMiddleware } from "@/lib/middleware"
-import { getUserRole } from "@/lib/user-role"
+import { getAccess } from "@/lib/access"
 
 function generateToken(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789"
@@ -38,7 +38,7 @@ export const createInvitation = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     const { session } = context
     const userId = session.user.id
-    const userRole = await getUserRole(userId)
+    const { role: userRole } = await getAccess(userId)
     await ensureAdminDatabaseSchema()
 
     if (userRole !== "superadmin") {
@@ -67,7 +67,7 @@ export const getAllCenters = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { session } = context
     const userId = session.user.id
-    const userRole = await getUserRole(userId)
+    const { role: userRole } = await getAccess(userId)
     await ensureAdminDatabaseSchema()
 
     if (userRole !== "superadmin") {

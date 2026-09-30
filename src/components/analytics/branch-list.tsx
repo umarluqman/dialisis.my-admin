@@ -3,6 +3,7 @@ import { ChevronRight, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import type { AnalyticsBranch } from "@/core/functions/analytics-functions"
 import { cn } from "@/lib/utils"
 import { contactRate, formatNumber, formatRate } from "./format"
@@ -24,9 +25,20 @@ function sortValue(branch: AnalyticsBranch, sort: SortKey) {
   return branch[sort]
 }
 
+const ATTENTION = {
+  views: {
+    label: "No views",
+    hint: "Nobody opened this centre's page on dialisis.my in this period.",
+  },
+  contacts: {
+    label: "No contacts",
+    hint: "People viewed this centre, but nobody tapped Call, WhatsApp or Directions.",
+  },
+}
+
 function attentionLabel(branch: AnalyticsBranch) {
-  if (branch.views === 0) return "No views"
-  if (branch.contacts === 0) return "No contacts"
+  if (branch.views === 0) return ATTENTION.views
+  if (branch.contacts === 0) return ATTENTION.contacts
   return null
 }
 
@@ -76,6 +88,9 @@ export function BranchList({
             centers
           </p>
         </div>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Contacts are taps on Call, WhatsApp or Directions from dialisis.my.
+        </p>
 
         <label className="relative mt-4 block">
           <span className="sr-only">Search centers</span>
@@ -168,13 +183,19 @@ export function BranchList({
                         {branch.name}
                       </span>
                       {attention && (
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2 py-0.5 text-xs font-medium">
-                          <span
-                            aria-hidden="true"
-                            className="size-1.5 rounded-full bg-destructive"
-                          />
-                          {attention}
-                        </span>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2 py-0.5 text-xs font-medium">
+                              <span
+                                aria-hidden="true"
+                                className="size-1.5 rounded-full bg-destructive"
+                              />
+                              {attention.label}
+                              <span className="sr-only">: {attention.hint}</span>
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>{attention.hint}</TooltipContent>
+                        </Tooltip>
                       )}
                     </span>
                     <span className="block text-sm text-muted-foreground">

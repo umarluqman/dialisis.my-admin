@@ -5,7 +5,7 @@ import {
   revalidatePublicCenterQuietly,
   type PublicCenterRevalidationInput,
 } from "@/lib/public-site-revalidation"
-import { getUserRole } from "@/lib/user-role"
+import { getAccess } from "@/lib/access"
 
 type PublicCenterSnapshot = {
   slug: string
@@ -59,7 +59,7 @@ export async function revalidateCenter(id: string) {
 }
 
 export async function requireSuperadmin(userId: string) {
-  if ((await getUserRole(userId)) !== "superadmin") {
+  if ((await getAccess(userId)).role !== "superadmin") {
     throw new Error("Superadmin only")
   }
 }

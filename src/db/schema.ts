@@ -41,6 +41,12 @@ export const state = sqliteTable("State", {
     .notNull(),
 })
 
+export const company = sqliteTable("Company", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  slug: text("slug").notNull().unique(),
+})
+
 export const dialysisCenter = sqliteTable(
   "DialysisCenter",
   {
@@ -82,6 +88,9 @@ export const dialysisCenter = sqliteTable(
       .notNull()
       .references(() => state.id),
     town: text("town").default("").notNull(),
+    companyId: text("companyId").references(() => company.id, {
+      onDelete: "set null",
+    }),
     featured: integer("featured", { mode: "boolean" }).default(false).notNull(),
     plan: text("plan", { enum: ["asas", "pro"] }).default("asas").notNull(),
     planEndsAt: text("planEndsAt"),

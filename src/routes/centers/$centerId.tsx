@@ -1,3 +1,4 @@
+import { PreviewBanner } from "@/components/dashboard/preview-banner"
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useState, useEffect } from "react"
@@ -386,6 +387,7 @@ function CenterEditPage() {
 
   return (
     <div className="min-h-screen bg-muted/30 pb-24 sm:pb-8">
+      {userRole?.preview && <PreviewBanner label={userRole.preview.label} />}
       <div className="mx-auto w-full max-w-5xl space-y-4 px-3 py-4 sm:space-y-6 sm:px-6 lg:px-8">
         <div className="sticky top-0 z-20 -mx-3 border-b bg-background/95 px-3 py-3 backdrop-blur sm:static sm:mx-0 sm:rounded-lg sm:border sm:px-4">
           <div className="flex items-center gap-3">

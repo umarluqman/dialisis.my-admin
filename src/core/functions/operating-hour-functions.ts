@@ -1,36 +1,18 @@
 import { createServerFn } from "@tanstack/react-start"
 import { z } from "zod"
-import { eq, and, asc } from "drizzle-orm"
+import { eq, asc } from "drizzle-orm"
 import { db } from "@/db/connection"
 import { ensureAdminDatabaseSchema } from "@/db/ensure-schema"
-import { centerOperatingHour, userCenterAccess } from "@/db/schema"
+import { centerOperatingHour } from "@/db/schema"
 import { authMiddleware } from "@/lib/middleware"
-import { getUserRole } from "@/lib/user-role"
-
-async function checkCenterAccess(userId: string, centerId: string) {
-  const role = await getUserRole(userId)
-  if (role === "superadmin") return
-
-  const [access] = await db
-    .select()
-    .from(userCenterAccess)
-    .where(
-      and(
-        eq(userCenterAccess.userId, userId),
-        eq(userCenterAccess.dialysisCenterId, centerId)
-      )
-    )
-    .limit(1)
-
-  if (!access) throw new Error("Access denied")
-}
+import { requireCenterAccess } from "@/lib/access"
 
 export const getOperatingHoursForCenter = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .inputValidator(z.object({ centerId: z.string().min(1) }))
   .handler(async ({ context, data }) => {
     await ensureAdminDatabaseSchema()
-    await checkCenterAccess(context.session.user.id, data.centerId)
+    await requireCenterAccess(context.session.user.id, data.centerId)
 
     return await db
       .select()
@@ -56,7 +38,7 @@ export const upsertOperatingHours = createServerFn({ method: "POST" })
   )
   .handler(async ({ context, data }) => {
     await ensureAdminDatabaseSchema()
-    await checkCenterAccess(context.session.user.id, data.centerId)
+    await requireCenterAccess(context.session.user.id, data.centerId)
 
     // Delete existing hours for this center
     await db

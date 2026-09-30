@@ -4,7 +4,6 @@ import { eq, and, inArray, ne, count, lte, gt } from "drizzle-orm"
 import { db } from "@/db/connection"
 import {
   dialysisCenter,
-  userCenterAccess,
   state,
   centerImage,
   featuredSlot,
@@ -21,7 +20,7 @@ import {
   extractGoogleMapsCoordinates,
   extractGoogleMapsUrl,
 } from "@/lib/google-maps-embed"
-import { getUserRole } from "@/lib/user-role"
+import { getAccess, requireCenterAccess } from "@/lib/access"
 import { toDbDate } from "@/lib/analytics"
 import { EARLYBIRD_SEATS } from "@/lib/plan"
 
@@ -57,9 +56,11 @@ async function generateUniqueCenterSlug(name: string) {
 export const getCurrentUserRole = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .handler(async ({ context }) => {
-    const { session } = context
-    const role = await getUserRole(session.user.id)
-    return { role }
+    const { role, preview } = await getAccess(context.session.user.id)
+    return {
+      role,
+      preview: preview && { label: preview.label, centers: preview.centerIds.length },
+    }
   })
 
 const ResolveGoogleMapsCoordinatesSchema = z.object({
@@ -112,30 +113,19 @@ export const resolveGoogleMapsCoordinates = createServerFn({ method: "POST" })
 export const getCentersForUser = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .handler(async ({ context }) => {
-    const { session } = context
-    const userId = session.user.id
-    const userRole = await getUserRole(userId)
+    const { centerIds: accessibleCenterIds } = await getAccess(context.session.user.id)
     await ensureAdminDatabaseSchema()
 
-    let centersData
-    if (userRole === "superadmin") {
-      centersData = await db
-        .select()
-        .from(dialysisCenter)
-        .leftJoin(state, eq(dialysisCenter.stateId, state.id))
-        .orderBy(dialysisCenter.dialysisCenterName)
-    } else {
-      centersData = await db
-        .select()
-        .from(userCenterAccess)
-        .innerJoin(
-          dialysisCenter,
-          eq(userCenterAccess.dialysisCenterId, dialysisCenter.id)
-        )
-        .leftJoin(state, eq(dialysisCenter.stateId, state.id))
-        .where(eq(userCenterAccess.userId, userId))
-        .orderBy(dialysisCenter.dialysisCenterName)
-    }
+    const centersData = await db
+      .select()
+      .from(dialysisCenter)
+      .leftJoin(state, eq(dialysisCenter.stateId, state.id))
+      .where(
+        accessibleCenterIds
+          ? inArray(dialysisCenter.id, accessibleCenterIds)
+          : undefined
+      )
+      .orderBy(dialysisCenter.dialysisCenterName)
 
     const centerIds = centersData.map((row) => row.DialysisCenter.id)
 
@@ -185,9 +175,7 @@ export const getCenterById = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .inputValidator(GetCenterByIdSchema)
   .handler(async ({ context, data }) => {
-    const { session } = context
-    const userId = session.user.id
-    const userRole = await getUserRole(userId)
+    await requireCenterAccess(context.session.user.id, data.id)
     await ensureAdminDatabaseSchema()
 
     const [center] = await db
@@ -199,23 +187,6 @@ export const getCenterById = createServerFn({ method: "GET" })
 
     if (!center) {
       throw new Error("Center not found")
-    }
-
-    if (userRole !== "superadmin") {
-      const [access] = await db
-        .select()
-        .from(userCenterAccess)
-        .where(
-          and(
-            eq(userCenterAccess.userId, userId),
-            eq(userCenterAccess.dialysisCenterId, data.id)
-          )
-        )
-        .limit(1)
-
-      if (!access) {
-        throw new Error("Access denied")
-      }
     }
 
     const images = await db
@@ -267,11 +238,10 @@ export const createCenter = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .inputValidator(CreateCenterSchema)
   .handler(async ({ context, data }) => {
-    const { session } = context
-    const userRole = await getUserRole(session.user.id)
+    const { role } = await getAccess(context.session.user.id)
     await ensureAdminDatabaseSchema()
 
-    if (userRole !== "superadmin") {
+    if (role !== "superadmin") {
       throw new Error("Only superadmins can create centers")
     }
 
@@ -357,27 +327,8 @@ export const updateCenter = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .inputValidator(UpdateCenterSchema)
   .handler(async ({ context, data }) => {
-    const { session } = context
-    const userId = session.user.id
-    const userRole = await getUserRole(userId)
+    await requireCenterAccess(context.session.user.id, data.id)
     await ensureAdminDatabaseSchema()
-
-    if (userRole !== "superadmin") {
-      const [access] = await db
-        .select()
-        .from(userCenterAccess)
-        .where(
-          and(
-            eq(userCenterAccess.userId, userId),
-            eq(userCenterAccess.dialysisCenterId, data.id)
-          )
-        )
-        .limit(1)
-
-      if (!access) {
-        throw new Error("Access denied")
-      }
-    }
 
     const beforeCenter = await getPublicCenterSnapshot(data.id)
 
@@ -428,27 +379,8 @@ export const deleteCenter = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .inputValidator(DeleteCenterSchema)
   .handler(async ({ context, data }) => {
-    const { session } = context
-    const userId = session.user.id
-    const userRole = await getUserRole(userId)
+    await requireCenterAccess(context.session.user.id, data.id)
     await ensureAdminDatabaseSchema()
-
-    if (userRole !== "superadmin") {
-      const [access] = await db
-        .select()
-        .from(userCenterAccess)
-        .where(
-          and(
-            eq(userCenterAccess.userId, userId),
-            eq(userCenterAccess.dialysisCenterId, data.id)
-          )
-        )
-        .limit(1)
-
-      if (!access) {
-        throw new Error("Access denied")
-      }
-    }
 
     const beforeCenter = await getPublicCenterSnapshot(data.id)
 

@@ -1,7 +1,9 @@
 import { redirect } from "@tanstack/react-router"
 import { createMiddleware } from "@tanstack/react-start"
-import { getRequestHeaders } from "@tanstack/react-start/server"
+import { getRequest, getRequestHeaders } from "@tanstack/react-start/server"
 import { auth } from "./auth"
+import { readPreview } from "./access"
+import { getUserRole } from "./user-role"
 
 export const authMiddleware = createMiddleware().server(async ({ next }) => {
   const headers = getRequestHeaders()
@@ -9,6 +11,14 @@ export const authMiddleware = createMiddleware().server(async ({ next }) => {
 
   if (!session) {
     throw redirect({ to: "/auth/sign-in" })
+  }
+
+  if (
+    getRequest().method !== "GET" &&
+    readPreview() &&
+    (await getUserRole(session.user.id)) === "superadmin"
+  ) {
+    throw new Error("Preview is read-only. Exit preview to make changes.")
   }
 
   return await next({

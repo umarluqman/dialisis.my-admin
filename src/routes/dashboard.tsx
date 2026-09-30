@@ -12,6 +12,7 @@ import { FollowUpView } from "@/components/dashboard/follow-up-view"
 import { InvitationsView } from "@/components/dashboard/invitations-view"
 import { FeaturedView } from "@/components/dashboard/featured-view"
 import { SalesView } from "@/components/dashboard/sales-view"
+import { PreviewBanner } from "@/components/dashboard/preview-banner"
 import {
   centersQuery,
   followUpLeadsQuery,
@@ -32,6 +33,7 @@ const DASHBOARD_TABS = [
 ] as const
 export type DashboardTab = (typeof DASHBOARD_TABS)[number]
 const SUPERADMIN_TABS: DashboardTab[] = ["featured", "sales", "invitations"]
+const PREVIEW_HIDDEN_TABS: DashboardTab[] = ["leads", "follow-up"]
 
 const searchSchema = z.object({
   tab: z.enum(DASHBOARD_TABS).optional().catch(undefined),
@@ -72,9 +74,13 @@ function DashboardPage() {
   const { data: leads } = useQuery({ ...intakeLeadsQuery, enabled: !!session })
   const { data: followUpLeads } = useQuery({ ...followUpLeadsQuery, enabled: !!session })
 
+  const preview = userRole?.preview
   const isSuperadmin = userRole?.role === "superadmin"
   const tab =
-    SUPERADMIN_TABS.includes(requestedTab) && !isSuperadmin ? "analytics" : requestedTab
+    (SUPERADMIN_TABS.includes(requestedTab) && !isSuperadmin) ||
+    (PREVIEW_HIDDEN_TABS.includes(requestedTab) && preview)
+      ? "analytics"
+      : requestedTab
   const newLeadCount =
     leads?.filter(
       (lead) => toLeadStatus(lead.status) === "new" && lead.quality !== "test"
@@ -108,24 +114,35 @@ function DashboardPage() {
     <SidebarProvider>
       <DashboardSidebar
         activeTab={tab}
-        user={session.user}
+        user={
+          preview
+            ? {
+                name: preview.label,
+                email: `${preview.centers} ${preview.centers === 1 ? "centre" : "centres"}`,
+              }
+            : session.user
+        }
         role={userRole?.role}
+        hiddenTabs={preview ? PREVIEW_HIDDEN_TABS : []}
         newLeadCount={newLeadCount}
         followUpCount={followUpCount}
       />
       <SidebarInset>
-        <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-3 border-b bg-background/95 px-4 backdrop-blur">
-          <SidebarTrigger className="-ml-1" />
-          <Separator orientation="vertical" className="data-[orientation=vertical]:h-5 data-[orientation=vertical]:self-center" />
-          <div className="flex min-w-0 items-baseline gap-3">
-            <h1 className="truncate text-base font-semibold">{TAB_TITLES[tab]}</h1>
-            {context[tab] && (
-              <span className="truncate text-sm text-muted-foreground tabular-nums">
-                {context[tab]}
-              </span>
-            )}
-          </div>
-        </header>
+        <div className="sticky top-0 z-10">
+          {preview && <PreviewBanner label={preview.label} />}
+          <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-background/95 px-4 backdrop-blur">
+            <SidebarTrigger className="-ml-1" />
+            <Separator orientation="vertical" className="data-[orientation=vertical]:h-5 data-[orientation=vertical]:self-center" />
+            <div className="flex min-w-0 items-baseline gap-3">
+              <h1 className="truncate text-base font-semibold">{TAB_TITLES[tab]}</h1>
+              {context[tab] && (
+                <span className="truncate text-sm text-muted-foreground tabular-nums">
+                  {context[tab]}
+                </span>
+              )}
+            </div>
+          </header>
+        </div>
         <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">
           {tab === "analytics" && <AnalyticsView isSuperadmin={isSuperadmin} />}
           {tab === "centers" && <CentersView isSuperadmin={isSuperadmin} />}

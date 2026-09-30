@@ -24,11 +24,10 @@ import {
   intakeLead,
   locationView,
   state,
-  userCenterAccess,
 } from "@/db/schema"
 import { ensureAdminDatabaseSchema } from "@/db/ensure-schema"
 import { authMiddleware } from "@/lib/middleware"
-import { getUserRole } from "@/lib/user-role"
+import { getAccess } from "@/lib/access"
 import { requireSuperadmin } from "@/lib/center-admin"
 import { isCenterInTown, townForCenter } from "@/lib/cities"
 import {
@@ -103,48 +102,33 @@ async function getCenterScope(
   centerId?: string,
   location: LocationFilter = {}
 ) {
-  const role = await getUserRole(userId)
+  const { role, centerIds } = await getAccess(userId)
 
   if (centerId) {
-    if (role !== "superadmin") {
-      const [access] = await db
-        .select({ id: userCenterAccess.id })
-        .from(userCenterAccess)
-        .where(
-          and(
-            eq(userCenterAccess.userId, userId),
-            eq(userCenterAccess.dialysisCenterId, centerId)
-          )
-        )
-        .limit(1)
-
-      if (!access) {
-        throw new Error("Access denied")
-      }
+    if (centerIds && !centerIds.includes(centerId)) {
+      throw new Error("Access denied")
     }
 
     return { role, filter: (column: Column) => eq(column, centerId) }
   }
 
-  const inLocation = and(
-    location.state
-      ? inArray(
-          dialysisCenter.stateId,
-          db.select({ id: state.id }).from(state).where(eq(state.name, location.state))
-        )
-      : undefined,
-    location.town ? eq(dialysisCenter.town, location.town) : undefined
-  )
-  const centerIds =
-    role === "superadmin"
-      ? db.select({ id: dialysisCenter.id }).from(dialysisCenter).where(inLocation)
-      : db
-          .select({ id: userCenterAccess.dialysisCenterId })
-          .from(userCenterAccess)
-          .innerJoin(dialysisCenter, eq(userCenterAccess.dialysisCenterId, dialysisCenter.id))
-          .where(and(eq(userCenterAccess.userId, userId), inLocation))
+  const scopedIds = db
+    .select({ id: dialysisCenter.id })
+    .from(dialysisCenter)
+    .where(
+      and(
+        centerIds ? inArray(dialysisCenter.id, centerIds) : undefined,
+        location.state
+          ? inArray(
+              dialysisCenter.stateId,
+              db.select({ id: state.id }).from(state).where(eq(state.name, location.state))
+            )
+          : undefined,
+        location.town ? eq(dialysisCenter.town, location.town) : undefined
+      )
+    )
 
-  return { role, filter: (column: Column) => inArray(column, centerIds) }
+  return { role, filter: (column: Column) => inArray(column, scopedIds) }
 }
 
 const mytDay = (column: Column) => sql<string>`date(${column}, '+8 hours')`

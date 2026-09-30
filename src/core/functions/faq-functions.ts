@@ -1,36 +1,18 @@
 import { createServerFn } from "@tanstack/react-start"
 import { z } from "zod"
-import { eq, and, asc } from "drizzle-orm"
+import { eq, asc } from "drizzle-orm"
 import { db } from "@/db/connection"
 import { ensureAdminDatabaseSchema } from "@/db/ensure-schema"
-import { centerFaq, userCenterAccess } from "@/db/schema"
+import { centerFaq } from "@/db/schema"
 import { authMiddleware } from "@/lib/middleware"
-import { getUserRole } from "@/lib/user-role"
-
-async function checkCenterAccess(userId: string, centerId: string) {
-  const role = await getUserRole(userId)
-  if (role === "superadmin") return
-
-  const [access] = await db
-    .select()
-    .from(userCenterAccess)
-    .where(
-      and(
-        eq(userCenterAccess.userId, userId),
-        eq(userCenterAccess.dialysisCenterId, centerId)
-      )
-    )
-    .limit(1)
-
-  if (!access) throw new Error("Access denied")
-}
+import { requireCenterAccess } from "@/lib/access"
 
 export const getFaqsForCenter = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .inputValidator(z.object({ centerId: z.string().min(1) }))
   .handler(async ({ context, data }) => {
     await ensureAdminDatabaseSchema()
-    await checkCenterAccess(context.session.user.id, data.centerId)
+    await requireCenterAccess(context.session.user.id, data.centerId)
 
     return await db
       .select()
@@ -50,7 +32,7 @@ export const createFaq = createServerFn({ method: "POST" })
   )
   .handler(async ({ context, data }) => {
     await ensureAdminDatabaseSchema()
-    await checkCenterAccess(context.session.user.id, data.centerId)
+    await requireCenterAccess(context.session.user.id, data.centerId)
 
     const existing = await db
       .select({ displayOrder: centerFaq.displayOrder })
@@ -96,7 +78,7 @@ export const updateFaq = createServerFn({ method: "POST" })
 
     if (!faq) throw new Error("FAQ not found")
 
-    await checkCenterAccess(context.session.user.id, faq.dialysisCenterId)
+    await requireCenterAccess(context.session.user.id, faq.dialysisCenterId)
 
     const { faqId, ...updateData } = data
     await db
@@ -121,7 +103,7 @@ export const deleteFaq = createServerFn({ method: "POST" })
 
     if (!faq) throw new Error("FAQ not found")
 
-    await checkCenterAccess(context.session.user.id, faq.dialysisCenterId)
+    await requireCenterAccess(context.session.user.id, faq.dialysisCenterId)
 
     await db.delete(centerFaq).where(eq(centerFaq.id, data.faqId))
 

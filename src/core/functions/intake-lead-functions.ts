@@ -3,20 +3,11 @@ import { z } from "zod"
 import { and, desc, eq, inArray, not, sql, type SQL } from "drizzle-orm"
 import { db } from "@/db/connection"
 import { ensureAdminDatabaseSchema } from "@/db/ensure-schema"
-import { dialysisCenter, intakeLead, userCenterAccess } from "@/db/schema"
+import { dialysisCenter, intakeLead } from "@/db/schema"
 import { authMiddleware } from "@/lib/middleware"
-import { getUserRole } from "@/lib/user-role"
+import { getAccess } from "@/lib/access"
 import { toDbDate } from "@/lib/analytics"
 import { getLeadQuality, leadDuplicateKey, testLeadSql } from "@/lib/lead-quality"
-
-async function getAccessibleCenterIds(userId: string) {
-  const rows = await db
-    .select({ centerId: userCenterAccess.dialysisCenterId })
-    .from(userCenterAccess)
-    .where(eq(userCenterAccess.userId, userId))
-
-  return rows.map((row) => row.centerId)
-}
 
 const GetIntakeLeadsSchema = z.object({
   centerId: z.string().optional(),
@@ -71,16 +62,15 @@ export const getIntakeLeads = createServerFn({ method: "GET" })
     const now = Date.now()
     const { session } = context
     const userId = session.user.id
-    const userRole = await getUserRole(userId)
+    const { centerIds: accessibleCenterIds, preview } = await getAccess(userId)
+    if (preview) return []
     const conditions: SQL[] = []
 
     if (data.centerId) {
       conditions.push(eq(intakeLead.dialysisCenterId, data.centerId))
     }
 
-    if (userRole !== "superadmin") {
-      const accessibleCenterIds = await getAccessibleCenterIds(userId)
-
+    if (accessibleCenterIds) {
       if (data.centerId && !accessibleCenterIds.includes(data.centerId)) {
         throw new Error("Access denied")
       }
@@ -126,8 +116,9 @@ export const getFollowUpLeads = createServerFn({ method: "GET" })
     const userId = context.session.user.id
     const conditions: SQL[] = [eq(intakeLead.status, "new"), not(testLeadSql)]
 
-    if ((await getUserRole(userId)) !== "superadmin") {
-      const accessibleCenterIds = await getAccessibleCenterIds(userId)
+    const { centerIds: accessibleCenterIds, preview } = await getAccess(userId)
+    if (preview) return []
+    if (accessibleCenterIds) {
       if (accessibleCenterIds.length === 0) return []
       conditions.push(inArray(intakeLead.dialysisCenterId, accessibleCenterIds))
     }
@@ -182,8 +173,8 @@ export const updateIntakeLeadStatus = createServerFn({ method: "POST" })
       throw new Error("Lead not found")
     }
 
-    if ((await getUserRole(userId)) !== "superadmin") {
-      const accessibleCenterIds = await getAccessibleCenterIds(userId)
+    const { centerIds: accessibleCenterIds } = await getAccess(userId)
+    if (accessibleCenterIds) {
       if (leads.some((lead) => !accessibleCenterIds.includes(lead.centerId))) {
         throw new Error("Access denied")
       }
