@@ -12,12 +12,43 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet"
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar"
+import { defineCopy, useCopy } from "@/lib/i18n"
 
 const MAX_VISIBLE = 50
 
 type Target = { companyId: string } | { centerId: string }
 
+const COPY = defineCopy({
+  en: {
+    startFailed: "Failed to start preview",
+    title: "Preview as PIC",
+    description: "See the dashboard exactly as a PIC of these centres would. Read-only.",
+    search: "Search brand, centre, town or state",
+    loading: "Loading...",
+    brands: "Brands",
+    centres: (count: number) => `${count} ${count === 1 ? "centre" : "centres"}`,
+    singleCentre: "Single centre",
+    noMatch: "No centres match.",
+    showing: (shown: number, total: number) =>
+      `Showing ${shown} of ${total}. Search to narrow down.`,
+  },
+  ms: {
+    startFailed: "Gagal memulakan pratonton",
+    title: "Pratonton sebagai PIC",
+    description: "Lihat papan pemuka sama seperti yang dilihat oleh PIC pusat ini. Baca sahaja.",
+    search: "Cari jenama, pusat, bandar atau negeri",
+    loading: "Memuatkan...",
+    brands: "Jenama",
+    centres: (count: number) => `${count} pusat`,
+    singleCentre: "Pusat tunggal",
+    noMatch: "Tiada pusat sepadan.",
+    showing: (shown: number, total: number) =>
+      `Memaparkan ${shown} daripada ${total}. Cari untuk mengecilkan senarai.`,
+  },
+})
+
 export function PreviewPicker() {
+  const t = useCopy(COPY)
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState("")
   const { data, isLoading } = useQuery({
@@ -29,7 +60,7 @@ export function PreviewPicker() {
   const start = useMutation({
     mutationFn: (target: Target) => startPreview({ data: target }),
     onSuccess: () => window.location.assign("/dashboard?tab=analytics"),
-    onError: (error) => toast.error(error.message || "Failed to start preview"),
+    onError: (error) => toast.error(error.message || t.startFailed),
   })
 
   const query = search.trim().toLowerCase()
@@ -45,22 +76,20 @@ export function PreviewPicker() {
     <SidebarMenuItem>
       <SidebarMenuButton onClick={() => setOpen(true)}>
         <Eye />
-        <span>Preview as PIC</span>
+        <span>{t.title}</span>
       </SidebarMenuButton>
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent className="flex flex-col gap-0 sm:max-w-md">
           <SheetHeader>
-            <SheetTitle>Preview as PIC</SheetTitle>
-            <SheetDescription>
-              See the dashboard exactly as a PIC of these centres would. Read-only.
-            </SheetDescription>
+            <SheetTitle>{t.title}</SheetTitle>
+            <SheetDescription>{t.description}</SheetDescription>
           </SheetHeader>
           <div className="px-4 pb-3">
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="search"
-                placeholder="Search brand, centre, town or state"
+                placeholder={t.search}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-9"
@@ -70,13 +99,13 @@ export function PreviewPicker() {
           </div>
           <div className="flex-1 overflow-y-auto border-t">
             {isLoading ? (
-              <p className="p-4 text-sm text-muted-foreground">Loading...</p>
+              <p className="p-4 text-sm text-muted-foreground">{t.loading}</p>
             ) : (
               <>
                 {brands.length > 0 && (
                   <section>
                     <h3 className="px-3 pt-3 pb-1 text-xs font-medium text-muted-foreground">
-                      Brands
+                      {t.brands}
                     </h3>
                     <ul className="divide-y">
                       {brands.map((brand) => (
@@ -89,7 +118,7 @@ export function PreviewPicker() {
                           >
                             <span className="truncate">{brand.name}</span>
                             <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
-                              {brand.centers} {brand.centers === 1 ? "centre" : "centres"}
+                              {t.centres(brand.centers)}
                             </span>
                           </button>
                         </li>
@@ -99,10 +128,10 @@ export function PreviewPicker() {
                 )}
                 <section>
                   <h3 className="px-3 pt-3 pb-1 text-xs font-medium text-muted-foreground">
-                    Single centre
+                    {t.singleCentre}
                   </h3>
                   {centers.length === 0 ? (
-                    <p className="px-3 py-2.5 text-sm text-muted-foreground">No centres match.</p>
+                    <p className="px-3 py-2.5 text-sm text-muted-foreground">{t.noMatch}</p>
                   ) : (
                     <ul className="divide-y">
                       {centers.slice(0, MAX_VISIBLE).map((center) => (
@@ -124,7 +153,7 @@ export function PreviewPicker() {
                   )}
                   {centers.length > MAX_VISIBLE && (
                     <p className="px-3 py-2.5 text-xs text-muted-foreground">
-                      Showing {MAX_VISIBLE} of {centers.length}. Search to narrow down.
+                      {t.showing(MAX_VISIBLE, centers.length)}
                     </p>
                   )}
                 </section>

@@ -8,6 +8,41 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useTheme } from "./theme-provider";
+import { defineCopy, useCopy } from "@/lib/i18n";
+
+const COPY = defineCopy({
+  en: {
+    labels: { light: "Light", dark: "Dark", system: "System" },
+    descriptions: {
+      light: "Use light theme",
+      dark: "Use dark theme",
+      system: "Use system theme",
+    },
+    names: { light: "light", dark: "dark", system: "system" } satisfies Record<
+      "light" | "dark" | "system",
+      string
+    >,
+    toggle: "Toggle theme",
+    currentTheme: (name: string) => `Current theme: ${name}`,
+    systemWith: (resolved: string) => `System (${resolved})`,
+    currentlyUsing: (name: string) => `Currently using ${name} theme`,
+    switchTo: (name: string) => `Switch to ${name} theme`,
+  },
+  ms: {
+    labels: { light: "Terang", dark: "Gelap", system: "Sistem" },
+    descriptions: {
+      light: "Guna tema terang",
+      dark: "Guna tema gelap",
+      system: "Guna tema sistem",
+    },
+    names: { light: "terang", dark: "gelap", system: "sistem" },
+    toggle: "Tukar tema",
+    currentTheme: (name: string) => `Tema semasa: ${name}`,
+    systemWith: (resolved: string) => `Sistem (${resolved})`,
+    currentlyUsing: (name: string) => `Kini menggunakan tema ${name}`,
+    switchTo: (name: string) => `Tukar ke tema ${name}`,
+  },
+});
 
 interface ThemeToggleProps {
   variant?: "default" | "outline" | "ghost";
@@ -23,6 +58,7 @@ export function ThemeToggle({
   align = "end",
 }: ThemeToggleProps) {
   const { theme, setTheme, resolvedTheme } = useTheme();
+  const t = useCopy(COPY);
 
   // Animation variants for icons
   const iconVariants = {
@@ -61,21 +97,21 @@ export function ThemeToggle({
   const themeOptions = [
     {
       value: "light",
-      label: "Light",
+      label: t.labels.light,
       icon: Sun,
-      description: "Use light theme",
+      description: t.descriptions.light,
     },
     {
       value: "dark", 
-      label: "Dark",
+      label: t.labels.dark,
       icon: Moon,
-      description: "Use dark theme",
+      description: t.descriptions.dark,
     },
     {
       value: "system",
-      label: "System",
+      label: t.labels.system,
       icon: Monitor,
-      description: "Use system theme",
+      description: t.descriptions.system,
     },
   ] as const;
 
@@ -95,7 +131,7 @@ export function ThemeToggle({
             focus:ring-2 focus:ring-ring focus:ring-offset-2
             ${showLabel ? "gap-2" : "aspect-square"}
           `}
-          aria-label="Toggle theme"
+          aria-label={t.toggle}
         >
           <div className="relative flex items-center justify-center">
             {getCurrentIcon()}
@@ -106,7 +142,11 @@ export function ThemeToggle({
             </span>
           )}
           <span className="sr-only">
-            Current theme: {theme === "system" ? `System (${resolvedTheme})` : theme}
+            {t.currentTheme(
+              theme === "system"
+                ? t.systemWith(resolvedTheme ? t.names[resolvedTheme] : "")
+                : t.names[theme]
+            )}
           </span>
         </Button>
       </DropdownMenuTrigger>
@@ -169,7 +209,7 @@ export function ThemeToggle({
                 w-2 h-2 rounded-full transition-colors duration-200
                 ${resolvedTheme === 'dark' ? 'bg-blue-500' : 'bg-amber-500'}
               `} />
-              Currently using {resolvedTheme} theme
+              {t.currentlyUsing(t.names[resolvedTheme])}
             </div>
           </div>
         )}
@@ -181,6 +221,7 @@ export function ThemeToggle({
 // Simplified version for minimal use cases
 export function ThemeToggleSimple() {
   const { theme, setTheme, resolvedTheme } = useTheme();
+  const t = useCopy(COPY);
   
   const handleToggle = () => {
     if (theme === "light") {
@@ -203,7 +244,7 @@ export function ThemeToggleSimple() {
         hover:scale-105 active:scale-95
         focus:ring-2 focus:ring-ring focus:ring-offset-2
       `}
-      aria-label={`Switch to ${theme === "light" ? "dark" : theme === "dark" ? "system" : "light"} theme`}
+      aria-label={t.switchTo(t.names[theme === "light" ? "dark" : theme === "dark" ? "system" : "light"])}
     >
       <div className="relative flex items-center justify-center">
         {theme === "system" && (
@@ -217,7 +258,11 @@ export function ThemeToggleSimple() {
         )}
       </div>
       <span className="sr-only">
-        Current theme: {theme === "system" ? `System (${resolvedTheme})` : theme}
+        {t.currentTheme(
+          theme === "system"
+            ? t.systemWith(resolvedTheme ? t.names[resolvedTheme] : "")
+            : t.names[theme]
+        )}
       </span>
     </Button>
   );

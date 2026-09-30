@@ -29,21 +29,94 @@ import { Textarea } from "@/components/ui/textarea"
 import { toMytDay } from "@/lib/analytics"
 import { SALES_STAGES, weeklyScorecard } from "@/lib/sales"
 import { cn } from "@/lib/utils"
+import { defineCopy, useCopy } from "@/lib/i18n"
 import { allCentersQuery, salesProspectsQuery } from "./queries"
 
 type Stage = (typeof SALES_STAGES)[number]
 
-const STAGE_LABELS: Record<Stage, string> = {
-  contacted: "Contacted",
-  demo: "Demo",
-  pilot: "Pilot",
-  paid: "Paid",
-  lost: "Lost",
-}
+const COPY = defineCopy({
+  en: {
+    stages: {
+      contacted: "Contacted",
+      demo: "Demo",
+      pilot: "Pilot",
+      paid: "Paid",
+      lost: "Lost",
+    } satisfies Record<Stage, string>,
+    saveFailed: "Failed to save prospect",
+    thisWeekLabel: "This week",
+    thisWeek: (stage: string) => `${stage} this week`,
+    lastWeek: (count: number) => `Last week ${count}`,
+    filterByStage: "Filter by stage",
+    all: "All",
+    addProspect: "Add prospect",
+    loadFailed: "Failed to load prospects.",
+    loading: "Loading prospects...",
+    noneInStage: "No prospects in this stage.",
+    noneYet: "No prospects yet.",
+    lostReasonLine: (reason: string) => `Lost: ${reason}`,
+    followUp: (date: string) => `Follow up ${date}`,
+    stage: "Stage",
+    editProspect: "Edit prospect",
+    saved: "Prospect saved",
+    newProspect: "New prospect",
+    organization: "Organisation or chain",
+    centre: "Centre (optional)",
+    searchCentres: "Search centres",
+    noCentres: "No centres found.",
+    contactName: "Contact name",
+    phone: "Phone",
+    nextFollowUp: "Next follow-up",
+    lostReason: "Lost reason",
+    notes: "Notes",
+    saving: "Saving...",
+    save: "Save",
+    cancel: "Cancel",
+  },
+  ms: {
+    stages: {
+      contacted: "Dihubungi",
+      demo: "Demo",
+      pilot: "Percubaan",
+      paid: "Berbayar",
+      lost: "Terlepas",
+    },
+    saveFailed: "Gagal menyimpan prospek",
+    thisWeekLabel: "Minggu ini",
+    thisWeek: (stage: string) => `${stage} minggu ini`,
+    lastWeek: (count: number) => `Minggu lepas ${count}`,
+    filterByStage: "Tapis mengikut peringkat",
+    all: "Semua",
+    addProspect: "Tambah prospek",
+    loadFailed: "Gagal memuatkan prospek.",
+    loading: "Memuatkan prospek...",
+    noneInStage: "Tiada prospek pada peringkat ini.",
+    noneYet: "Belum ada prospek.",
+    lostReasonLine: (reason: string) => `Terlepas: ${reason}`,
+    followUp: (date: string) => `Susulan ${date}`,
+    stage: "Peringkat",
+    editProspect: "Sunting prospek",
+    saved: "Prospek disimpan",
+    newProspect: "Prospek baru",
+    organization: "Organisasi atau rangkaian",
+    centre: "Pusat (tidak wajib)",
+    searchCentres: "Cari pusat",
+    noCentres: "Tiada pusat dijumpai.",
+    contactName: "Nama kenalan",
+    phone: "No. telefon",
+    nextFollowUp: "Susulan seterusnya",
+    lostReason: "Sebab terlepas",
+    notes: "Catatan",
+    saving: "Menyimpan...",
+    save: "Simpan",
+    cancel: "Batal",
+  },
+})
 
 type ProspectInput = Parameters<typeof saveSalesProspect>[0]["data"]
 
 function useSaveProspect(onSaved?: () => void) {
+  const t = useCopy(COPY)
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (data: ProspectInput) => saveSalesProspect({ data }),
@@ -51,7 +124,7 @@ function useSaveProspect(onSaved?: () => void) {
       queryClient.invalidateQueries({ queryKey: ["salesProspects"] })
       onSaved?.()
     },
-    onError: (error) => toast.error(error.message || "Failed to save prospect"),
+    onError: (error) => toast.error(error.message || t.saveFailed),
   })
 }
 
@@ -70,6 +143,7 @@ function toInput(prospect: SalesProspectRow): ProspectInput {
 }
 
 export function SalesView() {
+  const t = useCopy(COPY)
   const { data: prospects = [], isLoading, error } = useQuery(salesProspectsQuery)
   const [stage, setStage] = useState<Stage | undefined>()
   const [editing, setEditing] = useState<SalesProspectRow | "new" | null>(null)
@@ -77,32 +151,32 @@ export function SalesView() {
   const scorecard = weeklyScorecard(prospects)
   const filtered = stage ? prospects.filter((p) => p.stage === stage) : prospects
   const chips = [
-    { value: undefined, label: "All", count: prospects.length },
+    { value: undefined, label: t.all, count: prospects.length },
     ...SALES_STAGES.map((s) => ({
       value: s,
-      label: STAGE_LABELS[s],
+      label: t.stages[s],
       count: prospects.filter((p) => p.stage === s).length,
     })),
   ]
 
   return (
     <div className="space-y-4">
-      <section aria-label="This week" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <section aria-label={t.thisWeekLabel} className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {scorecard.map((row) => (
           <Card key={row.stage} size="sm">
             <CardContent>
               <p className="text-sm font-medium text-muted-foreground">
-                {STAGE_LABELS[row.stage]} this week
+                {t.thisWeek(t.stages[row.stage])}
               </p>
               <p className="mt-1.5 text-2xl font-semibold tabular-nums">{row.thisWeek}</p>
-              <p className="text-sm text-muted-foreground tabular-nums">Last week {row.lastWeek}</p>
+              <p className="text-sm text-muted-foreground tabular-nums">{t.lastWeek(row.lastWeek)}</p>
             </CardContent>
           </Card>
         ))}
       </section>
 
       <div className="flex flex-wrap items-center gap-2">
-        <div role="group" aria-label="Filter by stage" className="-mx-4 flex flex-1 gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0">
+        <div role="group" aria-label={t.filterByStage} className="-mx-4 flex flex-1 gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0">
           {chips.map((chip) => (
             <Button
               key={chip.label}
@@ -119,7 +193,7 @@ export function SalesView() {
         </div>
         <Button className="h-9" onClick={() => setEditing("new")}>
           <Plus />
-          Add prospect
+          {t.addProspect}
         </Button>
       </div>
 
@@ -133,13 +207,13 @@ export function SalesView() {
 
       {error ? (
         <p className="rounded-lg border p-8 text-center text-destructive">
-          {error.message || "Failed to load prospects."}
+          {error.message || t.loadFailed}
         </p>
       ) : isLoading ? (
-        <p className="rounded-lg border p-8 text-center text-muted-foreground">Loading prospects...</p>
+        <p className="rounded-lg border p-8 text-center text-muted-foreground">{t.loading}</p>
       ) : filtered.length === 0 ? (
         <p className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-          {stage ? "No prospects in this stage." : "No prospects yet."}
+          {stage ? t.noneInStage : t.noneYet}
         </p>
       ) : (
         <ul className="divide-y rounded-lg border bg-card">
@@ -159,6 +233,7 @@ function ProspectRow({
   prospect: SalesProspectRow
   onEdit: () => void
 }) {
+  const t = useCopy(COPY)
   const saveMutation = useSaveProspect()
   const followUp = prospect.nextFollowUpAt
   const overdue =
@@ -174,14 +249,14 @@ function ProspectRow({
         {(prospect.stage === "lost" && prospect.lostReason) || prospect.notes ? (
           <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
             {prospect.stage === "lost" && prospect.lostReason
-              ? `Lost: ${prospect.lostReason}`
+              ? t.lostReasonLine(prospect.lostReason)
               : prospect.notes}
           </p>
         ) : null}
       </div>
       {followUp && (
         <span className={cn("text-sm tabular-nums", overdue ? "font-medium text-destructive" : "text-muted-foreground")}>
-          Follow up {toMytDay(followUp.getTime())}
+          {t.followUp(toMytDay(followUp.getTime()))}
         </span>
       )}
       <div className="flex items-center gap-2">
@@ -192,18 +267,18 @@ function ProspectRow({
             saveMutation.mutate({ ...toInput(prospect), stage: value as Stage })
           }
         >
-          <SelectTrigger aria-label="Stage" className="data-[size=default]:h-9 w-32">
+          <SelectTrigger aria-label={t.stage} className="data-[size=default]:h-9 w-32">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             {SALES_STAGES.map((s) => (
               <SelectItem key={s} value={s}>
-                {STAGE_LABELS[s]}
+                {t.stages[s]}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-        <Button variant="outline" size="icon" className="size-9" aria-label="Edit prospect" onClick={onEdit}>
+        <Button variant="outline" size="icon" className="size-9" aria-label={t.editProspect} onClick={onEdit}>
           <Pencil />
         </Button>
       </div>
@@ -220,6 +295,7 @@ function ProspectForm({
   prospect: SalesProspectRow | null
   onDone: () => void
 }) {
+  const t = useCopy(COPY)
   const { data: centers = [] } = useQuery(allCentersQuery)
   const [form, setForm] = useState(() => ({
     organization: prospect?.organization ?? "",
@@ -236,7 +312,7 @@ function ProspectForm({
       : null
   )
   const saveMutation = useSaveProspect(() => {
-    toast.success("Prospect saved")
+    toast.success(t.saved)
     onDone()
   })
 
@@ -251,7 +327,7 @@ function ProspectForm({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{prospect ? "Edit prospect" : "New prospect"}</CardTitle>
+        <CardTitle>{prospect ? t.editProspect : t.newProspect}</CardTitle>
       </CardHeader>
       <CardContent>
         <form
@@ -274,7 +350,7 @@ function ProspectForm({
           }}
         >
           <Field>
-            <FieldLabel htmlFor="prospect-organization">Organisation or chain</FieldLabel>
+            <FieldLabel htmlFor="prospect-organization">{t.organization}</FieldLabel>
             <Input
               id="prospect-organization"
               required
@@ -283,7 +359,7 @@ function ProspectForm({
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor="prospect-center">Centre (optional)</FieldLabel>
+            <FieldLabel htmlFor="prospect-center">{t.centre}</FieldLabel>
             <Combobox
               items={centerOptions}
               value={center}
@@ -291,9 +367,9 @@ function ProspectForm({
               itemToStringLabel={(item: CenterOption) => item.name}
               isItemEqualToValue={(item: CenterOption, value: CenterOption) => item.id === value.id}
             >
-              <ComboboxInput id="prospect-center" placeholder="Search centres" showClear />
+              <ComboboxInput id="prospect-center" placeholder={t.searchCentres} showClear />
               <ComboboxContent>
-                <ComboboxEmpty>No centres found.</ComboboxEmpty>
+                <ComboboxEmpty>{t.noCentres}</ComboboxEmpty>
                 <ComboboxList>
                   {(item: CenterOption) => (
                     <ComboboxItem key={item.id} value={item}>
@@ -305,15 +381,15 @@ function ProspectForm({
             </Combobox>
           </Field>
           <Field>
-            <FieldLabel htmlFor="prospect-contact">Contact name</FieldLabel>
+            <FieldLabel htmlFor="prospect-contact">{t.contactName}</FieldLabel>
             <Input id="prospect-contact" value={form.contactName} onChange={set("contactName")} />
           </Field>
           <Field>
-            <FieldLabel htmlFor="prospect-phone">Phone</FieldLabel>
+            <FieldLabel htmlFor="prospect-phone">{t.phone}</FieldLabel>
             <Input id="prospect-phone" inputMode="tel" value={form.phone} onChange={set("phone")} />
           </Field>
           <Field>
-            <FieldLabel htmlFor="prospect-stage">Stage</FieldLabel>
+            <FieldLabel htmlFor="prospect-stage">{t.stage}</FieldLabel>
             <Select
               value={form.stage}
               onValueChange={(value) => setForm((prev) => ({ ...prev, stage: value as Stage }))}
@@ -324,14 +400,14 @@ function ProspectForm({
               <SelectContent>
                 {SALES_STAGES.map((s) => (
                   <SelectItem key={s} value={s}>
-                    {STAGE_LABELS[s]}
+                    {t.stages[s]}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </Field>
           <Field>
-            <FieldLabel htmlFor="prospect-follow-up">Next follow-up</FieldLabel>
+            <FieldLabel htmlFor="prospect-follow-up">{t.nextFollowUp}</FieldLabel>
             <Input
               id="prospect-follow-up"
               type="date"
@@ -341,20 +417,20 @@ function ProspectForm({
           </Field>
           {form.stage === "lost" && (
             <Field className="md:col-span-2">
-              <FieldLabel htmlFor="prospect-lost-reason">Lost reason</FieldLabel>
+              <FieldLabel htmlFor="prospect-lost-reason">{t.lostReason}</FieldLabel>
               <Input id="prospect-lost-reason" value={form.lostReason} onChange={set("lostReason")} />
             </Field>
           )}
           <Field className="md:col-span-2">
-            <FieldLabel htmlFor="prospect-notes">Notes</FieldLabel>
+            <FieldLabel htmlFor="prospect-notes">{t.notes}</FieldLabel>
             <Textarea id="prospect-notes" rows={3} value={form.notes} onChange={set("notes")} />
           </Field>
           <div className="flex gap-2 md:col-span-2">
             <Button type="submit" disabled={saveMutation.isPending} className="h-10">
-              {saveMutation.isPending ? "Saving..." : "Save"}
+              {saveMutation.isPending ? t.saving : t.save}
             </Button>
             <Button type="button" variant="outline" className="h-10" onClick={onDone}>
-              Cancel
+              {t.cancel}
             </Button>
           </div>
         </form>

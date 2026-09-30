@@ -7,6 +7,12 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Cancel01Icon } from "@hugeicons/core-free-icons"
+import { defineCopy, useCopy } from "@/lib/i18n"
+
+const COPY = defineCopy({
+  en: { close: "Close" },
+  ms: { close: "Tutup" },
+})
 
 function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />
@@ -53,6 +59,8 @@ function SheetContent({
   side?: "top" | "right" | "bottom" | "left"
   showCloseButton?: boolean
 }) {
+  const t = useCopy(COPY)
+
   return (
     <SheetPortal>
       <SheetOverlay />
@@ -67,7 +75,7 @@ function SheetContent({
           <SheetPrimitive.Close data-slot="sheet-close" asChild>
             <Button variant="ghost" className="absolute top-3 right-3" size="icon-sm">
               <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} />
-              <span className="sr-only">Close</span>
+              <span className="sr-only">{t.close}</span>
             </Button>
           </SheetPrimitive.Close>
         )}

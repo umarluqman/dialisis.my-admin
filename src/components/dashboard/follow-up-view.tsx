@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import {
   IntakeLeadDetails,
-  LEAD_STATUS_LABELS,
+  LEAD_STATUS_COPY,
   formatAge,
   formatDate,
 } from "@/components/intake-lead-list"
@@ -24,6 +24,7 @@ import {
   getFollowUpLeads,
   updateIntakeLeadStatus,
 } from "@/core/functions/intake-lead-functions"
+import { defineCopy, useCopy, useLocale } from "@/lib/i18n"
 import { followUpLeadsQuery } from "./queries"
 
 type FollowUpLead = Awaited<ReturnType<typeof getFollowUpLeads>>[number]
@@ -31,33 +32,91 @@ type FollowUpLead = Awaited<ReturnType<typeof getFollowUpLeads>>[number]
 const OUTCOMES = ["contacted", "booked", "rejected"] as const
 type Outcome = (typeof OUTCOMES)[number]
 
-const SECTIONS = [
-  {
-    reason: "invalid",
-    title: "Before fix (delivery issue)",
-    description:
-      "Sent before 24 Sep 2026, 7:12 PM. The center was probably never told about these requests.",
-  },
-  {
-    reason: "stale",
-    title: "No response > 48h",
-    description: "Still marked New more than 48 hours after the patient asked.",
-  },
-] as const
+const SECTIONS = ["invalid", "stale"] as const
+type Section = (typeof SECTIONS)[number]
 
-function getDelivery(lead: FollowUpLead) {
+const COPY = defineCopy({
+  en: {
+    sections: {
+      invalid: {
+        title: "Before fix (delivery issue)",
+        description:
+          "Sent before 24 Sep 2026, 7:12 PM. The center was probably never told about these requests.",
+      },
+      stale: {
+        title: "No response > 48h",
+        description: "Still marked New more than 48 hours after the patient asked.",
+      },
+    } satisfies Record<Section, { title: string; description: string }>,
+    emailFailed: "Email failed",
+    noEmailSent: "No email sent",
+    emailOpened: "Email opened",
+    sentNotOpened: "Sent, not opened",
+    emailPending: "Email pending",
+    updateFailed: "Failed to update lead",
+    marked: (name: string, status: string) => `${name} marked as ${status}`,
+    loadFailed: "Failed to load leads.",
+    empty:
+      "Nothing needs follow-up. Requests show up here if they are still New after 48 hours.",
+    explainerTitle: "These patients may still be waiting for you",
+    explainerBug:
+      "Until 24 Sep 2026, 7:12 PM, a bug stopped appointment requests from reaching centers by email. Some patients may have been told their booking was confirmed, and most never got a call.",
+    explainerAction:
+      "Call or WhatsApp each patient, then mark the outcome. Handled requests leave this list.",
+    submittedTimes: (count: number) => `Submitted ${count}×`,
+    preferredSr: "Preferred ",
+    call: (name: string) => `Call ${name}`,
+    markOutcome: "Mark outcome",
+  },
+  ms: {
+    sections: {
+      invalid: {
+        title: "Sebelum pembetulan (isu penghantaran)",
+        description:
+          "Dihantar sebelum 24 Sep 2026, 7:12 PTG. Pusat mungkin tidak pernah dimaklumkan tentang permohonan ini.",
+      },
+      stale: {
+        title: "Tiada maklum balas > 48 jam",
+        description: "Masih berstatus Baru lebih daripada 48 jam selepas pesakit memohon.",
+      },
+    },
+    emailFailed: "E-mel gagal",
+    noEmailSent: "Tiada e-mel dihantar",
+    emailOpened: "E-mel dibuka",
+    sentNotOpened: "Dihantar, belum dibuka",
+    emailPending: "E-mel belum selesai",
+    updateFailed: "Gagal mengemas kini permohonan",
+    marked: (name: string, status: string) => `${name} ditandakan sebagai ${status}`,
+    loadFailed: "Gagal memuatkan permohonan.",
+    empty:
+      "Tiada permohonan yang perlu susulan. Permohonan dipaparkan di sini jika masih Baru selepas 48 jam.",
+    explainerTitle: "Pesakit ini mungkin masih menunggu anda",
+    explainerBug:
+      "Sehingga 24 Sep 2026, 7:12 PTG, satu pepijat menghalang permohonan temujanji daripada sampai ke pusat melalui e-mel. Sesetengah pesakit mungkin dimaklumkan bahawa temujanji mereka telah disahkan, dan kebanyakannya tidak pernah menerima panggilan.",
+    explainerAction:
+      "Hubungi setiap pesakit melalui telefon atau WhatsApp, kemudian tandakan hasilnya. Permohonan yang telah diuruskan akan dikeluarkan daripada senarai ini.",
+    submittedTimes: (count: number) => `Dihantar ${count}×`,
+    preferredSr: "Tarikh pilihan ",
+    call: (name: string) => `Panggil ${name}`,
+    markOutcome: "Tandakan hasil",
+  },
+})
+
+function getDelivery(lead: FollowUpLead, t: (typeof COPY)["en"]) {
   const status = lead.picNotificationStatus
-  if (status.startsWith("failed")) return { label: "Email failed", variant: "destructive" } as const
-  if (status.startsWith("skipped")) return { label: "No email sent", variant: "outline" } as const
+  if (status.startsWith("failed")) return { label: t.emailFailed, variant: "destructive" } as const
+  if (status.startsWith("skipped")) return { label: t.noEmailSent, variant: "outline" } as const
   if (status === "sent") {
-    return { label: lead.viewedAt ? "Email opened" : "Sent, not opened", variant: "outline" } as const
+    return { label: lead.viewedAt ? t.emailOpened : t.sentNotOpened, variant: "outline" } as const
   }
-  return { label: "Email pending", variant: "outline" } as const
+  return { label: t.emailPending, variant: "outline" } as const
 }
 
 export function FollowUpView() {
   const queryClient = useQueryClient()
   const { data: leads = [], isLoading, error } = useQuery(followUpLeadsQuery)
+  const t = useCopy(COPY)
+  const statusLabels = useCopy(LEAD_STATUS_COPY)
 
   const mutation = useMutation({
     mutationFn: ({ lead, status }: { lead: FollowUpLead; status: Outcome }) =>
@@ -72,10 +131,10 @@ export function FollowUpView() {
     },
     onError: (err, _vars, context) => {
       queryClient.setQueryData(followUpLeadsQuery.queryKey, context?.previous)
-      toast.error(err.message || "Failed to update lead")
+      toast.error(err.message || t.updateFailed)
     },
     onSuccess: (_data, { lead, status }) => {
-      toast.success(`${lead.fullName} marked as ${LEAD_STATUS_LABELS[status]}`)
+      toast.success(t.marked(lead.fullName, statusLabels[status]))
     },
     onSettled: () => {
       for (const queryKey of [["followUpLeads"], ["intakeLeads"], ["analytics"]]) {
@@ -87,7 +146,7 @@ export function FollowUpView() {
   if (error) {
     return (
       <p className="rounded-lg border p-8 text-center text-destructive">
-        {error.message || "Failed to load leads."}
+        {error.message || t.loadFailed}
       </p>
     )
   }
@@ -107,7 +166,7 @@ export function FollowUpView() {
   if (leads.length === 0) {
     return (
       <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-        Nothing needs follow-up. Requests show up here if they are still New after 48 hours.
+        {t.empty}
       </div>
     )
   }
@@ -124,34 +183,27 @@ export function FollowUpView() {
           <AlertTriangle className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden />
           <div className="space-y-1.5">
             <h2 id="follow-up-explainer" className="font-medium">
-              These patients may still be waiting for you
+              {t.explainerTitle}
             </h2>
-            <p className="text-muted-foreground">
-              Until 24 Sep 2026, 7:12 PM, a bug stopped appointment requests from reaching
-              centers by email. Some patients may have been told their booking was confirmed,
-              and most never got a call.
-            </p>
-            <p className="text-muted-foreground">
-              Call or WhatsApp each patient, then mark the outcome. Handled requests leave this
-              list.
-            </p>
+            <p className="text-muted-foreground">{t.explainerBug}</p>
+            <p className="text-muted-foreground">{t.explainerAction}</p>
           </div>
         </section>
       )}
 
-      {SECTIONS.map((section) => {
-        const sectionLeads = leads.filter((lead) => lead.reason === section.reason)
+      {SECTIONS.map((reason) => {
+        const sectionLeads = leads.filter((lead) => lead.reason === reason)
         if (sectionLeads.length === 0) return null
-        const headingId = `follow-up-${section.reason}`
+        const headingId = `follow-up-${reason}`
 
         return (
-          <section key={section.reason} aria-labelledby={headingId} className="space-y-2">
+          <section key={reason} aria-labelledby={headingId} className="space-y-2">
             <div>
               <h2 id={headingId} className="flex items-baseline gap-2 text-sm font-medium">
-                {section.title}
+                {t.sections[reason].title}
                 <span className="text-muted-foreground tabular-nums">{sectionLeads.length}</span>
               </h2>
-              <p className="text-xs text-muted-foreground">{section.description}</p>
+              <p className="text-xs text-muted-foreground">{t.sections[reason].description}</p>
             </div>
             <ul className="divide-y overflow-hidden rounded-lg border bg-card">
               {sectionLeads.map((lead) => (
@@ -176,7 +228,10 @@ function FollowUpRow({
   lead: FollowUpLead
   onMark: (status: Outcome) => void
 }) {
-  const delivery = getDelivery(lead)
+  const t = useCopy(COPY)
+  const statusLabels = useCopy(LEAD_STATUS_COPY)
+  const { locale } = useLocale()
+  const delivery = getDelivery(lead, t)
 
   return (
     <Collapsible asChild>
@@ -189,7 +244,7 @@ function FollowUpRow({
                 <span className="truncate text-sm font-semibold">{lead.fullName}</span>
                 <Badge variant={delivery.variant}>{delivery.label}</Badge>
                 {lead.ids.length > 1 && (
-                  <Badge variant="secondary">Submitted {lead.ids.length}×</Badge>
+                  <Badge variant="secondary">{t.submittedTimes(lead.ids.length)}</Badge>
                 )}
               </div>
               <p className="text-xs text-muted-foreground sm:text-sm">
@@ -197,18 +252,18 @@ function FollowUpRow({
                 {lead.centerTown ? ` · ${lead.centerTown}` : ""}
                 <span aria-hidden> · </span>
                 <span className="whitespace-nowrap">
-                  <span className="sr-only">Preferred </span>
-                  {formatDate(lead.preferredDate)}, {lead.preferredSession}
+                  <span className="sr-only">{t.preferredSr}</span>
+                  {formatDate(lead.preferredDate, locale)}, {lead.preferredSession}
                 </span>
               </p>
             </div>
             <span className="shrink-0 text-xs whitespace-nowrap text-muted-foreground tabular-nums">
-              {formatAge(lead.createdAt)}
+              {formatAge(lead.createdAt, locale)}
             </span>
           </CollapsibleTrigger>
           <div className="flex items-center gap-2 pl-7 sm:pl-0">
             <Button asChild size="icon-lg" variant="outline">
-              <a href={`tel:${lead.phoneNumber}`} aria-label={`Call ${lead.fullName}`}>
+              <a href={`tel:${lead.phoneNumber}`} aria-label={t.call(lead.fullName)}>
                 <Phone />
               </a>
             </Button>
@@ -225,14 +280,14 @@ function FollowUpRow({
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button className="ml-auto h-9 sm:ml-0">
-                  Mark outcome
+                  {t.markOutcome}
                   <ChevronDown />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 {OUTCOMES.map((status) => (
                   <DropdownMenuItem key={status} onSelect={() => onMark(status)}>
-                    {LEAD_STATUS_LABELS[status]}
+                    {statusLabels[status]}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>

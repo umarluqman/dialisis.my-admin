@@ -15,11 +15,58 @@ import {
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { defineCopy, useCopy } from "@/lib/i18n"
 import { allCentersQuery } from "./queries"
 
 const MAX_VISIBLE = 100
 
+const COPY = defineCopy({
+  en: {
+    generated: "Invitation link generated successfully",
+    generateFailed: "Failed to generate invitation",
+    copied: "Link copied to clipboard",
+    title: "Invite a PIC",
+    description:
+      "The link lets this email sign up and manage the selected centers. It expires in 7 days.",
+    email: "PIC email",
+    centers: "Centers",
+    selected: (count: number) => `${count} selected`,
+    remove: (name: string) => `Remove ${name}`,
+    search: "Search name, town or state",
+    loading: "Loading centers...",
+    noMatch: "No centers match your search.",
+    showing: (shown: number, total: number) =>
+      `Showing ${shown} of ${total}. Refine your search to see more.`,
+    generating: "Generating...",
+    generate: "Generate invitation link",
+    link: "Invitation link",
+    copy: "Copy",
+  },
+  ms: {
+    generated: "Pautan jemputan berjaya dijana",
+    generateFailed: "Gagal menjana jemputan",
+    copied: "Pautan disalin ke papan klip",
+    title: "Jemput PIC",
+    description:
+      "Pautan ini membolehkan pemilik e-mel ini mendaftar dan mengurus pusat yang dipilih. Pautan tamat tempoh dalam 7 hari.",
+    email: "E-mel PIC",
+    centers: "Pusat",
+    selected: (count: number) => `${count} dipilih`,
+    remove: (name: string) => `Buang ${name}`,
+    search: "Cari nama, bandar atau negeri",
+    loading: "Memuatkan pusat...",
+    noMatch: "Tiada pusat sepadan dengan carian anda.",
+    showing: (shown: number, total: number) =>
+      `Memaparkan ${shown} daripada ${total}. Perhalusi carian untuk melihat lagi.`,
+    generating: "Menjana...",
+    generate: "Jana pautan jemputan",
+    link: "Pautan jemputan",
+    copy: "Salin",
+  },
+})
+
 export function InvitationsView() {
+  const t = useCopy(COPY)
   const [email, setEmail] = useState("")
   const [centerSearch, setCenterSearch] = useState("")
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -31,10 +78,10 @@ export function InvitationsView() {
       createInvitation({ data: { ...data, expiresInDays: 7 } }),
     onSuccess: (data) => {
       setGeneratedLink(`${window.location.origin}/auth/sign-up?invite=${data.token}`)
-      toast.success("Invitation link generated successfully")
+      toast.success(t.generated)
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to generate invitation")
+      toast.error(error.message || t.generateFailed)
     },
   })
 
@@ -48,7 +95,7 @@ export function InvitationsView() {
   const handleCopyLink = async () => {
     if (!generatedLink) return
     await navigator.clipboard.writeText(generatedLink)
-    toast.success("Link copied to clipboard")
+    toast.success(t.copied)
   }
 
   const query = centerSearch.trim().toLowerCase()
@@ -62,14 +109,12 @@ export function InvitationsView() {
   return (
     <Card className="max-w-3xl">
       <CardHeader>
-        <CardTitle>Invite a PIC</CardTitle>
-        <CardDescription>
-          The link lets this email sign up and manage the selected centers. It expires in 7 days.
-        </CardDescription>
+        <CardTitle>{t.title}</CardTitle>
+        <CardDescription>{t.description}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-2">
-          <Label htmlFor="inviteEmail">PIC email</Label>
+          <Label htmlFor="inviteEmail">{t.email}</Label>
           <Input
             id="inviteEmail"
             type="email"
@@ -84,9 +129,9 @@ export function InvitationsView() {
 
         <div className="space-y-2">
           <div className="flex items-baseline justify-between gap-2">
-            <Label htmlFor="inviteCenterSearch">Centers</Label>
+            <Label htmlFor="inviteCenterSearch">{t.centers}</Label>
             <span className="text-xs text-muted-foreground tabular-nums">
-              {selectedIds.length} selected
+              {t.selected(selectedIds.length)}
             </span>
           </div>
           {selectedCenters.length > 0 && (
@@ -98,7 +143,7 @@ export function InvitationsView() {
                     type="button"
                     onClick={() => toggleCenter(center.id)}
                     className="rounded-sm p-0.5 hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                    aria-label={`Remove ${center.dialysisCenterName}`}
+                    aria-label={t.remove(center.dialysisCenterName)}
                   >
                     <X className="size-3" />
                   </button>
@@ -111,7 +156,7 @@ export function InvitationsView() {
             <Input
               id="inviteCenterSearch"
               type="search"
-              placeholder="Search name, town or state"
+              placeholder={t.search}
               value={centerSearch}
               onChange={(e) => setCenterSearch(e.target.value)}
               className="pl-9"
@@ -119,9 +164,9 @@ export function InvitationsView() {
           </div>
           <div className="max-h-72 overflow-y-auto rounded-lg border">
             {isLoading ? (
-              <p className="p-4 text-sm text-muted-foreground">Loading centers...</p>
+              <p className="p-4 text-sm text-muted-foreground">{t.loading}</p>
             ) : filtered.length === 0 ? (
-              <p className="p-4 text-sm text-muted-foreground">No centers match your search.</p>
+              <p className="p-4 text-sm text-muted-foreground">{t.noMatch}</p>
             ) : (
               <ul className="divide-y">
                 {filtered.slice(0, MAX_VISIBLE).map((center) => (
@@ -148,7 +193,7 @@ export function InvitationsView() {
             )}
             {filtered.length > MAX_VISIBLE && (
               <p className="border-t p-3 text-center text-xs text-muted-foreground">
-                Showing {MAX_VISIBLE} of {filtered.length}. Refine your search to see more.
+                {t.showing(MAX_VISIBLE, filtered.length)}
               </p>
             )}
           </div>
@@ -158,17 +203,17 @@ export function InvitationsView() {
           onClick={() => createInvitationMutation.mutate({ email, centerIds: selectedIds })}
           disabled={!email.trim() || selectedIds.length === 0 || createInvitationMutation.isPending}
         >
-          {createInvitationMutation.isPending ? "Generating..." : "Generate invitation link"}
+          {createInvitationMutation.isPending ? t.generating : t.generate}
         </Button>
 
         {generatedLink && (
           <div className="space-y-2 rounded-lg border bg-muted/30 p-3">
-            <Label htmlFor="inviteLink">Invitation link</Label>
+            <Label htmlFor="inviteLink">{t.link}</Label>
             <div className="flex gap-2">
               <Input id="inviteLink" value={generatedLink} readOnly className="flex-1 bg-background" />
               <Button variant="outline" onClick={handleCopyLink}>
                 <Copy />
-                Copy
+                {t.copy}
               </Button>
             </div>
           </div>

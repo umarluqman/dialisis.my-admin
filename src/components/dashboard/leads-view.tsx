@@ -6,16 +6,42 @@ import { Input } from "@/components/ui/input"
 import {
   IntakeLeadList,
   LEAD_STATUSES,
-  LEAD_STATUS_LABELS,
+  LEAD_STATUS_COPY,
   toLeadStatus,
   type LeadStatus,
 } from "@/components/intake-lead-list"
+import { defineCopy, useCopy } from "@/lib/i18n"
 import { LEAD_LIMIT, intakeLeadsQuery } from "./queries"
+
+const COPY = defineCopy({
+  en: {
+    all: "All",
+    searchLabel: "Search leads",
+    searchPlaceholder: "Search patient, center, phone or MyKad",
+    filterByStatus: "Filter by status",
+    loadFailed: "Failed to load intake leads.",
+    noMatches: "No intake leads match these filters.",
+    empty: "No intake leads yet.",
+    limitNote: (limit: number) => `Only the latest ${limit} leads are loaded.`,
+  },
+  ms: {
+    all: "Semua",
+    searchLabel: "Cari permohonan",
+    searchPlaceholder: "Cari pesakit, pusat, no. telefon atau MyKad",
+    filterByStatus: "Tapis mengikut status",
+    loadFailed: "Gagal memuatkan permohonan temujanji.",
+    noMatches: "Tiada permohonan temujanji sepadan dengan tapisan ini.",
+    empty: "Belum ada permohonan temujanji.",
+    limitNote: (limit: number) => `Hanya ${limit} permohonan terkini dimuatkan.`,
+  },
+})
 
 export function LeadsView() {
   const search = useSearch({ from: "/dashboard" })
   const navigate = useNavigate({ from: "/dashboard" })
   const { data: leads = [], isLoading, error } = useQuery(intakeLeadsQuery)
+  const t = useCopy(COPY)
+  const statusLabels = useCopy(LEAD_STATUS_COPY)
 
   const setSearch = (patch: Partial<typeof search>) =>
     navigate({ search: (prev) => ({ ...prev, ...patch }), replace: true })
@@ -36,8 +62,8 @@ export function LeadsView() {
     : matching
 
   const chips: { value: LeadStatus | undefined; label: string; count: number }[] = [
-    { value: undefined, label: "All", count: counted.length },
-    ...LEAD_STATUSES.map((s) => ({ value: s, label: LEAD_STATUS_LABELS[s], count: counts[s] })),
+    { value: undefined, label: t.all, count: counted.length },
+    ...LEAD_STATUSES.map((s) => ({ value: s, label: statusLabels[s], count: counts[s] })),
   ]
 
   return (
@@ -46,15 +72,15 @@ export function LeadsView() {
         <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           type="search"
-          aria-label="Search leads"
-          placeholder="Search patient, center, phone or MyKad"
+          aria-label={t.searchLabel}
+          placeholder={t.searchPlaceholder}
           value={search.q ?? ""}
           onChange={(e) => setSearch({ q: e.target.value || undefined })}
           className="h-9 pl-9"
         />
       </div>
 
-      <div role="group" aria-label="Filter by status" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0">
+      <div role="group" aria-label={t.filterByStatus} className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0">
         {chips.map((chip) => {
           const active = search.status === chip.value
           return (
@@ -75,7 +101,7 @@ export function LeadsView() {
 
       {error ? (
         <p className="rounded-lg border p-8 text-center text-destructive">
-          {error.message || "Failed to load intake leads."}
+          {error.message || t.loadFailed}
         </p>
       ) : isLoading ? (
         <div className="divide-y rounded-lg border bg-card">
@@ -91,12 +117,12 @@ export function LeadsView() {
             key={`${query}|${search.status}`}
             leads={filtered}
             emptyMessage={
-              query || search.status ? "No intake leads match these filters." : "No intake leads yet."
+              query || search.status ? t.noMatches : t.empty
             }
           />
           {leads.length >= LEAD_LIMIT && (
             <p className="text-center text-xs text-muted-foreground">
-              Only the latest {LEAD_LIMIT} leads are loaded.
+              {t.limitNote(LEAD_LIMIT)}
             </p>
           )}
         </>

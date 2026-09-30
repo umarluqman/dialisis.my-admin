@@ -19,6 +19,8 @@ import {
 import { z } from "zod"
 import { toast } from "sonner"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { LocaleToggle } from "@/components/locale-toggle"
+import { defineCopy, useCopy } from "@/lib/i18n"
 
 const signUpSearchSchema = z.object({
   invite: z.string().optional(),
@@ -29,8 +31,72 @@ export const Route = createFileRoute("/auth/sign-up")({
   component: SignUpPage,
 })
 
+const COPY = defineCopy({
+  en: {
+    wrongEmail: "Use the email address this invitation was sent to",
+    sendFailed: "Failed to send verification code",
+    invalidCode: "Invalid verification code",
+    assigned: "Access verified and centers assigned!",
+    assignFailed: "Access verified but failed to assign centers",
+    validating: "Validating invitation...",
+    invalidInvitation: "Invalid Invitation",
+    error: "Error",
+    invitationUnusable: "This invitation link is invalid, expired, or has already been used.",
+    contactAdmin: "Please contact your administrator for a new invitation link.",
+    title: "Create Account",
+    description: "Enter your information and verify by one-time email code",
+    name: "Name",
+    email: "Email",
+    oneTimeCode: "One-time code",
+    verifying: "Verifying...",
+    sending: "Sending...",
+    verifyCode: "Verify Code",
+    sendCode: "Send Code",
+    sendAgain: "Send Code Again",
+    haveAccount: "Already have an account?",
+    signIn: "Sign in",
+    assignedCenters: "Assigned Centers",
+    assignedDescription: (email: string) =>
+      `After signing up with ${email}, you will have access to these dialysis centers`,
+    noInvitation: "No Invitation",
+    needInvitation:
+      "You need an invitation link from an administrator to register. Contact your admin to get an invite.",
+  },
+  ms: {
+    wrongEmail: "Gunakan alamat e-mel yang menerima jemputan ini",
+    sendFailed: "Gagal menghantar kod pengesahan",
+    invalidCode: "Kod pengesahan tidak sah",
+    assigned: "Akses disahkan dan pusat telah diberikan!",
+    assignFailed: "Akses disahkan tetapi gagal memberikan pusat",
+    validating: "Mengesahkan jemputan...",
+    invalidInvitation: "Jemputan tidak sah",
+    error: "Ralat",
+    invitationUnusable: "Pautan jemputan ini tidak sah, tamat tempoh atau telah digunakan.",
+    contactAdmin: "Sila hubungi pentadbir anda untuk pautan jemputan baru.",
+    title: "Cipta akaun",
+    description: "Masukkan maklumat anda dan sahkan dengan kod e-mel sekali guna",
+    name: "Nama",
+    email: "E-mel",
+    oneTimeCode: "Kod sekali guna",
+    verifying: "Mengesahkan...",
+    sending: "Menghantar...",
+    verifyCode: "Sahkan kod",
+    sendCode: "Hantar kod",
+    sendAgain: "Hantar semula kod",
+    haveAccount: "Sudah ada akaun?",
+    signIn: "Log masuk",
+    assignedCenters: "Pusat yang diberikan",
+    assignedDescription: (email: string) =>
+      `Selepas mendaftar dengan ${email}, anda boleh mengakses pusat dialisis ini`,
+    noInvitation: "Tiada jemputan",
+    needInvitation:
+      "Anda memerlukan pautan jemputan daripada pentadbir untuk mendaftar. Hubungi pentadbir anda untuk mendapatkan jemputan.",
+  },
+})
+
 function SignUpPage() {
   const navigate = useNavigate()
+  const t = useCopy(COPY)
   const { invite } = Route.useSearch()
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
@@ -69,7 +135,7 @@ function SignUpPage() {
       invitation?.email &&
       email.trim().toLowerCase() !== invitation.email.toLowerCase()
     ) {
-      setError("Use the email address this invitation was sent to")
+      setError(t.wrongEmail)
       setIsLoading(false)
       return
     }
@@ -80,7 +146,7 @@ function SignUpPage() {
     })
 
     if (result.error) {
-      setError(result.error.message ?? "Failed to send verification code")
+      setError(result.error.message ?? t.sendFailed)
       setIsLoading(false)
       return
     }
@@ -101,7 +167,7 @@ function SignUpPage() {
     const result = await signIn.emailOtp(verificationPayload)
 
     if (result.error) {
-      setError(result.error.message ?? "Invalid verification code")
+      setError(result.error.message ?? t.invalidCode)
       setIsLoading(false)
       return
     }
@@ -109,9 +175,9 @@ function SignUpPage() {
     if (invite && result.data?.user?.id) {
       try {
         await consumeInvitationMutation.mutateAsync(result.data.user.id)
-        toast.success("Access verified and centers assigned!")
+        toast.success(t.assigned)
       } catch {
-        toast.error("Access verified but failed to assign centers")
+        toast.error(t.assignFailed)
       }
     }
 
@@ -131,10 +197,11 @@ function SignUpPage() {
 
   if (invite && invitationLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center p-4">
+      <div className="relative flex min-h-screen items-center justify-center p-4">
+        <LocaleToggle className="absolute top-4 right-4" />
         <Card className="w-full max-w-md">
           <CardContent className="py-8 text-center">
-            <p className="text-muted-foreground">Validating invitation...</p>
+            <p className="text-muted-foreground">{t.validating}</p>
           </CardContent>
         </Card>
       </div>
@@ -143,24 +210,25 @@ function SignUpPage() {
 
   if (invite && invitationError) {
     return (
-      <div className="flex min-h-screen items-center justify-center p-4">
+      <div className="relative flex min-h-screen items-center justify-center p-4">
+        <LocaleToggle className="absolute top-4 right-4" />
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle className="text-2xl font-bold">
-              Invalid Invitation
+              {t.invalidInvitation}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <Alert variant="destructive">
-              <AlertTitle>Error</AlertTitle>
+              <AlertTitle>{t.error}</AlertTitle>
               <AlertDescription>
                 {invitationError instanceof Error
                   ? invitationError.message
-                  : "This invitation link is invalid, expired, or has already been used."}
+                  : t.invitationUnusable}
               </AlertDescription>
             </Alert>
             <p className="text-center text-sm text-muted-foreground">
-              Please contact your administrator for a new invitation link.
+              {t.contactAdmin}
             </p>
           </CardContent>
         </Card>
@@ -169,13 +237,14 @@ function SignUpPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
+    <div className="relative flex min-h-screen items-center justify-center p-4">
+      <LocaleToggle className="absolute top-4 right-4" />
       <div className="w-full max-w-md space-y-4">
         <Card>
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold">Create Account</CardTitle>
+            <CardTitle className="text-2xl font-bold">{t.title}</CardTitle>
             <CardDescription>
-              Enter your information and verify by one-time email code
+              {t.description}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -186,7 +255,7 @@ function SignUpPage() {
                 </div>
               )}
               <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
+                <Label htmlFor="name">{t.name}</Label>
                 <Input
                   id="name"
                   type="text"
@@ -198,7 +267,7 @@ function SignUpPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t.email}</Label>
                 <Input
                   id="email"
                   type="email"
@@ -211,7 +280,7 @@ function SignUpPage() {
               </div>
               {codeSent && (
                 <div className="space-y-2">
-                  <Label htmlFor="otp">One-time code</Label>
+                  <Label htmlFor="otp">{t.oneTimeCode}</Label>
                   <Input
                     id="otp"
                     value={otp}
@@ -232,11 +301,11 @@ function SignUpPage() {
               >
                 {isLoading
                   ? codeSent
-                    ? "Verifying..."
-                    : "Sending..."
+                    ? t.verifying
+                    : t.sending
                   : codeSent
-                    ? "Verify Code"
-                    : "Send Code"}
+                    ? t.verifyCode
+                    : t.sendCode}
               </Button>
               {codeSent && (
                 <Button
@@ -246,16 +315,16 @@ function SignUpPage() {
                   disabled={isLoading}
                   onClick={sendCode}
                 >
-                  Send Code Again
+                  {t.sendAgain}
                 </Button>
               )}
               <p className="text-center text-sm text-muted-foreground">
-                Already have an account?{" "}
+                {t.haveAccount}{" "}
                 <Link
                   to="/auth/sign-in"
                   className="text-primary underline-offset-4 hover:underline"
                 >
-                  Sign in
+                  {t.signIn}
                 </Link>
               </p>
             </form>
@@ -265,9 +334,9 @@ function SignUpPage() {
         {invitation && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Assigned Centers</CardTitle>
+              <CardTitle className="text-lg">{t.assignedCenters}</CardTitle>
               <CardDescription>
-                After signing up with {invitation.email}, you will have access to these dialysis centers
+                {t.assignedDescription(invitation.email ?? "")}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -293,10 +362,9 @@ function SignUpPage() {
 
         {!invite && (
           <Alert>
-            <AlertTitle>No Invitation</AlertTitle>
+            <AlertTitle>{t.noInvitation}</AlertTitle>
             <AlertDescription>
-              You need an invitation link from an administrator to register.
-              Contact your admin to get an invite.
+              {t.needInvitation}
             </AlertDescription>
           </Alert>
         )}

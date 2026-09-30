@@ -18,6 +18,34 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { useState } from "react";
+import { defineCopy, useCopy } from "@/lib/i18n";
+
+const COPY = defineCopy({
+  en: {
+    unexpected: "An unexpected error occurred",
+    title: "Something went wrong",
+    subtitle: "We encountered an unexpected error. Please try again.",
+    tryAgain: "Try Again",
+    goHome: "Go to Home",
+    goBack: "Go Back",
+    details: "Technical Details",
+    stackTrace: "Error Stack Trace:",
+    persists: "If this error persists, please report it to our support team.",
+    report: "Report Error",
+  },
+  ms: {
+    unexpected: "Ralat tidak dijangka berlaku",
+    title: "Berlaku masalah",
+    subtitle: "Kami menghadapi ralat tidak dijangka. Sila cuba lagi.",
+    tryAgain: "Cuba lagi",
+    goHome: "Ke laman utama",
+    goBack: "Kembali",
+    details: "Butiran teknikal",
+    stackTrace: "Surihan tindanan ralat:",
+    persists: "Jika ralat ini berterusan, sila laporkan kepada pasukan sokongan kami.",
+    report: "Laporkan ralat",
+  },
+});
 
 export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
   const router = useRouter();
@@ -26,12 +54,13 @@ export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
     select: (state) => state.id === rootRouteId,
   });
   const [showDetails, setShowDetails] = useState(false);
+  const t = useCopy(COPY);
 
   console.error(error);
 
   // Format error details for display
   const err = error instanceof Error ? error : undefined;
-  const errorMessage = err?.message || "An unexpected error occurred";
+  const errorMessage = err?.message || t.unexpected;
   const errorStack = err?.stack || "";
   const hasStack = errorStack.length > 0;
 
@@ -52,9 +81,9 @@ export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
               <AlertTriangle className="h-5 w-5 text-destructive" />
             </div>
             <div>
-              <CardTitle className="text-xl">Something went wrong</CardTitle>
+              <CardTitle className="text-xl">{t.title}</CardTitle>
               <p className="text-sm text-muted-foreground">
-                We encountered an unexpected error. Please try again.
+                {t.subtitle}
               </p>
             </div>
           </div>
@@ -76,14 +105,14 @@ export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
               className="flex items-center gap-2"
             >
               <RefreshCw className="h-4 w-4" />
-              Try Again
+              {t.tryAgain}
             </Button>
 
             {isRoot ? (
               <Button variant="outline" asChild>
                 <Link to="/" className="flex items-center gap-2">
                   <Home className="h-4 w-4" />
-                  Go to Home
+                  {t.goHome}
                 </Link>
               </Button>
             ) : (
@@ -93,7 +122,7 @@ export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
                 className="flex items-center gap-2"
               >
                 <ArrowLeft className="h-4 w-4" />
-                Go Back
+                {t.goBack}
               </Button>
             )}
           </div>
@@ -108,7 +137,7 @@ export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
                   className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
                 >
                   <Bug className="h-4 w-4" />
-                  Technical Details
+                  {t.details}
                   <ChevronDown
                     className={`h-4 w-4 transition-transform duration-200 ${showDetails ? "rotate-180" : ""}`}
                   />
@@ -117,7 +146,7 @@ export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
               <CollapsibleContent className="space-y-2">
                 <div className="rounded-lg bg-muted p-4">
                   <h4 className="text-sm font-medium mb-2">
-                    Error Stack Trace:
+                    {t.stackTrace}
                   </h4>
                   <pre className="text-xs text-muted-foreground whitespace-pre-wrap break-words max-h-40 overflow-y-auto">
                     {errorStack}
@@ -131,7 +160,7 @@ export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
           <div className="border-t pt-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
               <div className="text-sm text-muted-foreground">
-                If this error persists, please report it to our support team.
+                {t.persists}
               </div>
               <Button
                 variant="outline"
@@ -140,7 +169,7 @@ export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
                 className="flex items-center gap-2"
               >
                 <Mail className="h-4 w-4" />
-                Report Error
+                {t.report}
               </Button>
             </div>
           </div>

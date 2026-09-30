@@ -14,15 +14,70 @@ import {
 } from "@/components/ui/select"
 import type { getCentersForUser } from "@/core/functions/center-functions"
 import { isPlanActive } from "@/lib/plan"
+import { defineCopy, useCopy } from "@/lib/i18n"
 import { centersQuery } from "./queries"
 
 const PAGE_SIZE = 50
 const ALL = "all"
 
+const COPY = defineCopy({
+  en: {
+    searchLabel: "Search centers",
+    searchPlaceholder: "Search name, town or address",
+    state: "State",
+    allStates: "All states",
+    sector: "Sector",
+    allSectors: "All sectors",
+    sortAsc: "Sort A to Z",
+    sortDesc: "Sort Z to A",
+    nameAsc: "Name A–Z",
+    nameDesc: "Name Z–A",
+    addCenter: "Add center",
+    filteredCount: (shown: number, total: number) => `${shown} of ${total} centers`,
+    clearFilters: "Clear filters",
+    loadFailed: "Failed to load dialysis centers.",
+    noMatch: "No centers match these filters.",
+    noneAssigned: "No dialysis centers assigned to you yet.",
+    name: "Name",
+    location: "Location",
+    unnamed: "Unnamed center",
+    verified: "Verified",
+    featured: "Featured",
+    showing: (visible: number, total: number) => `Showing ${visible} of ${total}`,
+    showMore: "Show more",
+  },
+  ms: {
+    searchLabel: "Cari pusat",
+    searchPlaceholder: "Cari nama, bandar atau alamat",
+    state: "Negeri",
+    allStates: "Semua negeri",
+    sector: "Sektor",
+    allSectors: "Semua sektor",
+    sortAsc: "Susun A hingga Z",
+    sortDesc: "Susun Z hingga A",
+    nameAsc: "Nama A–Z",
+    nameDesc: "Nama Z–A",
+    addCenter: "Tambah pusat",
+    filteredCount: (shown: number, total: number) => `${shown} daripada ${total} pusat`,
+    clearFilters: "Kosongkan tapisan",
+    loadFailed: "Gagal memuatkan pusat dialisis.",
+    noMatch: "Tiada pusat sepadan dengan tapisan ini.",
+    noneAssigned: "Belum ada pusat dialisis yang diberikan kepada anda.",
+    name: "Nama",
+    location: "Lokasi",
+    unnamed: "Pusat tanpa nama",
+    verified: "Disahkan",
+    featured: "Pilihan",
+    showing: (visible: number, total: number) => `Memaparkan ${visible} daripada ${total}`,
+    showMore: "Lihat lagi",
+  },
+})
+
 export function CentersView({ isSuperadmin }: { isSuperadmin: boolean }) {
   const search = useSearch({ from: "/dashboard" })
   const navigate = useNavigate({ from: "/dashboard" })
   const { data: centers = [], isLoading, error } = useQuery(centersQuery)
+  const t = useCopy(COPY)
 
   const setSearch = (patch: Partial<typeof search>) =>
     navigate({ search: (prev) => ({ ...prev, ...patch }), replace: true })
@@ -56,8 +111,8 @@ export function CentersView({ isSuperadmin }: { isSuperadmin: boolean }) {
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             type="search"
-            aria-label="Search centers"
-            placeholder="Search name, town or address"
+            aria-label={t.searchLabel}
+            placeholder={t.searchPlaceholder}
             value={search.q ?? ""}
             onChange={(e) => setSearch({ q: e.target.value || undefined })}
             className="h-9 pl-9"
@@ -65,16 +120,16 @@ export function CentersView({ isSuperadmin }: { isSuperadmin: boolean }) {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <FilterSelect
-            label="State"
-            allLabel="All states"
+            label={t.state}
+            allLabel={t.allStates}
             value={search.state}
             options={states}
             onChange={(state) => setSearch({ state })}
           />
           {sectors.length > 0 && (
             <FilterSelect
-              label="Sector"
-              allLabel="All sectors"
+              label={t.sector}
+              allLabel={t.allSectors}
               value={search.sector}
               options={sectors}
               onChange={(sector) => setSearch({ sector })}
@@ -84,8 +139,8 @@ export function CentersView({ isSuperadmin }: { isSuperadmin: boolean }) {
             variant="outline"
             size="icon"
             className="size-9"
-            aria-label={search.sort === "desc" ? "Sort A to Z" : "Sort Z to A"}
-            title={search.sort === "desc" ? "Name Z–A" : "Name A–Z"}
+            aria-label={search.sort === "desc" ? t.sortAsc : t.sortDesc}
+            title={search.sort === "desc" ? t.nameDesc : t.nameAsc}
             onClick={() => setSearch({ sort: search.sort === "desc" ? undefined : "desc" })}
           >
             {search.sort === "desc" ? <ArrowUpZA /> : <ArrowDownAZ />}
@@ -94,7 +149,7 @@ export function CentersView({ isSuperadmin }: { isSuperadmin: boolean }) {
             <Button asChild className="h-9">
               <Link to="/centers/$centerId" params={{ centerId: "new" }}>
                 <Plus />
-                Add center
+                {t.addCenter}
               </Link>
             </Button>
           )}
@@ -104,7 +159,7 @@ export function CentersView({ isSuperadmin }: { isSuperadmin: boolean }) {
       {hasFilters && (
         <div className="flex items-center justify-between text-sm text-muted-foreground">
           <span className="tabular-nums" aria-live="polite">
-            {filtered.length} of {centers.length} centers
+            {t.filteredCount(filtered.length, centers.length)}
           </span>
           <Button
             variant="link"
@@ -114,14 +169,14 @@ export function CentersView({ isSuperadmin }: { isSuperadmin: boolean }) {
               setSearch({ q: undefined, state: undefined, sector: undefined })
             }
           >
-            Clear filters
+            {t.clearFilters}
           </Button>
         </div>
       )}
 
       {error ? (
         <p className="rounded-lg border p-8 text-center text-destructive">
-          {error.message || "Failed to load dialysis centers."}
+          {error.message || t.loadFailed}
         </p>
       ) : isLoading ? (
         <div className="divide-y rounded-lg border bg-card">
@@ -134,7 +189,7 @@ export function CentersView({ isSuperadmin }: { isSuperadmin: boolean }) {
         </div>
       ) : filtered.length === 0 ? (
         <p className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-          {hasFilters ? "No centers match these filters." : "No dialysis centers assigned to you yet."}
+          {hasFilters ? t.noMatch : t.noneAssigned}
         </p>
       ) : (
         <CenterList key={filterKey} centers={filtered} />
@@ -147,15 +202,16 @@ type Center = Awaited<ReturnType<typeof getCentersForUser>>[number]
 
 function CenterList({ centers }: { centers: Center[] }) {
   const [visible, setVisible] = useState(PAGE_SIZE)
+  const t = useCopy(COPY)
 
   return (
     <div className="space-y-3">
       <div className="overflow-hidden rounded-lg border bg-card">
         <div className="hidden grid-cols-[2.5rem_minmax(0,2fr)_minmax(0,1.2fr)_minmax(0,0.8fr)_1.5rem] gap-4 border-b bg-muted/40 px-4 py-2 text-xs font-medium text-muted-foreground md:grid">
           <span />
-          <span>Name</span>
-          <span>Location</span>
-          <span>Sector</span>
+          <span>{t.name}</span>
+          <span>{t.location}</span>
+          <span>{t.sector}</span>
           <span />
         </div>
         <ul className="divide-y">
@@ -184,15 +240,15 @@ function CenterList({ centers }: { centers: Center[] }) {
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="truncate text-sm font-medium">
-                        {center.dialysisCenterName || "Unnamed center"}
+                        {center.dialysisCenterName || t.unnamed}
                       </span>
                       {isPlanActive(center) && <Badge className="shrink-0">Pro</Badge>}
                       {center.verifiedAt && (
                         <Badge variant="outline" className="shrink-0">
-                          Verified
+                          {t.verified}
                         </Badge>
                       )}
-                      {center.featuredNow && <Badge variant="secondary" className="shrink-0">Featured</Badge>}
+                      {center.featuredNow && <Badge variant="secondary" className="shrink-0">{t.featured}</Badge>}
                     </div>
                     <p className="truncate text-xs text-muted-foreground md:hidden">
                       {[location, center.sector].filter(Boolean).join(" · ") || "-"}
@@ -214,10 +270,10 @@ function CenterList({ centers }: { centers: Center[] }) {
       {visible < centers.length && (
         <div className="flex items-center justify-center gap-3 text-sm text-muted-foreground">
           <span className="tabular-nums">
-            Showing {visible} of {centers.length}
+            {t.showing(visible, centers.length)}
           </span>
           <Button variant="outline" size="sm" onClick={() => setVisible((v) => v + PAGE_SIZE)}>
-            Show more
+            {t.showMore}
           </Button>
         </div>
       )}

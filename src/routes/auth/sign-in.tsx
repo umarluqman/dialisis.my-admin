@@ -11,13 +11,51 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { LocaleToggle } from "@/components/locale-toggle"
+import { defineCopy, useCopy } from "@/lib/i18n"
 
 export const Route = createFileRoute("/auth/sign-in")({
   component: SignInPage,
 })
 
+const COPY = defineCopy({
+  en: {
+    sendFailed: "Failed to send sign-in code",
+    invalidCode: "Invalid sign-in code",
+    title: "Sign In",
+    enterCode: "Enter the code sent to your email",
+    enterEmail: "Enter your email to receive a one-time code",
+    email: "Email",
+    oneTimeCode: "One-time code",
+    verifying: "Verifying...",
+    sending: "Sending...",
+    verifyCode: "Verify Code",
+    sendCode: "Send Code",
+    sendAgain: "Send Code Again",
+    noAccess: "Don't have access?",
+    useInvitation: "Use invitation",
+  },
+  ms: {
+    sendFailed: "Gagal menghantar kod log masuk",
+    invalidCode: "Kod log masuk tidak sah",
+    title: "Log masuk",
+    enterCode: "Masukkan kod yang dihantar ke e-mel anda",
+    enterEmail: "Masukkan e-mel anda untuk menerima kod sekali guna",
+    email: "E-mel",
+    oneTimeCode: "Kod sekali guna",
+    verifying: "Mengesahkan...",
+    sending: "Menghantar...",
+    verifyCode: "Sahkan kod",
+    sendCode: "Hantar kod",
+    sendAgain: "Hantar semula kod",
+    noAccess: "Tiada akses?",
+    useInvitation: "Guna jemputan",
+  },
+})
+
 function SignInPage() {
   const navigate = useNavigate()
+  const t = useCopy(COPY)
   const [email, setEmail] = useState("")
   const [otp, setOtp] = useState("")
   const [codeSent, setCodeSent] = useState(false)
@@ -34,7 +72,7 @@ function SignInPage() {
     })
 
     if (result.error) {
-      setError(result.error.message ?? "Failed to send sign-in code")
+      setError(result.error.message ?? t.sendFailed)
     } else {
       setCodeSent(true)
     }
@@ -52,7 +90,7 @@ function SignInPage() {
     })
 
     if (result.error) {
-      setError(result.error.message ?? "Invalid sign-in code")
+      setError(result.error.message ?? t.invalidCode)
       setIsLoading(false)
       return
     }
@@ -72,14 +110,13 @@ function SignInPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
+    <div className="relative flex min-h-screen items-center justify-center p-4">
+      <LocaleToggle className="absolute top-4 right-4" />
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold">Sign In</CardTitle>
+          <CardTitle className="text-2xl font-bold">{t.title}</CardTitle>
           <CardDescription>
-            {codeSent
-              ? "Enter the code sent to your email"
-              : "Enter your email to receive a one-time code"}
+            {codeSent ? t.enterCode : t.enterEmail}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -90,7 +127,7 @@ function SignInPage() {
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t.email}</Label>
               <Input
                 id="email"
                 type="email"
@@ -103,7 +140,7 @@ function SignInPage() {
             </div>
             {codeSent && (
               <div className="space-y-2">
-                <Label htmlFor="otp">One-time code</Label>
+                <Label htmlFor="otp">{t.oneTimeCode}</Label>
                 <Input
                   id="otp"
                   value={otp}
@@ -124,11 +161,11 @@ function SignInPage() {
             >
               {isLoading
                 ? codeSent
-                  ? "Verifying..."
-                  : "Sending..."
+                  ? t.verifying
+                  : t.sending
                 : codeSent
-                  ? "Verify Code"
-                  : "Send Code"}
+                  ? t.verifyCode
+                  : t.sendCode}
             </Button>
             {codeSent && (
               <Button
@@ -138,16 +175,16 @@ function SignInPage() {
                 disabled={isLoading}
                 onClick={sendCode}
               >
-                Send Code Again
+                {t.sendAgain}
               </Button>
             )}
             <p className="text-center text-sm text-muted-foreground">
-              Don&apos;t have access?{" "}
+              {t.noAccess}{" "}
               <Link
                 to="/auth/sign-up"
                 className="text-primary underline-offset-4 hover:underline"
               >
-                Use invitation
+                {t.useInvitation}
               </Link>
             </p>
           </form>

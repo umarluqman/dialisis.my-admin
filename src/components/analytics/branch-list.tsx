@@ -5,17 +5,13 @@ import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import type { AnalyticsBranch } from "@/core/functions/analytics-functions"
+import { defineCopy, useCopy } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { contactRate, formatNumber, formatRate } from "./format"
 
-const SORTS = [
-  { value: "views", label: "Views" },
-  { value: "contacts", label: "Contacts" },
-  { value: "rate", label: "Contact rate" },
-  { value: "leads", label: "Leads" },
-] as const
+const SORTS = ["views", "contacts", "rate", "leads"] as const
 
-type SortKey = (typeof SORTS)[number]["value"]
+type SortKey = (typeof SORTS)[number]
 
 const INITIAL_LIMIT = 10
 const COLUMNS = "md:grid-cols-[minmax(0,1fr)_repeat(4,6.5rem)_1.25rem]"
@@ -25,20 +21,72 @@ function sortValue(branch: AnalyticsBranch, sort: SortKey) {
   return branch[sort]
 }
 
-const ATTENTION = {
-  views: {
-    label: "No views",
-    hint: "Nobody opened this centre's page on dialisis.my in this period.",
+const COPY = defineCopy({
+  en: {
+    sorts: {
+      views: "Views",
+      contacts: "Contacts",
+      rate: "Contact rate",
+      leads: "Leads",
+    } satisfies Record<SortKey, string>,
+    attention: {
+      views: {
+        label: "No views",
+        hint: "Nobody opened this centre's page on dialisis.my in this period.",
+      },
+      contacts: {
+        label: "No contacts",
+        hint: "People viewed this centre, but nobody tapped Call, WhatsApp or Directions.",
+      },
+    },
+    title: "Center performance",
+    count: (shown: string, total: string) => `${shown} of ${total} centers`,
+    description: "Contacts are taps on Call, WhatsApp or Directions from dialisis.my.",
+    search: "Search centers",
+    searchPlaceholder: "Search by name or town",
+    sortBy: "Sort by",
+    needsAttention: "Needs attention",
+    center: "Center",
+    rate: "Rate",
+    empty: "No centers match your filters.",
+    showTop: (limit: number) => `Show top ${limit} only`,
+    showAll: (count: string) => `Show all ${count} centers`,
   },
-  contacts: {
-    label: "No contacts",
-    hint: "People viewed this centre, but nobody tapped Call, WhatsApp or Directions.",
+  ms: {
+    sorts: {
+      views: "Paparan",
+      contacts: "Hubungan",
+      rate: "Kadar hubungan",
+      leads: "Permohonan",
+    },
+    attention: {
+      views: {
+        label: "Tiada paparan",
+        hint: "Tiada sesiapa membuka halaman pusat ini di dialisis.my dalam tempoh ini.",
+      },
+      contacts: {
+        label: "Tiada hubungan",
+        hint: "Ada yang melihat pusat ini, tetapi tiada sesiapa menekan Panggil, WhatsApp atau Arah.",
+      },
+    },
+    title: "Prestasi pusat",
+    count: (shown: string, total: string) => `${shown} daripada ${total} pusat`,
+    description: "Hubungan dikira apabila pelawat menekan Panggil, WhatsApp atau Arah di dialisis.my.",
+    search: "Cari pusat",
+    searchPlaceholder: "Cari mengikut nama atau bandar",
+    sortBy: "Susun mengikut",
+    needsAttention: "Perlu perhatian",
+    center: "Pusat",
+    rate: "Kadar",
+    empty: "Tiada pusat sepadan dengan tapisan anda.",
+    showTop: (limit: number) => `Lihat ${limit} teratas sahaja`,
+    showAll: (count: string) => `Lihat semua ${count} pusat`,
   },
-}
+})
 
-function attentionLabel(branch: AnalyticsBranch) {
-  if (branch.views === 0) return ATTENTION.views
-  if (branch.contacts === 0) return ATTENTION.contacts
+function attentionKey(branch: AnalyticsBranch) {
+  if (branch.views === 0) return "views"
+  if (branch.contacts === 0) return "contacts"
   return null
 }
 
@@ -49,12 +97,13 @@ export function BranchList({
   branches: AnalyticsBranch[]
   onSelect: (id: string) => void
 }) {
+  const t = useCopy(COPY)
   const [query, setQuery] = useState("")
   const [sort, setSort] = useState<SortKey>("views")
   const [attentionOnly, setAttentionOnly] = useState(false)
   const [showAll, setShowAll] = useState(false)
 
-  const attentionCount = branches.filter(attentionLabel).length
+  const attentionCount = branches.filter(attentionKey).length
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase()
@@ -64,7 +113,7 @@ export function BranchList({
           (!needle ||
             branch.name.toLowerCase().includes(needle) ||
             branch.town.toLowerCase().includes(needle)) &&
-          (!attentionOnly || attentionLabel(branch))
+          (!attentionOnly || attentionKey(branch))
       )
       .sort(
         (a, b) => sortValue(b, sort) - sortValue(a, sort) || b.views - a.views
@@ -81,19 +130,18 @@ export function BranchList({
       <div className="border-b p-4 md:p-5">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h3 id="branch-list-heading" className="text-base font-medium">
-            Center performance
+            {t.title}
           </h3>
           <p className="text-xs tabular-nums text-muted-foreground">
-            {formatNumber(filtered.length)} of {formatNumber(branches.length)}{" "}
-            centers
+            {t.count(formatNumber(filtered.length), formatNumber(branches.length))}
           </p>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
-          Contacts are taps on Call, WhatsApp or Directions from dialisis.my.
+          {t.description}
         </p>
 
         <label className="relative mt-4 block">
-          <span className="sr-only">Search centers</span>
+          <span className="sr-only">{t.search}</span>
           <Search
             aria-hidden="true"
             className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
@@ -102,24 +150,24 @@ export function BranchList({
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search by name or town"
+            placeholder={t.searchPlaceholder}
             className="h-10 pl-9"
           />
         </label>
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span className="mr-1 text-sm text-muted-foreground">Sort by</span>
+          <span className="mr-1 text-sm text-muted-foreground">{t.sortBy}</span>
           {SORTS.map((option) => (
             <Button
-              key={option.value}
+              key={option}
               type="button"
               size="sm"
-              variant={sort === option.value ? "secondary" : "ghost"}
-              aria-pressed={sort === option.value}
-              onClick={() => setSort(option.value)}
+              variant={sort === option ? "secondary" : "ghost"}
+              aria-pressed={sort === option}
+              onClick={() => setSort(option)}
               className="h-9 px-3"
             >
-              {option.label}
+              {t.sorts[option]}
             </Button>
           ))}
           {attentionCount > 0 && (
@@ -135,7 +183,7 @@ export function BranchList({
                 aria-hidden="true"
                 className="size-2 rounded-full bg-destructive"
               />
-              Needs attention
+              {t.needsAttention}
               <span className="tabular-nums text-muted-foreground">
                 {formatNumber(attentionCount)}
               </span>
@@ -151,21 +199,22 @@ export function BranchList({
           COLUMNS
         )}
       >
-        <span>Center</span>
-        <span className="text-right">Views</span>
-        <span className="text-right">Contacts</span>
-        <span className="text-right">Contact rate</span>
-        <span className="text-right">Leads</span>
+        <span>{t.center}</span>
+        <span className="text-right">{t.sorts.views}</span>
+        <span className="text-right">{t.sorts.contacts}</span>
+        <span className="text-right">{t.sorts.rate}</span>
+        <span className="text-right">{t.sorts.leads}</span>
       </div>
 
       {visible.length === 0 ? (
         <p className="p-6 text-center text-muted-foreground">
-          No centers match your filters.
+          {t.empty}
         </p>
       ) : (
         <ul className="divide-y">
           {visible.map((branch) => {
-            const attention = attentionLabel(branch)
+            const key = attentionKey(branch)
+            const attention = key && t.attention[key]
             const value = sortValue(branch, sort)
             return (
               <li key={branch.id}>
@@ -212,14 +261,14 @@ export function BranchList({
                     </span>
                   </span>
                   <span className="grid grid-cols-4 gap-2 md:contents">
-                    <Stat label="Views" value={formatNumber(branch.views)} active={sort === "views"} />
-                    <Stat label="Contacts" value={formatNumber(branch.contacts)} active={sort === "contacts"} />
+                    <Stat label={t.sorts.views} value={formatNumber(branch.views)} active={sort === "views"} />
+                    <Stat label={t.sorts.contacts} value={formatNumber(branch.contacts)} active={sort === "contacts"} />
                     <Stat
-                      label="Rate"
+                      label={t.rate}
                       value={formatRate(contactRate(branch.contactVisitors, branch.visitors))}
                       active={sort === "rate"}
                     />
-                    <Stat label="Leads" value={formatNumber(branch.leads)} active={sort === "leads"} />
+                    <Stat label={t.sorts.leads} value={formatNumber(branch.leads)} active={sort === "leads"} />
                   </span>
                   <ChevronRight
                     aria-hidden="true"
@@ -241,8 +290,8 @@ export function BranchList({
             className="h-9"
           >
             {showAll
-              ? `Show top ${INITIAL_LIMIT} only`
-              : `Show all ${formatNumber(filtered.length)} centers`}
+              ? t.showTop(INITIAL_LIMIT)
+              : t.showAll(formatNumber(filtered.length))}
           </Button>
         </div>
       )}

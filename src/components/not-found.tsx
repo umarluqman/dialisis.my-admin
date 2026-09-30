@@ -2,8 +2,28 @@ import { Link } from "@tanstack/react-router";
 import { ArrowLeft, Home, Search, FileQuestion } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { defineCopy, useCopy } from "@/lib/i18n";
+
+const COPY = defineCopy({
+  en: {
+    title: "Page Not Found",
+    description: "The page you're looking for doesn't exist or has been moved.",
+    goBack: "Go Back",
+    home: "Home",
+    help: "Try checking the URL or use the search functionality",
+  },
+  ms: {
+    title: "Halaman tidak dijumpai",
+    description: "Halaman yang anda cari tidak wujud atau telah dipindahkan.",
+    goBack: "Kembali",
+    home: "Laman utama",
+    help: "Semak URL atau gunakan fungsi carian",
+  },
+});
 
 export function NotFound({ children }: { children?: any }) {
+  const t = useCopy(COPY);
+
   return (
     <div className="min-h-[60vh] flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
@@ -17,12 +37,12 @@ export function NotFound({ children }: { children?: any }) {
             {/* Heading */}
             <div className="space-y-2">
               <h1 className="text-2xl font-semibold tracking-tight">
-                Page Not Found
+                {t.title}
               </h1>
               <div className="text-muted-foreground">
                 {children || (
                   <p>
-                    The page you're looking for doesn't exist or has been moved.
+                    {t.description}
                   </p>
                 )}
               </div>
@@ -36,12 +56,12 @@ export function NotFound({ children }: { children?: any }) {
                 className="flex items-center gap-2"
               >
                 <ArrowLeft className="h-4 w-4" />
-                Go Back
+                {t.goBack}
               </Button>
               <Button variant="outline" asChild>
                 <Link to="/" className="flex items-center gap-2">
                   <Home className="h-4 w-4" />
-                  Home
+                  {t.home}
                 </Link>
               </Button>
             </div>
@@ -51,7 +71,7 @@ export function NotFound({ children }: { children?: any }) {
               <div className="flex items-center gap-2 text-sm text-muted-foreground justify-center">
                 <Search className="h-4 w-4" />
                 <span>
-                  Try checking the URL or use the search functionality
+                  {t.help}
                 </span>
               </div>
             </div>

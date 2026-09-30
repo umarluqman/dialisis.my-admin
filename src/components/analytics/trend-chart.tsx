@@ -1,31 +1,84 @@
 import { useRef, useState, type KeyboardEvent, type MouseEvent } from "react"
 import { Button } from "@/components/ui/button"
 import type { getAnalyticsOverview } from "@/core/functions/analytics-functions"
-import { CONTACT_KINDS, CONTACT_LABELS, type ContactKind } from "@/lib/analytics"
+import { CONTACT_KINDS, type ContactKind } from "@/lib/analytics"
+import { defineCopy, useCopy, useLocale } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
-import { CONTACT_COLORS, formatDay, formatLongDay, formatNumber } from "./format"
+import { CONTACT_COLORS, formatDay, formatLongDay, formatNumber, LABELS } from "./format"
 
 type DailyPoint = Awaited<ReturnType<typeof getAnalyticsOverview>>["daily"][number]
 type SeriesKey = "views" | "visitors" | "leads" | ContactKind
-type Series = { key: SeriesKey; label: string; color: string }
+type Series = { key: SeriesKey; color: string }
 
-const METRICS = [
-  { key: "views", label: "Views", unit: "views" },
-  { key: "visitors", label: "Visitors", unit: "visitors" },
-  { key: "contacts", label: "Contacts", unit: "contacts" },
-  { key: "leads", label: "Leads", unit: "leads" },
-] as const
-type MetricKey = (typeof METRICS)[number]["key"]
+const METRICS = ["views", "visitors", "contacts", "leads"] as const
+type MetricKey = (typeof METRICS)[number]
+
+const COPY = defineCopy({
+  en: {
+    metrics: {
+      views: "Views",
+      visitors: "Visitors",
+      contacts: "Contacts",
+      leads: "Leads",
+    } satisfies Record<MetricKey, string>,
+    units: {
+      views: "views",
+      visitors: "visitors",
+      contacts: "contacts",
+      leads: "leads",
+    } satisfies Record<MetricKey, string>,
+    series: {
+      views: "Page views",
+      visitors: "Visitors",
+      leads: "Leads",
+    },
+    chartMetric: "Chart metric",
+    peak: (peak: string, day: string) => ` · peak ${peak} on ${day}`,
+    noData: (label: string) => `${label}: no data in this period.`,
+    summary: (label: string, sum: string, unit: string, peak: string, day: string) =>
+      `${label}: ${sum} ${unit} in total, peak of ${peak} on ${day}.`,
+    chartLabel: (label: string, canDrill: boolean) =>
+      `${label} per day. Use arrow keys to move between days${canDrill ? ", Enter to view a day" : ""}.`,
+    notTracked: "Not tracked yet",
+    untracked: "not tracked yet",
+    drillHint: (touch: boolean) => `${touch ? "Tap again" : "Click"} to view this day`,
+  },
+  ms: {
+    metrics: {
+      views: "Paparan",
+      visitors: "Pelawat",
+      contacts: "Hubungan",
+      leads: "Permohonan",
+    },
+    units: {
+      views: "paparan",
+      visitors: "pelawat",
+      contacts: "hubungan",
+      leads: "permohonan",
+    },
+    series: {
+      views: "Paparan halaman",
+      visitors: "Pelawat",
+      leads: "Permohonan",
+    },
+    chartMetric: "Metrik carta",
+    peak: (peak: string, day: string) => ` · puncak ${peak} pada ${day}`,
+    noData: (label: string) => `${label}: tiada data dalam tempoh ini.`,
+    summary: (label: string, sum: string, unit: string, peak: string, day: string) =>
+      `${label}: ${sum} ${unit} secara keseluruhan, puncak ${peak} pada ${day}.`,
+    chartLabel: (label: string, canDrill: boolean) =>
+      `${label} sehari. Guna kekunci anak panah untuk beralih antara hari${canDrill ? ", Enter untuk melihat hari tertentu" : ""}.`,
+    notTracked: "Belum dijejak",
+    untracked: "belum dijejak",
+    drillHint: (touch: boolean) => `${touch ? "Tekan sekali lagi" : "Klik"} untuk melihat hari tersebut`,
+  },
+})
 
 const TOOLTIP_ROWS: Series[] = [
-  { key: "views", label: "Page views", color: "bg-primary" },
-  { key: "visitors", label: "Visitors", color: "bg-primary" },
-  ...CONTACT_KINDS.map((kind) => ({
-    key: kind,
-    label: CONTACT_LABELS[kind],
-    color: CONTACT_COLORS[kind],
-  })),
-  { key: "leads", label: "Leads", color: "bg-chart-4" },
+  { key: "views", color: "bg-primary" },
+  { key: "visitors", color: "bg-primary" },
+  ...CONTACT_KINDS.map((kind) => ({ key: kind, color: CONTACT_COLORS[kind] })),
+  { key: "leads", color: "bg-chart-4" },
 ]
 
 function seriesFor(metric: MetricKey, contact?: ContactKind) {
@@ -61,11 +114,16 @@ export function TrendChart({
   contact?: ContactKind
   onSelectDay: (day: string) => void
 }) {
+  const t = useCopy(COPY)
+  const { locale } = useLocale()
+  const labels = useCopy(LABELS)
+  const seriesLabels: Record<SeriesKey, string> = { ...t.series, ...labels.contact }
   const [metric, setMetric] = useState<MetricKey>("views")
   const [active, setActive] = useState<number | null>(null)
   const pointerType = useRef("mouse")
 
-  const { label, unit } = METRICS.find((option) => option.key === metric)!
+  const label = t.metrics[metric]
+  const unit = t.units[metric]
   const series = seriesFor(metric, contact)
   const totals = points.map((point) => totalOf(point, series))
   const untracked = totals.filter((value) => value === null).length
@@ -121,25 +179,25 @@ export function TrendChart({
       <figcaption className="flex flex-wrap items-center justify-between gap-3">
         <div
           role="group"
-          aria-label="Chart metric"
+          aria-label={t.chartMetric}
           className="flex gap-1 rounded-lg border bg-card p-1"
         >
           {METRICS.map((option) => (
             <Button
-              key={option.key}
+              key={option}
               size="sm"
-              variant={metric === option.key ? "secondary" : "ghost"}
-              aria-pressed={metric === option.key}
-              onClick={() => setMetric(option.key)}
+              variant={metric === option ? "secondary" : "ghost"}
+              aria-pressed={metric === option}
+              onClick={() => setMetric(option)}
             >
-              {option.label}
+              {t.metrics[option]}
             </Button>
           ))}
         </div>
         <span className="text-sm tabular-nums text-muted-foreground">
           <span className="font-medium text-foreground">{formatNumber(sum)}</span>{" "}
           {unit}
-          {peak > 0 && points.length > 1 && ` · peak ${formatNumber(peak)} on ${formatDay(peakDay)}`}
+          {peak > 0 && points.length > 1 && t.peak(formatNumber(peak), formatDay(peakDay, locale))}
         </span>
       </figcaption>
 
@@ -148,7 +206,7 @@ export function TrendChart({
           {series.map((item) => (
             <li key={item.key} className="flex items-center gap-1.5">
               <span aria-hidden="true" className={cn("size-2.5 rounded-[3px]", item.color)} />
-              {item.label}
+              {seriesLabels[item.key]}
             </li>
           ))}
         </ul>
@@ -156,8 +214,8 @@ export function TrendChart({
 
       <p className="sr-only">
         {sum === 0
-          ? `${label}: no data in this period.`
-          : `${label}: ${formatNumber(sum)} ${unit} in total, peak of ${formatNumber(peak)} on ${formatDay(peakDay)}.`}
+          ? t.noData(label)
+          : t.summary(label, formatNumber(sum), unit, formatNumber(peak), formatDay(peakDay, locale))}
       </p>
 
       <div className="mt-4 grid grid-cols-[auto_minmax(0,1fr)] gap-x-2">
@@ -179,7 +237,7 @@ export function TrendChart({
         <div
           tabIndex={0}
           role="group"
-          aria-label={`${label} per day. Use arrow keys to move between days${canDrill ? ", Enter to view a day" : ""}.`}
+          aria-label={t.chartLabel(label, canDrill)}
           onPointerDown={(event) => (pointerType.current = event.pointerType)}
           onPointerMove={(event) => {
             pointerType.current = event.pointerType
@@ -245,15 +303,15 @@ export function TrendChart({
               className="pointer-events-none absolute inset-y-0 left-0 flex items-center justify-center overflow-hidden rounded-t-[4px] bg-muted/60 bg-[repeating-linear-gradient(135deg,var(--border)_0_1px,transparent_1px_7px)] px-1 text-center text-[11px] text-muted-foreground"
               style={{ width: `${(untracked / points.length) * 100}%` }}
             >
-              Not tracked yet
+              {t.notTracked}
             </div>
           )}
 
           <div aria-live="polite" className="sr-only">
             {activePoint &&
-              `${formatLongDay(activePoint.day)}: ${
+              `${formatLongDay(activePoint.day, locale)}: ${
                 totals[active!] === null
-                  ? "not tracked yet"
+                  ? t.untracked
                   : `${formatNumber(totals[active!]!)} ${unit}`
               }`}
           </div>
@@ -269,7 +327,7 @@ export function TrendChart({
               }
             >
               <p className="text-xs font-medium text-muted-foreground">
-                {formatLongDay(activePoint.day)}
+                {formatLongDay(activePoint.day, locale)}
               </p>
               {activeTracked ? (
                 <ul className="mt-2 space-y-1">
@@ -284,17 +342,17 @@ export function TrendChart({
                         <span className="min-w-8 font-semibold tabular-nums">
                           {value === null ? "–" : formatNumber(value)}
                         </span>
-                        <span className="text-muted-foreground">{row.label}</span>
+                        <span className="text-muted-foreground">{seriesLabels[row.key]}</span>
                       </li>
                     )
                   })}
                 </ul>
               ) : (
-                <p className="mt-2 text-sm">Not tracked yet</p>
+                <p className="mt-2 text-sm">{t.notTracked}</p>
               )}
               {canDrill && activeTracked && (
                 <p className="mt-2 border-t pt-2 text-xs text-muted-foreground">
-                  {pointerType.current === "touch" ? "Tap again" : "Click"} to view this day
+                  {t.drillHint(pointerType.current === "touch")}
                 </p>
               )}
             </div>
@@ -307,7 +365,7 @@ export function TrendChart({
         >
           {[...new Set([0, Math.floor((points.length - 1) / 2), points.length - 1])].map(
             (index) => (
-              <span key={index}>{formatDay(points[index].day)}</span>
+              <span key={index}>{formatDay(points[index].day, locale)}</span>
             )
           )}
         </div>

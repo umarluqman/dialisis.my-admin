@@ -21,6 +21,7 @@ import {
 } from "@/components/dashboard/queries"
 import { LEAD_STATUSES, toLeadStatus } from "@/components/intake-lead-list"
 import { ANALYTICS_PRESETS, CONTACT_KINDS, SOURCE_KEYS } from "@/lib/analytics"
+import { defineCopy, useCopy } from "@/lib/i18n"
 
 const DASHBOARD_TABS = [
   "analytics",
@@ -55,18 +56,50 @@ export const Route = createFileRoute("/dashboard")({
   component: DashboardPage,
 })
 
-const TAB_TITLES: Record<DashboardTab, string> = {
-  analytics: "Analytics",
-  centers: "Dialysis Centers",
-  leads: "Intake Leads",
-  "follow-up": "Needs follow-up",
-  featured: "Featured slots",
-  sales: "Sales pipeline",
-  invitations: "Invitations",
-}
+const COPY = defineCopy({
+  en: {
+    titles: {
+      analytics: "Analytics",
+      centers: "Dialysis Centers",
+      leads: "Intake Leads",
+      "follow-up": "Needs follow-up",
+      featured: "Featured slots",
+      sales: "Sales pipeline",
+      invitations: "Invitations",
+    } satisfies Record<DashboardTab, string>,
+    centerCount: (n: number) => `${n} ${n === 1 ? "center" : "centers"}`,
+    previewCenters: (n: number) => `${n} ${n === 1 ? "centre" : "centres"}`,
+    leadsContext: (newCount: number, total: number) => `${newCount} new · ${total} latest`,
+    followUpContext: (n: number) => `${n} to contact`,
+    featuredContext: "One centre per town and per state",
+    salesContext: "Contacted → demo → pilot → paid",
+    invitationsContext: "Invite a PIC to manage centers",
+    loading: "Loading...",
+  },
+  ms: {
+    titles: {
+      analytics: "Analitik",
+      centers: "Pusat dialisis",
+      leads: "Permohonan temujanji",
+      "follow-up": "Perlu susulan",
+      featured: "Slot pilihan",
+      sales: "Saluran jualan",
+      invitations: "Jemputan",
+    },
+    centerCount: (n: number) => `${n} pusat`,
+    previewCenters: (n: number) => `${n} pusat`,
+    leadsContext: (newCount: number, total: number) => `${newCount} baru · ${total} terkini`,
+    followUpContext: (n: number) => `${n} perlu dihubungi`,
+    featuredContext: "Satu pusat bagi setiap bandar dan setiap negeri",
+    salesContext: "Dihubungi → demo → percubaan → berbayar",
+    invitationsContext: "Jemput PIC untuk mengurus pusat",
+    loading: "Memuatkan...",
+  },
+})
 
 function DashboardPage() {
   const navigate = useNavigate()
+  const t = useCopy(COPY)
   const { tab: requestedTab = "analytics" } = Route.useSearch()
   const { data: session, isPending: sessionPending } = useSession()
   const { data: userRole } = useQuery(userRoleQuery(session?.user?.id))
@@ -89,18 +122,18 @@ function DashboardPage() {
 
   const context: Record<DashboardTab, string | null> = {
     analytics: null,
-    centers: centers ? `${centers.length} ${centers.length === 1 ? "center" : "centers"}` : null,
-    leads: leads ? `${newLeadCount} new · ${leads.length} latest` : null,
-    "follow-up": followUpLeads ? `${followUpCount} to contact` : null,
-    featured: "One centre per town and per state",
-    sales: "Contacted → demo → pilot → paid",
-    invitations: "Invite a PIC to manage centers",
+    centers: centers ? t.centerCount(centers.length) : null,
+    leads: leads ? t.leadsContext(newLeadCount, leads.length) : null,
+    "follow-up": followUpLeads ? t.followUpContext(followUpCount) : null,
+    featured: t.featuredContext,
+    sales: t.salesContext,
+    invitations: t.invitationsContext,
   }
 
   if (sessionPending) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="text-muted-foreground">Loading...</div>
+        <div className="text-muted-foreground">{t.loading}</div>
       </div>
     )
   }
@@ -118,7 +151,7 @@ function DashboardPage() {
           preview
             ? {
                 name: preview.label,
-                email: `${preview.centers} ${preview.centers === 1 ? "centre" : "centres"}`,
+                email: t.previewCenters(preview.centers),
               }
             : session.user
         }
@@ -134,7 +167,7 @@ function DashboardPage() {
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="data-[orientation=vertical]:h-5 data-[orientation=vertical]:self-center" />
             <div className="flex min-w-0 items-baseline gap-3">
-              <h1 className="truncate text-base font-semibold">{TAB_TITLES[tab]}</h1>
+              <h1 className="truncate text-base font-semibold">{t.titles[tab]}</h1>
               {context[tab] && (
                 <span className="truncate text-sm text-muted-foreground tabular-nums">
                   {context[tab]}

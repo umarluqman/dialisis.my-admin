@@ -11,18 +11,51 @@ import {
 import {
   ANALYTICS_PRESETS,
   CONTACT_KINDS,
-  CONTACT_LABELS,
   isValidRange,
   SOURCE_KEYS,
-  SOURCE_LABELS,
   toMytDay,
   type AnalyticsPreset,
   type AnalyticsRange,
   type ContactKind,
   type SourceKey,
 } from "@/lib/analytics"
+import { defineCopy, useCopy } from "@/lib/i18n"
+import { LABELS } from "./format"
 
 const ALL = "all"
+
+const COPY = defineCopy({
+  en: {
+    period: "Reporting period",
+    days: (days: number) => `${days} days`,
+    fromDate: "From date",
+    toDate: "To date",
+    state: "State",
+    allStates: "All states",
+    town: "Town",
+    allTowns: "All towns",
+    contactType: "Contact type",
+    allContactTypes: "All contact types",
+    sourcePage: "Source page",
+    allSourcePages: "All source pages",
+    reset: "Reset",
+  },
+  ms: {
+    period: "Tempoh laporan",
+    days: (days: number) => `${days} hari`,
+    fromDate: "Tarikh mula",
+    toDate: "Tarikh akhir",
+    state: "Negeri",
+    allStates: "Semua negeri",
+    town: "Bandar",
+    allTowns: "Semua bandar",
+    contactType: "Jenis hubungan",
+    allContactTypes: "Semua jenis hubungan",
+    sourcePage: "Halaman sumber",
+    allSourcePages: "Semua halaman sumber",
+    reset: "Set semula",
+  },
+})
 
 export type AnalyticsSearch = {
   days?: AnalyticsPreset
@@ -51,6 +84,8 @@ export function AnalyticsFilters({
   towns: string[]
   onChange: (patch: AnalyticsSearch) => void
 }) {
+  const t = useCopy(COPY)
+  const labels = useCopy(LABELS)
   const today = toMytDay(Date.now())
   const setRange = (next: AnalyticsRange) => {
     if (isValidRange(next)) onChange({ ...next, days: undefined })
@@ -61,7 +96,7 @@ export function AnalyticsFilters({
     <div className="flex flex-wrap items-center gap-2">
       <div
         role="group"
-        aria-label="Reporting period"
+        aria-label={t.period}
         className="flex gap-1 rounded-lg border bg-card p-1"
       >
         {ANALYTICS_PRESETS.map((days) => (
@@ -72,7 +107,7 @@ export function AnalyticsFilters({
             aria-pressed={days === activePreset}
             onClick={() => onChange({ days, from: undefined, to: undefined })}
           >
-            {days} days
+            {t.days(days)}
           </Button>
         ))}
       </div>
@@ -80,7 +115,7 @@ export function AnalyticsFilters({
       <div className="flex items-center gap-1.5">
         <Input
           type="date"
-          aria-label="From date"
+          aria-label={t.fromDate}
           value={range.from}
           min={minDay}
           max={range.to}
@@ -92,7 +127,7 @@ export function AnalyticsFilters({
         </span>
         <Input
           type="date"
-          aria-label="To date"
+          aria-label={t.toDate}
           value={range.to}
           min={range.from}
           max={today}
@@ -103,8 +138,8 @@ export function AnalyticsFilters({
 
       {states.length > 1 && (
         <FilterSelect
-          label="State"
-          allLabel="All states"
+          label={t.state}
+          allLabel={t.allStates}
           value={search.state}
           options={states.map((name) => [name, name])}
           onChange={(state) => onChange({ state, town: undefined })}
@@ -112,25 +147,25 @@ export function AnalyticsFilters({
       )}
       {towns.length > 1 && (
         <FilterSelect
-          label="Town"
-          allLabel="All towns"
+          label={t.town}
+          allLabel={t.allTowns}
           value={search.town}
           options={towns.map((name) => [name, name])}
           onChange={(town) => onChange({ town })}
         />
       )}
       <FilterSelect
-        label="Contact type"
-        allLabel="All contact types"
+        label={t.contactType}
+        allLabel={t.allContactTypes}
         value={search.contact}
-        options={CONTACT_KINDS.map((kind) => [kind, CONTACT_LABELS[kind]])}
+        options={CONTACT_KINDS.map((kind) => [kind, labels.contact[kind]])}
         onChange={(contact) => onChange({ contact: contact as ContactKind | undefined })}
       />
       <FilterSelect
-        label="Source page"
-        allLabel="All source pages"
+        label={t.sourcePage}
+        allLabel={t.allSourcePages}
         value={search.source}
-        options={SOURCE_KEYS.map((key) => [key, SOURCE_LABELS[key]])}
+        options={SOURCE_KEYS.map((key) => [key, labels.source[key]])}
         onChange={(source) => onChange({ source: source as SourceKey | undefined })}
       />
 
@@ -152,7 +187,7 @@ export function AnalyticsFilters({
           }
         >
           <X />
-          Reset
+          {t.reset}
         </Button>
       )}
     </div>

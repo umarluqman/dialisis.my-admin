@@ -5,22 +5,9 @@ export const MAX_RANGE_DAYS = 366
 
 export const CONTACT_KINDS = ["whatsapp", "call", "directions"] as const
 export type ContactKind = (typeof CONTACT_KINDS)[number]
-export const CONTACT_LABELS: Record<ContactKind, string> = {
-  whatsapp: "WhatsApp",
-  call: "Phone call",
-  directions: "Directions",
-}
 
-export const SOURCE_LABELS = {
-  home: "Home page",
-  map: "Centers map",
-  center: "Center page",
-  chain: "Chain page",
-  location: "Location listing",
-  other: "Other page",
-} as const
-export type SourceKey = keyof typeof SOURCE_LABELS
-export const SOURCE_KEYS = Object.keys(SOURCE_LABELS) as [SourceKey, ...SourceKey[]]
+export const SOURCE_KEYS = ["home", "map", "center", "chain", "location", "other"] as const
+export type SourceKey = (typeof SOURCE_KEYS)[number]
 
 export type AnalyticsRange = { from: string; to: string }
 

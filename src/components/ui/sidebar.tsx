@@ -22,6 +22,20 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { SidebarLeftIcon } from "@hugeicons/core-free-icons"
+import { defineCopy, useCopy } from "@/lib/i18n"
+
+const COPY = defineCopy({
+  en: {
+    title: "Sidebar",
+    description: "Displays the mobile sidebar.",
+    toggle: "Toggle Sidebar",
+  },
+  ms: {
+    title: "Bar sisi",
+    description: "Memaparkan bar sisi mudah alih.",
+    toggle: "Buka/tutup bar sisi",
+  },
+})
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
@@ -160,6 +174,7 @@ function Sidebar({
   collapsible?: "offExamples" | "icon" | "none"
 }) {
   const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
+  const t = useCopy(COPY)
 
   if (collapsible === "none") {
     return (
@@ -192,8 +207,8 @@ function Sidebar({
           side={side}
         >
           <SheetHeader className="sr-only">
-            <SheetTitle>Sidebar</SheetTitle>
-            <SheetDescription>Displays the mobile sidebar.</SheetDescription>
+            <SheetTitle>{t.title}</SheetTitle>
+            <SheetDescription>{t.description}</SheetDescription>
           </SheetHeader>
           <div className="flex h-full w-full flex-col">{children}</div>
         </SheetContent>
@@ -255,6 +270,7 @@ function SidebarTrigger({
   ...props
 }: React.ComponentProps<typeof Button>) {
   const { toggleSidebar } = useSidebar()
+  const t = useCopy(COPY)
 
   return (
     <Button
@@ -270,22 +286,23 @@ function SidebarTrigger({
       {...props}
     >
       <HugeiconsIcon icon={SidebarLeftIcon} strokeWidth={2} />
-      <span className="sr-only">Toggle Sidebar</span>
+      <span className="sr-only">{t.toggle}</span>
     </Button>
   )
 }
 
 function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
   const { toggleSidebar } = useSidebar()
+  const t = useCopy(COPY)
 
   return (
     <button
       data-sidebar="rail"
       data-slot="sidebar-rail"
-      aria-label="Toggle Sidebar"
+      aria-label={t.toggle}
       tabIndex={-1}
       onClick={toggleSidebar}
-      title="Toggle Sidebar"
+      title={t.toggle}
       className={cn(
         "hover:after:bg-sidebar-border absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 transition-all ease-linear group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] sm:flex",
         "in-data-[side=left]:cursor-w-resize in-data-[side=right]:cursor-e-resize",

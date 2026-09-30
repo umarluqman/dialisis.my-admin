@@ -13,15 +13,14 @@ import {
 } from "@/core/functions/analytics-functions"
 import {
   CONTACT_KINDS,
-  CONTACT_LABELS,
   DEFAULT_PRESET,
   isValidRange,
   presetRange,
   rangeLength,
-  SOURCE_LABELS,
   toMytDay,
   type AnalyticsRange,
 } from "@/lib/analytics"
+import { defineCopy, useCopy, useLocale } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { AnalyticsFilters, type AnalyticsSearch } from "./analytics-filters"
 import { BranchList } from "./branch-list"
@@ -33,10 +32,138 @@ import {
   formatMytDateTime,
   formatNumber,
   formatRate,
+  LABELS,
 } from "./format"
 import { TrendChart } from "./trend-chart"
 
 const PUBLIC_SITE_URL = "https://www.dialisis.my"
+
+const COPY = defineCopy({
+  en: {
+    loadError: "We couldn't load visitor analytics. Please try again.",
+    retry: "Retry",
+    noCenters: "No centers yet",
+    noCentersBody: "Analytics appear here once a center is assigned to your account.",
+    newFeature: "New feature",
+    viewsSince: "Page views tracked since",
+    contactsSince: "Contacts and leads since",
+    mytNote: "(Malaysia time).",
+    allCenters: "All centers",
+    title: "Visitor analytics",
+    centerCount: (count: string, place: string) =>
+      `${count} centers${place ? ` in ${place}` : ""}`,
+    viewPublicPage: "View public page",
+    noMatch: "Nothing matches these filters",
+    noMatchBody:
+      "No page views, contacts or leads for this date range and filter combination. Try a longer range or reset the filters.",
+    noData: "No visitor data yet",
+    noDataBody: (selected: boolean) =>
+      `Tracking started recently. Page views and contacts for ${selected ? "this center" : "your centers"} will appear here as visitors arrive on dialisis.my. Check back in a few days.`,
+    footnote:
+      "Each visitor is counted once per center per day (Malaysia time). Page views include repeat visits on the same day; contacts count once per visitor, method and day. Intake leads exclude test submissions and leads still marked new after 48 hours, and repeat forms from the same phone on the same day count once. Contact type and source page filters narrow contacts and contact rate only; page views and leads aren't tied to either. Today is included, so its numbers are still growing.",
+    call: "Call",
+    previous: (days: number) =>
+      days === 1 ? "the previous day" : `the previous ${days} days`,
+    comparedWith: (previous: string) => `Compared with ${previous}`,
+    noComparison: (previous: string) =>
+      `Change vs ${previous} appears once there's enough history`,
+    summary: "Summary",
+    pageViews: "Page views",
+    pageViewsHint: "Times the center page was opened.",
+    visitors: "Unique visitors",
+    visitorsHint: "Different people viewing, per day.",
+    contacts: "Contacts",
+    contactRate: "Contact rate",
+    points: (value: string) => `${value} pts`,
+    contactRateHint: "Visitors who went on to contact.",
+    leads: "Intake leads",
+    booked: "booked",
+    excludes: (count: string) => `Excludes ${count} awaiting`,
+    followUp: "follow-up",
+    dailyTrend: "Daily trend",
+    contactMethods: "How visitors made contact",
+    selectToFilter: "Select one to filter.",
+    sources: "Where contacts came from",
+    noContacts: "No contacts in this period yet.",
+    featured: "Featured placement",
+    featuredHint: "Visitors who saw the featured card on location pages, and who opened it.",
+    impressions: "Impressions",
+    clicks: "Clicks",
+    clickRate: "Click rate",
+    comparedWithTown: (town: string) => `Compared with ${town}`,
+    townViews: "page views vs a town average of",
+    across: (count: string) => `across ${count} centers`,
+    onPar: " (on par).",
+    townDiff: (percent: number, above: boolean) =>
+      ` (${percent}% ${above ? "above" : "below"}).`,
+    noChange: "No change",
+    up: "up",
+    down: "down",
+    loading: "Loading analytics",
+  },
+  ms: {
+    loadError: "Kami tidak dapat memuatkan analitik pelawat. Sila cuba lagi.",
+    retry: "Cuba lagi",
+    noCenters: "Belum ada pusat",
+    noCentersBody: "Analitik akan dipaparkan di sini selepas pusat ditetapkan kepada akaun anda.",
+    newFeature: "Ciri baru",
+    viewsSince: "Paparan halaman dijejak sejak",
+    contactsSince: "Hubungan dan permohonan sejak",
+    mytNote: "(waktu Malaysia).",
+    allCenters: "Semua pusat",
+    title: "Analitik pelawat",
+    centerCount: (count: string, place: string) =>
+      `${count} pusat${place ? ` di ${place}` : ""}`,
+    viewPublicPage: "Lihat halaman awam",
+    noMatch: "Tiada yang sepadan dengan tapisan ini",
+    noMatchBody:
+      "Tiada paparan halaman, hubungan atau permohonan untuk julat tarikh dan gabungan tapisan ini. Cuba julat yang lebih panjang atau set semula tapisan.",
+    noData: "Belum ada data pelawat",
+    noDataBody: (selected: boolean) =>
+      `Penjejakan baru sahaja bermula. Paparan halaman dan hubungan untuk ${selected ? "pusat ini" : "pusat anda"} akan dipaparkan di sini apabila pelawat mengunjungi dialisis.my. Semak semula dalam beberapa hari.`,
+    footnote:
+      "Setiap pelawat dikira sekali bagi setiap pusat sehari (waktu Malaysia). Paparan halaman termasuk lawatan berulang pada hari yang sama; hubungan dikira sekali bagi setiap pelawat, kaedah dan hari. Permohonan temujanji tidak termasuk penghantaran ujian dan permohonan yang masih berstatus baru selepas 48 jam, dan borang berulang daripada no. telefon yang sama pada hari yang sama dikira sekali. Tapisan jenis hubungan dan halaman sumber hanya mengehadkan hubungan dan kadar hubungan; paparan halaman dan permohonan tidak berkait dengan kedua-duanya. Hari ini turut dikira, jadi angkanya masih bertambah.",
+    call: "Panggil",
+    previous: (days: number) =>
+      days === 1 ? "hari sebelumnya" : `${days} hari sebelumnya`,
+    comparedWith: (previous: string) => `Berbanding ${previous}`,
+    noComparison: (previous: string) =>
+      `Perubahan berbanding ${previous} dipaparkan apabila data sejarah mencukupi`,
+    summary: "Ringkasan",
+    pageViews: "Paparan halaman",
+    pageViewsHint: "Bilangan kali halaman pusat dibuka.",
+    visitors: "Pelawat unik",
+    visitorsHint: "Individu berbeza yang melihat, sehari.",
+    contacts: "Hubungan",
+    contactRate: "Kadar hubungan",
+    points: (value: string) => `${value} mata`,
+    contactRateHint: "Pelawat yang kemudian menghubungi pusat.",
+    leads: "Permohonan temujanji",
+    booked: "ditempah",
+    excludes: (count: string) => `Tidak termasuk ${count} yang perlu`,
+    followUp: "susulan",
+    dailyTrend: "Trend harian",
+    contactMethods: "Cara pelawat menghubungi pusat",
+    selectToFilter: "Pilih satu untuk menapis.",
+    sources: "Sumber hubungan",
+    noContacts: "Belum ada hubungan dalam tempoh ini.",
+    featured: "Penempatan pilihan",
+    featuredHint: "Pelawat yang melihat kad pilihan di halaman lokasi, dan yang membukanya.",
+    impressions: "Impresi",
+    clicks: "Klik",
+    clickRate: "Kadar klik",
+    comparedWithTown: (town: string) => `Berbanding ${town}`,
+    townViews: "paparan halaman berbanding purata bandar",
+    across: (count: string) => `bagi ${count} pusat`,
+    onPar: " (setara).",
+    townDiff: (percent: number, above: boolean) =>
+      ` (${percent}% ${above ? "lebih tinggi" : "lebih rendah"}).`,
+    noChange: "Tiada perubahan",
+    up: "naik",
+    down: "turun",
+    loading: "Memuatkan analitik",
+  },
+})
 
 const uniqueSorted = (values: string[]) =>
   Array.from(new Set(values)).filter(Boolean).sort()
@@ -46,6 +173,8 @@ export function AnalyticsView({ isSuperadmin }: { isSuperadmin: boolean }) {
     from: "/dashboard",
   })
   const navigate = useNavigate({ from: "/dashboard" })
+  const t = useCopy(COPY)
+  const { locale } = useLocale()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const topRef = useRef<HTMLDivElement>(null)
 
@@ -106,7 +235,7 @@ export function AnalyticsView({ isSuperadmin }: { isSuperadmin: boolean }) {
       <Card>
         <CardContent className="flex flex-col items-start gap-3">
           <p className="text-muted-foreground">
-            We couldn't load visitor analytics. Please try again.
+            {t.loadError}
           </p>
           <Button
             variant="outline"
@@ -115,7 +244,7 @@ export function AnalyticsView({ isSuperadmin }: { isSuperadmin: boolean }) {
               overviewQuery.refetch()
             }}
           >
-            Retry
+            {t.retry}
           </Button>
         </CardContent>
       </Card>
@@ -126,9 +255,9 @@ export function AnalyticsView({ isSuperadmin }: { isSuperadmin: boolean }) {
     return (
       <Card>
         <CardContent>
-          <h2 className="text-lg font-medium">No centers yet</h2>
+          <h2 className="text-lg font-medium">{t.noCenters}</h2>
           <p className="mt-1 text-muted-foreground">
-            Analytics appear here once a center is assigned to your account.
+            {t.noCentersBody}
           </p>
         </CardContent>
       </Card>
@@ -142,19 +271,19 @@ export function AnalyticsView({ isSuperadmin }: { isSuperadmin: boolean }) {
       {overview && (
         <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
           <Badge variant="outline" className="bg-card">
-            New feature
+            {t.newFeature}
           </Badge>
           <span>
-            Page views tracked since{" "}
+            {t.viewsSince}{" "}
             <span className="text-foreground tabular-nums">
-              {formatMytDateTime(overview.trackedSince.views)}
+              {formatMytDateTime(overview.trackedSince.views, locale)}
             </span>
             {" · "}
-            Contacts and leads since{" "}
+            {t.contactsSince}{" "}
             <span className="text-foreground tabular-nums">
-              {formatMytDateTime(overview.trackedSince.contacts)}
+              {formatMytDateTime(overview.trackedSince.contacts, locale)}
             </span>{" "}
-            (Malaysia time).
+            {t.mytNote}
           </span>
         </p>
       )}
@@ -167,22 +296,23 @@ export function AnalyticsView({ isSuperadmin }: { isSuperadmin: boolean }) {
             className="mb-3"
           >
             <ArrowLeft />
-            All centers
+            {t.allCenters}
           </Button>
         )}
         {branches ? (
           <>
             <h2 className="text-2xl font-semibold tracking-tight">
-              {selected ? selected.name : "Visitor analytics"}
+              {selected ? selected.name : t.title}
             </h2>
             <p className="mt-1 text-sm tabular-nums text-muted-foreground">
               {selected
                 ? [selected.town, selected.state].filter(Boolean).join(", ")
-                : `${formatNumber(visibleBranches.length)} centers${
-                    town || state ? ` in ${[town, state].filter(Boolean).join(", ")}` : ""
-                  }`}
+                : t.centerCount(
+                    formatNumber(visibleBranches.length),
+                    [town, state].filter(Boolean).join(", ")
+                  )}
               {overview &&
-                ` · ${formatDay(overview.startDay)}${overview.startDay < overview.endDay ? ` – ${formatDay(overview.endDay)}` : ""}`}
+                ` · ${formatDay(overview.startDay, locale)}${overview.startDay < overview.endDay ? ` – ${formatDay(overview.endDay, locale)}` : ""}`}
             </p>
           </>
         ) : (
@@ -198,7 +328,7 @@ export function AnalyticsView({ isSuperadmin }: { isSuperadmin: boolean }) {
               target="_blank"
               rel="noopener noreferrer"
             >
-              View public page
+              {t.viewPublicPage}
               <ExternalLink />
             </a>
           </Button>
@@ -222,19 +352,16 @@ export function AnalyticsView({ isSuperadmin }: { isSuperadmin: boolean }) {
           <CardContent>
             {isFiltered ? (
               <>
-                <h3 className="text-lg font-medium">Nothing matches these filters</h3>
+                <h3 className="text-lg font-medium">{t.noMatch}</h3>
                 <p className="mt-1 max-w-2xl text-muted-foreground">
-                  No page views, contacts or leads for this date range and filter
-                  combination. Try a longer range or reset the filters.
+                  {t.noMatchBody}
                 </p>
               </>
             ) : (
               <>
-                <h3 className="text-lg font-medium">No visitor data yet</h3>
+                <h3 className="text-lg font-medium">{t.noData}</h3>
                 <p className="mt-1 max-w-2xl text-muted-foreground">
-                  Tracking started recently. Page views and contacts for{" "}
-                  {selected ? "this center" : "your centers"} will appear here as
-                  visitors arrive on dialisis.my. Check back in a few days.
+                  {t.noDataBody(Boolean(selected))}
                 </p>
               </>
             )}
@@ -265,13 +392,7 @@ export function AnalyticsView({ isSuperadmin }: { isSuperadmin: boolean }) {
       {isSuperadmin && !selected && <LocationDemand range={range} state={state} />}
 
       <p className="max-w-3xl text-xs text-muted-foreground">
-        Each visitor is counted once per center per day (Malaysia time). Page
-        views include repeat visits on the same day; contacts count once per
-        visitor, method and day. Intake leads exclude test submissions and
-        leads still marked new after 48 hours, and repeat forms from the same
-        phone on the same day count once. Contact type and source page filters
-        narrow contacts and contact rate only; page views and leads aren't tied
-        to either. Today is included, so its numbers are still growing.
+        {t.footnote}
       </p>
     </div>
   )
@@ -290,6 +411,8 @@ function Overview({
   filters: AnalyticsSearch
   onFilter: (patch: AnalyticsSearch) => void
 }) {
+  const t = useCopy(COPY)
+  const labels = useCopy(LABELS)
   const { current, previous, comparable } = overview
   const contacts = current.call + current.whatsapp + current.directions
   const previousContacts =
@@ -300,27 +423,27 @@ function Overview({
   const rateComparable = comparable.views && comparable.contacts
   const contactKinds = CONTACT_KINDS.map((kind) => ({
     kind,
-    label: CONTACT_LABELS[kind],
-    short: kind === "call" ? "Call" : CONTACT_LABELS[kind],
+    label: labels.contact[kind],
+    short: kind === "call" ? t.call : labels.contact[kind],
     value: current[kind],
   }))
   const contactMax = Math.max(...contactKinds.map((kind) => kind.value))
   const length = rangeLength(range)
-  const previousLabel = length === 1 ? "the previous day" : `the previous ${length} days`
+  const previousLabel = t.previous(length)
   const { impressions, clicks } = overview.featured
   const sourceMax = overview.sources[0]?.value ?? 0
 
   return (
     <>
-      <section aria-label="Summary">
+      <section aria-label={t.summary}>
         <p className="mb-2 text-sm text-muted-foreground">
           {comparable.views
-            ? `Compared with ${previousLabel}`
-            : `Change vs ${previousLabel} appears once there's enough history`}
+            ? t.comparedWith(previousLabel)
+            : t.noComparison(previousLabel)}
         </p>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
           <Kpi
-            label="Page views"
+            label={t.pageViews}
             value={formatNumber(current.views)}
             delta={
               comparable.views && (
@@ -328,10 +451,10 @@ function Overview({
               )
             }
           >
-            Times the center page was opened.
+            {t.pageViewsHint}
           </Kpi>
           <Kpi
-            label="Unique visitors"
+            label={t.visitors}
             value={formatNumber(current.visitors)}
             delta={
               comparable.views && (
@@ -339,10 +462,10 @@ function Overview({
               )
             }
           >
-            Different people viewing, per day.
+            {t.visitorsHint}
           </Kpi>
           <Kpi
-            label="Contacts"
+            label={t.contacts}
             value={formatNumber(contacts)}
             delta={
               comparable.contacts && (
@@ -362,22 +485,22 @@ function Overview({
             </span>
           </Kpi>
           <Kpi
-            label="Contact rate"
+            label={t.contactRate}
             value={formatRate(rate)}
             delta={
               rateComparable &&
               previous.visitors > 0 && (
                 <DeltaText
                   change={rateChange}
-                  text={`${Math.abs(rateChange).toFixed(1)} pts`}
+                  text={t.points(Math.abs(rateChange).toFixed(1))}
                 />
               )
             }
           >
-            Visitors who went on to contact.
+            {t.contactRateHint}
           </Kpi>
           <Kpi
-            label="Intake leads"
+            label={t.leads}
             className="col-span-2 lg:col-span-1"
             value={formatNumber(current.leads)}
             delta={
@@ -389,15 +512,15 @@ function Overview({
             <span className="tabular-nums text-foreground">
               {formatNumber(current.booked)}
             </span>{" "}
-            booked
+            {t.booked}
             {current.followUp > 0 && (
               <Link
                 to="/dashboard"
                 search={{ tab: "follow-up" }}
                 className="mt-1 block text-xs underline underline-offset-2 hover:text-foreground"
               >
-                Excludes {formatNumber(current.followUp)} awaiting{" "}
-                <span className="whitespace-nowrap">follow-up</span>
+                {t.excludes(formatNumber(current.followUp))}{" "}
+                <span className="whitespace-nowrap">{t.followUp}</span>
               </Link>
             )}
           </Kpi>
@@ -406,7 +529,7 @@ function Overview({
 
       <Card>
         <CardContent>
-          <h3 className="mb-4 text-base font-medium">Daily trend</h3>
+          <h3 className="mb-4 text-base font-medium">{t.dailyTrend}</h3>
           <TrendChart
             points={overview.daily}
             contact={filters.contact}
@@ -418,8 +541,8 @@ function Overview({
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardContent>
-            <h3 className="text-base font-medium">How visitors made contact</h3>
-            <p className="mt-1 text-sm text-muted-foreground">Select one to filter.</p>
+            <h3 className="text-base font-medium">{t.contactMethods}</h3>
+            <p className="mt-1 text-sm text-muted-foreground">{t.selectToFilter}</p>
             <ul className="mt-3 space-y-1">
               {contactKinds.map((kind) => (
                 <BarRow
@@ -441,19 +564,19 @@ function Overview({
         </Card>
         <Card>
           <CardContent>
-            <h3 className="text-base font-medium">Where contacts came from</h3>
+            <h3 className="text-base font-medium">{t.sources}</h3>
             {overview.sources.length === 0 ? (
               <p className="mt-4 text-muted-foreground">
-                No contacts in this period yet.
+                {t.noContacts}
               </p>
             ) : (
               <>
-                <p className="mt-1 text-sm text-muted-foreground">Select one to filter.</p>
+                <p className="mt-1 text-sm text-muted-foreground">{t.selectToFilter}</p>
                 <ul className="mt-3 space-y-1">
                   {overview.sources.map((source) => (
                     <BarRow
                       key={`${source.key}|${source.sub}`}
-                      label={SOURCE_LABELS[source.key]}
+                      label={labels.source[source.key]}
                       sub={source.sub}
                       value={source.value}
                       max={sourceMax}
@@ -476,15 +599,15 @@ function Overview({
       {impressions + clicks > 0 && (
         <Card>
           <CardContent>
-            <h3 className="text-base font-medium">Featured placement</h3>
+            <h3 className="text-base font-medium">{t.featured}</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              Visitors who saw the featured card on location pages, and who opened it.
+              {t.featuredHint}
             </p>
             <dl className="mt-4 grid grid-cols-3 gap-4">
               {[
-                { label: "Impressions", value: formatNumber(impressions) },
-                { label: "Clicks", value: formatNumber(clicks) },
-                { label: "Click rate", value: formatRate(impressions > 0 ? clicks / impressions : 0) },
+                { label: t.impressions, value: formatNumber(impressions) },
+                { label: t.clicks, value: formatNumber(clicks) },
+                { label: t.clickRate, value: formatRate(impressions > 0 ? clicks / impressions : 0) },
               ].map((stat) => (
                 <div key={stat.label}>
                   <dt className="text-sm text-muted-foreground">{stat.label}</dt>
@@ -506,6 +629,7 @@ function TownComparison({
   centerId: string
   range: AnalyticsRange
 }) {
+  const t = useCopy(COPY)
   const { data } = useQuery({
     queryKey: ["analytics", "town", range, centerId],
     queryFn: () => getTownComparison({ data: { ...range, centerId } }),
@@ -522,20 +646,18 @@ function TownComparison({
   return (
     <Card>
       <CardContent>
-        <h3 className="text-base font-medium">Compared with {data.town}</h3>
+        <h3 className="text-base font-medium">{t.comparedWithTown(data.town)}</h3>
         <p className="mt-1 text-muted-foreground">
           <span className="font-medium text-foreground tabular-nums">
             {formatNumber(data.views)}
           </span>{" "}
-          page views vs a town average of{" "}
+          {t.townViews}{" "}
           <span className="font-medium text-foreground tabular-nums">
             {formatNumber(average)}
           </span>{" "}
-          across {formatNumber(data.centers)} centers
+          {t.across(formatNumber(data.centers))}
           {change !== null &&
-            (change === 0
-              ? " (on par)."
-              : ` (${Math.abs(change)}% ${change > 0 ? "above" : "below"}).`)}
+            (change === 0 ? t.onPar : t.townDiff(Math.abs(change), change > 0))}
         </p>
       </CardContent>
     </Card>
@@ -549,9 +671,10 @@ function Delta({ current, previous }: { current: number; previous: number }) {
 }
 
 function DeltaText({ change, text }: { change: number; text: string }) {
+  const t = useCopy(COPY)
   if (change === 0) {
     return (
-      <span className="text-xs text-muted-foreground">No change</span>
+      <span className="text-xs text-muted-foreground">{t.noChange}</span>
     )
   }
   return (
@@ -562,7 +685,7 @@ function DeltaText({ change, text }: { change: number; text: string }) {
       )}
     >
       <span aria-hidden="true">{change > 0 ? "▲" : "▼"}</span>
-      <span className="sr-only">{change > 0 ? "up" : "down"}</span> {text}
+      <span className="sr-only">{change > 0 ? t.up : t.down}</span> {text}
     </span>
   )
 }
@@ -649,8 +772,9 @@ function BarRow({
 }
 
 function OverviewSkeleton() {
+  const t = useCopy(COPY)
   return (
-    <div className="space-y-4" aria-busy="true" aria-label="Loading analytics">
+    <div className="space-y-4" aria-busy="true" aria-label={t.loading}>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         {Array.from({ length: 5 }, (_, index) => (
           <Skeleton

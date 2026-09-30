@@ -77,6 +77,321 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { defineCopy, useCopy } from "@/lib/i18n"
+
+const COPY = defineCopy({
+  en: {
+    centerUpdated: "Center updated successfully",
+    updateCenterFailed: "Failed to update center",
+    centerDeleted: "Center deleted",
+    deleteCenterFailed: "Failed to delete center",
+    centerCreated: "Center created successfully",
+    createCenterFailed: "Failed to create center",
+    findingMap: "Finding map...",
+    saving: "Saving...",
+    createCenter: "Create Center",
+    editCenter: "Edit Center",
+    saveChanges: "Save Changes",
+    coordinatesFound: "Coordinates found.",
+    findingCoordinates: "Finding coordinates...",
+    coordinatesFoundFromLink: "Coordinates found from Google Maps link.",
+    coordinatesNotFound: "Could not find coordinates from this link.",
+    mapLinkUnresolved: "Could not resolve this Google Maps link.",
+    enterCenterName: "Please enter a center name",
+    selectState: "Please select a state",
+    mapCoordinatesNotFound: "Could not find map coordinates",
+    pasteMapHint: "Paste a Google Maps share link, embed, or coordinates.",
+    loading: "Loading...",
+    backToDashboard: "Back to dashboard",
+    centerDetails: "Dialysis center details",
+    deleteCenter: "Delete center",
+    deleteCenterTitle: "Delete this center?",
+    thisCenter: "this center",
+    deleteCenterDescription: (name: string) =>
+      `This permanently removes ${name} along with its images, FAQs, operating hours and intake leads. This cannot be undone.`,
+    cancel: "Cancel",
+    delete: "Delete",
+    basicInfo: "Basic Information",
+    basicInfoDescription: "General details about the dialysis center",
+    centerName: "Center Name",
+    centerNamePlaceholder: "Enter center name",
+    title: "Title",
+    titlePlaceholder: "Enter title",
+    sector: "Sector",
+    sectorPlaceholder: "e.g., Private, Government",
+    description: "Description",
+    descriptionPlaceholder: "Enter center description",
+    contactInfo: "Contact Information",
+    contactInfoDescription: "Phone, email, and website details",
+    telephone: "Telephone",
+    telephonePlaceholder: "Enter telephone",
+    phoneNumber: "Phone Number",
+    phoneNumberPlaceholder: "Enter phone number",
+    email: "Email",
+    emailPlaceholder: "Enter email",
+    website: "Website",
+    leadFollowUp: "Lead Follow-Up",
+    leadFollowUpDescription:
+      "Email alerts go to assigned admin users; WhatsApp handoff uses the PIC number",
+    picName: "PIC Name",
+    picNamePlaceholder: "Enter PIC name",
+    picWhatsapp: "PIC WhatsApp Number",
+    leadEmailNote:
+      "SES lead emails are sent to assigned PIC/admin users for this center. If no user is assigned, the center email is used as fallback.",
+    location: "Location",
+    locationDescription: "Address and location details",
+    address: "Address",
+    addressPlaceholder: "Enter full address",
+    addressWithUnit: "Address with Unit",
+    addressWithUnitPlaceholder: "Enter address with unit number",
+    googleMapsEmbed: "Google Maps Embed",
+    googleMapsEmbedPlaceholder:
+      "Paste Google Maps share link, iframe, or coordinates",
+    wazeCoordinates: (lat: number, lng: number) =>
+      `Waze coordinates: ${lat}, ${lng}`,
+    wazeHint: "Paste a Google Maps link to auto-fill Waze coordinates.",
+    town: "Town",
+    townPlaceholder: "Enter town",
+    state: "State",
+    statePlaceholder: "Select a state",
+    staffInfo: "Staff Information",
+    staffInfoDescription: "Key personnel at the dialysis center",
+    drInCharge: "Doctor In Charge",
+    drInChargePlaceholder: "Enter doctor name",
+    drInChargeTel: "Doctor Phone",
+    drInChargeTelPlaceholder: "Enter doctor phone",
+    panelNephrologist: "Panel Nephrologist",
+    panelNephrologistPlaceholder: "Enter nephrologist name",
+    centreManager: "Centre Manager",
+    centreManagerPlaceholder: "Enter manager name",
+    centreCoordinator: "Centre Coordinator",
+    centreCoordinatorPlaceholder: "Enter coordinator name",
+    facilities: "Facilities",
+    facilitiesDescription: "Equipment and services available",
+    units: "Units",
+    unitsPlaceholder: "Number of units",
+    hepatitisBay: "Hepatitis Bay",
+    hepatitisBayPlaceholder: "Enter hepatitis bay info",
+    benefits: "Benefits",
+    benefitsPlaceholder: "Enter benefits and services offered",
+    listingDetails: "Listing Details",
+    listingDetailsDescription: "What families ask before they call",
+    fees: "Fees",
+    feesPlaceholder: "e.g., RM180 per session, EPO extra",
+    sessionSlots: "Session Slots",
+    sessionSlotsPlaceholder: "e.g., Morning 7am, Afternoon 12pm, Evening 5pm",
+    languages: "Languages Spoken",
+    languagesPlaceholder: "e.g., Malay, English, Mandarin, Tamil",
+    panels: "Panels Accepted",
+    panelsPlaceholder: "e.g., PERKESO, JPA, AIA",
+    additionalDetails: "Additional Details",
+    additionalDetailsDescription:
+      "Create the center first to manage operating hours and FAQs.",
+    planUpdated: "Plan updated",
+    updatePlanFailed: "Failed to update plan",
+    plan: "Plan",
+    proExpired: "Pro expired",
+    verified: "Verified",
+    planDescription: "Superadmin only. Changes go live on the public site.",
+    asasFree: "Asas (free)",
+    planEndsOn: "Plan ends on",
+    planEndsOnHint: "Last day of Pro (Malaysia time). Leave empty for no end date.",
+    earlybirdSeats: (used: number, total: number, full: boolean) =>
+      `${used} / ${total} earlybird seats used${full ? " · full" : ""}`,
+    loadingSeats: "Loading seats...",
+    savePlan: "Save plan",
+    unverify: "Unverify",
+    markVerified: "Mark verified",
+    verifiedOn: (date: string) => `Verified on ${date}`,
+    intakeLeads: "Intake Leads",
+    intakeLeadsDescription: "Recent appointment requests from the public site",
+    loadingLeads: "Loading leads...",
+    noLeads: "No intake leads for this center yet.",
+    days: [
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+    ],
+    hoursSaved: "Operating hours saved",
+    saveHoursFailed: "Failed to save operating hours",
+    operatingHours: "Operating Hours",
+    operatingHoursDescription: "Set the opening and closing times for each day",
+    closed: "Closed",
+    to: "to",
+    saveHours: "Save Hours",
+    faqAdded: "FAQ added",
+    addFaqFailed: "Failed to add FAQ",
+    faqUpdated: "FAQ updated",
+    updateFaqFailed: "Failed to update FAQ",
+    faqDeleted: "FAQ deleted",
+    deleteFaqFailed: "Failed to delete FAQ",
+    faqs: "FAQs",
+    faqsDescription: "Frequently asked questions for this center",
+    question: "Question",
+    answer: "Answer",
+    save: "Save",
+    edit: "Edit",
+    addNewFaq: "Add New FAQ",
+    adding: "Adding...",
+    addFaq: "Add FAQ",
+  },
+  ms: {
+    centerUpdated: "Pusat dikemas kini",
+    updateCenterFailed: "Gagal mengemas kini pusat",
+    centerDeleted: "Pusat dipadam",
+    deleteCenterFailed: "Gagal memadam pusat",
+    centerCreated: "Pusat dicipta",
+    createCenterFailed: "Gagal mencipta pusat",
+    findingMap: "Mencari peta...",
+    saving: "Menyimpan...",
+    createCenter: "Cipta pusat",
+    editCenter: "Sunting pusat",
+    saveChanges: "Simpan perubahan",
+    coordinatesFound: "Koordinat ditemui.",
+    findingCoordinates: "Mencari koordinat...",
+    coordinatesFoundFromLink: "Koordinat ditemui daripada pautan Google Maps.",
+    coordinatesNotFound: "Koordinat tidak ditemui dalam pautan ini.",
+    mapLinkUnresolved: "Tidak dapat memproses pautan Google Maps ini.",
+    enterCenterName: "Sila masukkan nama pusat",
+    selectState: "Sila pilih negeri",
+    mapCoordinatesNotFound: "Koordinat peta tidak ditemui",
+    pasteMapHint: "Tampal pautan kongsi, benaman atau koordinat Google Maps.",
+    loading: "Memuatkan...",
+    backToDashboard: "Kembali ke papan pemuka",
+    centerDetails: "Butiran pusat dialisis",
+    deleteCenter: "Padam pusat",
+    deleteCenterTitle: "Padam pusat ini?",
+    thisCenter: "pusat ini",
+    deleteCenterDescription: (name: string) =>
+      `Tindakan ini memadam ${name} secara kekal bersama gambar, soalan lazim, waktu operasi dan permohonan temujanjinya. Tindakan ini tidak boleh dibatalkan.`,
+    cancel: "Batal",
+    delete: "Padam",
+    basicInfo: "Maklumat asas",
+    basicInfoDescription: "Butiran umum tentang pusat dialisis",
+    centerName: "Nama pusat",
+    centerNamePlaceholder: "Masukkan nama pusat",
+    title: "Tajuk",
+    titlePlaceholder: "Masukkan tajuk",
+    sector: "Sektor",
+    sectorPlaceholder: "cth. Swasta, Kerajaan",
+    description: "Penerangan",
+    descriptionPlaceholder: "Masukkan penerangan pusat",
+    contactInfo: "Maklumat hubungan",
+    contactInfoDescription: "Butiran telefon, e-mel dan laman web",
+    telephone: "Telefon",
+    telephonePlaceholder: "Masukkan no. telefon",
+    phoneNumber: "No. telefon",
+    phoneNumberPlaceholder: "Masukkan no. telefon",
+    email: "E-mel",
+    emailPlaceholder: "Masukkan e-mel",
+    website: "Laman web",
+    leadFollowUp: "Susulan permohonan",
+    leadFollowUpDescription:
+      "Makluman e-mel dihantar kepada pengguna pentadbir yang ditugaskan; WhatsApp disalurkan ke nombor PIC",
+    picName: "Nama PIC",
+    picNamePlaceholder: "Masukkan nama PIC",
+    picWhatsapp: "No. WhatsApp PIC",
+    leadEmailNote:
+      "E-mel permohonan SES dihantar kepada pengguna PIC/pentadbir yang ditugaskan untuk pusat ini. Jika tiada pengguna ditugaskan, e-mel pusat akan digunakan sebagai ganti.",
+    location: "Lokasi",
+    locationDescription: "Butiran alamat dan lokasi",
+    address: "Alamat",
+    addressPlaceholder: "Masukkan alamat penuh",
+    addressWithUnit: "Alamat dengan no. unit",
+    addressWithUnitPlaceholder: "Masukkan alamat dengan no. unit",
+    googleMapsEmbed: "Benaman Google Maps",
+    googleMapsEmbedPlaceholder:
+      "Tampal pautan kongsi, iframe atau koordinat Google Maps",
+    wazeCoordinates: (lat: number, lng: number) =>
+      `Koordinat Waze: ${lat}, ${lng}`,
+    wazeHint: "Tampal pautan Google Maps untuk mengisi koordinat Waze secara automatik.",
+    town: "Bandar",
+    townPlaceholder: "Masukkan bandar",
+    state: "Negeri",
+    statePlaceholder: "Pilih negeri",
+    staffInfo: "Maklumat kakitangan",
+    staffInfoDescription: "Kakitangan utama di pusat dialisis",
+    drInCharge: "Doktor bertanggungjawab",
+    drInChargePlaceholder: "Masukkan nama doktor",
+    drInChargeTel: "Telefon doktor",
+    drInChargeTelPlaceholder: "Masukkan no. telefon doktor",
+    panelNephrologist: "Pakar nefrologi panel",
+    panelNephrologistPlaceholder: "Masukkan nama pakar nefrologi",
+    centreManager: "Pengurus pusat",
+    centreManagerPlaceholder: "Masukkan nama pengurus",
+    centreCoordinator: "Penyelaras pusat",
+    centreCoordinatorPlaceholder: "Masukkan nama penyelaras",
+    facilities: "Kemudahan",
+    facilitiesDescription: "Peralatan dan perkhidmatan yang tersedia",
+    units: "Unit",
+    unitsPlaceholder: "Bilangan unit",
+    hepatitisBay: "Ruang hepatitis",
+    hepatitisBayPlaceholder: "Masukkan maklumat ruang hepatitis",
+    benefits: "Faedah",
+    benefitsPlaceholder: "Masukkan faedah dan perkhidmatan yang ditawarkan",
+    listingDetails: "Butiran penyenaraian",
+    listingDetailsDescription: "Perkara yang ditanya keluarga sebelum menghubungi",
+    fees: "Yuran",
+    feesPlaceholder: "cth. RM180 setiap sesi, EPO dicaj berasingan",
+    sessionSlots: "Slot sesi",
+    sessionSlotsPlaceholder: "cth. Pagi 7:00, Tengah hari 12:00, Petang 5:00",
+    languages: "Bahasa dituturkan",
+    languagesPlaceholder: "cth. Melayu, Inggeris, Mandarin, Tamil",
+    panels: "Panel diterima",
+    panelsPlaceholder: "cth. PERKESO, JPA, AIA",
+    additionalDetails: "Butiran tambahan",
+    additionalDetailsDescription:
+      "Cipta pusat dahulu untuk mengurus waktu operasi dan soalan lazim.",
+    planUpdated: "Pelan dikemas kini",
+    updatePlanFailed: "Gagal mengemas kini pelan",
+    plan: "Pelan",
+    proExpired: "Pro tamat tempoh",
+    verified: "Disahkan",
+    planDescription: "Superadmin sahaja. Perubahan terus dipaparkan di laman awam.",
+    asasFree: "Asas (percuma)",
+    planEndsOn: "Pelan tamat pada",
+    planEndsOnHint:
+      "Hari terakhir Pro (waktu Malaysia). Biarkan kosong jika tiada tarikh tamat.",
+    earlybirdSeats: (used: number, total: number, full: boolean) =>
+      `${used} / ${total} tempat earlybird digunakan${full ? " · penuh" : ""}`,
+    loadingSeats: "Memuatkan tempat...",
+    savePlan: "Simpan pelan",
+    unverify: "Batal pengesahan",
+    markVerified: "Tandakan disahkan",
+    verifiedOn: (date: string) => `Disahkan pada ${date}`,
+    intakeLeads: "Permohonan temujanji",
+    intakeLeadsDescription: "Permohonan temujanji terkini daripada laman awam",
+    loadingLeads: "Memuatkan permohonan...",
+    noLeads: "Belum ada permohonan temujanji untuk pusat ini.",
+    days: ["Ahad", "Isnin", "Selasa", "Rabu", "Khamis", "Jumaat", "Sabtu"],
+    hoursSaved: "Waktu operasi disimpan",
+    saveHoursFailed: "Gagal menyimpan waktu operasi",
+    operatingHours: "Waktu operasi",
+    operatingHoursDescription: "Tetapkan waktu buka dan tutup bagi setiap hari",
+    closed: "Tutup",
+    to: "hingga",
+    saveHours: "Simpan waktu",
+    faqAdded: "Soalan lazim ditambah",
+    addFaqFailed: "Gagal menambah soalan lazim",
+    faqUpdated: "Soalan lazim dikemas kini",
+    updateFaqFailed: "Gagal mengemas kini soalan lazim",
+    faqDeleted: "Soalan lazim dipadam",
+    deleteFaqFailed: "Gagal memadam soalan lazim",
+    faqs: "Soalan lazim",
+    faqsDescription: "Soalan lazim untuk pusat ini",
+    question: "Soalan",
+    answer: "Jawapan",
+    save: "Simpan",
+    edit: "Sunting",
+    addNewFaq: "Tambah soalan lazim baru",
+    adding: "Menambah...",
+    addFaq: "Tambah soalan lazim",
+  },
+})
 
 export const Route = createFileRoute("/centers/$centerId")({
   component: CenterEditPage,
@@ -161,6 +476,7 @@ function CenterEditPage() {
   const queryClient = useQueryClient()
   const { data: session } = useSession()
   const isNewCenter = centerId === "new"
+  const t = useCopy(COPY)
 
   const { data: userRole } = useQuery({
     queryKey: ["userRole", session?.user?.id],
@@ -225,31 +541,31 @@ function CenterEditPage() {
     mutationFn: (data: Partial<CenterFormData>) =>
       updateCenter({ data: { id: centerId, data } }),
     onSuccess: () => {
-      toast.success("Center updated successfully")
+      toast.success(t.centerUpdated)
       queryClient.invalidateQueries({ queryKey: ["center", centerId] })
       queryClient.invalidateQueries({ queryKey: ["centers"] })
       queryClient.invalidateQueries({ queryKey: ["allCenters"] })
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to update center")
+      toast.error(error.message || t.updateCenterFailed)
     },
   })
 
   const deleteMutation = useMutation({
     mutationFn: () => deleteCenter({ data: { id: centerId } }),
     onSuccess: async () => {
-      toast.success("Center deleted")
+      toast.success(t.centerDeleted)
       await queryClient.invalidateQueries({ queryKey: ["centers"] })
       await queryClient.invalidateQueries({ queryKey: ["allCenters"] })
       navigate({ to: "/dashboard" })
     },
-    onError: (error) => toast.error(error.message || "Failed to delete center"),
+    onError: (error) => toast.error(error.message || t.deleteCenterFailed),
   })
 
   const createMutation = useMutation({
     mutationFn: (data: CenterFormData) => createCenter({ data }),
     onSuccess: async (createdCenter) => {
-      toast.success("Center created successfully")
+      toast.success(t.centerCreated)
       await queryClient.invalidateQueries({ queryKey: ["centers"] })
       await queryClient.invalidateQueries({ queryKey: ["allCenters"] })
       navigate({
@@ -258,19 +574,19 @@ function CenterEditPage() {
       })
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to create center")
+      toast.error(error.message || t.createCenterFailed)
     },
   })
 
   const isSaving = updateMutation.isPending || createMutation.isPending
   const isSubmitDisabled = isSaving || isResolvingMap
   const saveButtonText = isResolvingMap
-    ? "Finding map..."
+    ? t.findingMap
     : isSaving
-    ? "Saving..."
+    ? t.saving
     : isNewCenter
-      ? "Create Center"
-      : "Save Changes"
+      ? t.createCenter
+      : t.saveChanges
 
   const resolveMapCoordinates = async (value: string) => {
     if (!value.trim()) return null
@@ -282,12 +598,12 @@ function CenterEditPage() {
         latitude: directCoordinates.latitude,
         longitude: directCoordinates.longitude,
       }))
-      setMapMessage("Coordinates found.")
+      setMapMessage(t.coordinatesFound)
       return directCoordinates
     }
 
     setIsResolvingMap(true)
-    setMapMessage("Finding coordinates...")
+    setMapMessage(t.findingCoordinates)
 
     try {
       const result = await resolveGoogleMapsCoordinates({ data: { value } })
@@ -297,14 +613,14 @@ function CenterEditPage() {
           latitude: result.coordinates!.latitude,
           longitude: result.coordinates!.longitude,
         }))
-        setMapMessage("Coordinates found from Google Maps link.")
+        setMapMessage(t.coordinatesFoundFromLink)
         return result.coordinates
       }
 
-      setMapMessage("Could not find coordinates from this link.")
+      setMapMessage(t.coordinatesNotFound)
       return null
     } catch {
-      setMapMessage("Could not resolve this Google Maps link.")
+      setMapMessage(t.mapLinkUnresolved)
       return null
     } finally {
       setIsResolvingMap(false)
@@ -315,12 +631,12 @@ function CenterEditPage() {
     e.preventDefault()
 
     if (!formData.dialysisCenterName.trim()) {
-      toast.error("Please enter a center name")
+      toast.error(t.enterCenterName)
       return
     }
 
     if (!formData.stateId) {
-      toast.error("Please select a state")
+      toast.error(t.selectState)
       return
     }
 
@@ -331,7 +647,7 @@ function CenterEditPage() {
     ) {
       const coordinates = await resolveMapCoordinates(formData.googleMapsEmbed)
       if (!coordinates) {
-        toast.error("Could not find map coordinates")
+        toast.error(t.mapCoordinatesNotFound)
         return
       }
 
@@ -370,9 +686,9 @@ function CenterEditPage() {
     }))
     setMapMessage(
       coordinates
-        ? "Coordinates found."
+        ? t.coordinatesFound
         : value.trim()
-          ? "Paste a Google Maps share link, embed, or coordinates."
+          ? t.pasteMapHint
           : ""
     )
   }
@@ -380,7 +696,7 @@ function CenterEditPage() {
   if (centerLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="text-muted-foreground">Loading...</div>
+        <div className="text-muted-foreground">{t.loading}</div>
       </div>
     )
   }
@@ -392,14 +708,14 @@ function CenterEditPage() {
         <div className="sticky top-0 z-20 -mx-3 border-b bg-background/95 px-3 py-3 backdrop-blur sm:static sm:mx-0 sm:rounded-lg sm:border sm:px-4">
           <div className="flex items-center gap-3">
             <Button variant="outline" size="icon" asChild className="size-10 shrink-0">
-              <Link to="/dashboard" aria-label="Back to dashboard">
+              <Link to="/dashboard" aria-label={t.backToDashboard}>
                 <ArrowLeft className="size-4" />
               </Link>
             </Button>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="truncate text-lg font-semibold sm:text-2xl">
-                  {isNewCenter ? "Create Center" : "Edit Center"}
+                  {isNewCenter ? t.createCenter : t.editCenter}
                 </h1>
                 {!isNewCenter && center?.state?.name && (
                   <Badge variant="secondary" className="hidden sm:inline-flex">
@@ -408,7 +724,7 @@ function CenterEditPage() {
                 )}
               </div>
               <p className="truncate text-sm text-muted-foreground">
-                {formData.dialysisCenterName || "Dialysis center details"}
+                {formData.dialysisCenterName || t.centerDetails}
               </p>
             </div>
             {!isNewCenter && (
@@ -419,7 +735,7 @@ function CenterEditPage() {
                     variant="outline"
                     size="icon"
                     className="size-10 shrink-0 text-destructive hover:text-destructive"
-                    aria-label="Delete center"
+                    aria-label={t.deleteCenter}
                     disabled={deleteMutation.isPending}
                   >
                     <Trash2 className="size-4" />
@@ -427,19 +743,18 @@ function CenterEditPage() {
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Delete this center?</AlertDialogTitle>
+                    <AlertDialogTitle>{t.deleteCenterTitle}</AlertDialogTitle>
                     <AlertDialogDescription>
-                      This permanently removes {formData.dialysisCenterName || "this center"} along
-                      with its images, FAQs, operating hours and intake leads. This cannot be undone.
+                      {t.deleteCenterDescription(formData.dialysisCenterName || t.thisCenter)}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogCancel>{t.cancel}</AlertDialogCancel>
                     <AlertDialogAction
                       variant="destructive"
                       onClick={() => deleteMutation.mutate()}
                     >
-                      Delete
+                      {t.delete}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -463,8 +778,8 @@ function CenterEditPage() {
               <div className="flex items-center gap-3">
                 <Building2 className="size-5 text-primary" />
                 <div>
-                  <CardTitle className="text-base sm:text-lg">Basic Information</CardTitle>
-                  <CardDescription>General details about the dialysis center</CardDescription>
+                  <CardTitle className="text-base sm:text-lg">{t.basicInfo}</CardTitle>
+                  <CardDescription>{t.basicInfoDescription}</CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -472,46 +787,46 @@ function CenterEditPage() {
               <FieldGroup className="gap-4">
                 <Field>
                   <FieldLabel htmlFor="dialysisCenterName">
-                    Center Name
+                    {t.centerName}
                   </FieldLabel>
                   <Input
                     id="dialysisCenterName"
                     name="dialysisCenterName"
                     value={formData.dialysisCenterName}
                     onChange={handleInputChange}
-                    placeholder="Enter center name"
+                    placeholder={t.centerNamePlaceholder}
                   />
                 </Field>
                 <div className="grid gap-4 md:grid-cols-2">
                   <Field>
-                    <FieldLabel htmlFor="title">Title</FieldLabel>
+                    <FieldLabel htmlFor="title">{t.title}</FieldLabel>
                     <Input
                       id="title"
                       name="title"
                       value={formData.title}
                       onChange={handleInputChange}
-                      placeholder="Enter title"
+                      placeholder={t.titlePlaceholder}
                     />
                   </Field>
                   <Field>
-                    <FieldLabel htmlFor="sector">Sector</FieldLabel>
+                    <FieldLabel htmlFor="sector">{t.sector}</FieldLabel>
                     <Input
                       id="sector"
                       name="sector"
                       value={formData.sector}
                       onChange={handleInputChange}
-                      placeholder="e.g., Private, Government"
+                      placeholder={t.sectorPlaceholder}
                     />
                   </Field>
                 </div>
                 <Field>
-                  <FieldLabel htmlFor="description">Description</FieldLabel>
+                  <FieldLabel htmlFor="description">{t.description}</FieldLabel>
                   <Textarea
                     id="description"
                     name="description"
                     value={formData.description}
                     onChange={handleInputChange}
-                    placeholder="Enter center description"
+                    placeholder={t.descriptionPlaceholder}
                     rows={3}
                   />
                 </Field>
@@ -524,8 +839,8 @@ function CenterEditPage() {
               <div className="flex items-center gap-3">
                 <Phone className="size-5 text-primary" />
                 <div>
-                  <CardTitle className="text-base sm:text-lg">Contact Information</CardTitle>
-                  <CardDescription>Phone, email, and website details</CardDescription>
+                  <CardTitle className="text-base sm:text-lg">{t.contactInfo}</CardTitle>
+                  <CardDescription>{t.contactInfoDescription}</CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -533,31 +848,31 @@ function CenterEditPage() {
               <FieldGroup className="gap-4">
                 <div className="grid gap-4 md:grid-cols-2">
                   <Field>
-                    <FieldLabel htmlFor="tel">Telephone</FieldLabel>
+                    <FieldLabel htmlFor="tel">{t.telephone}</FieldLabel>
                     <Input
                       inputMode="tel"
                       id="tel"
                       name="tel"
                       value={formData.tel}
                       onChange={handleInputChange}
-                      placeholder="Enter telephone"
+                      placeholder={t.telephonePlaceholder}
                     />
                   </Field>
                   <Field>
-                    <FieldLabel htmlFor="phoneNumber">Phone Number</FieldLabel>
+                    <FieldLabel htmlFor="phoneNumber">{t.phoneNumber}</FieldLabel>
                     <Input
                       inputMode="tel"
                       id="phoneNumber"
                       name="phoneNumber"
                       value={formData.phoneNumber}
                       onChange={handleInputChange}
-                      placeholder="Enter phone number"
+                      placeholder={t.phoneNumberPlaceholder}
                     />
                   </Field>
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
                   <Field>
-                    <FieldLabel htmlFor="email">Email</FieldLabel>
+                    <FieldLabel htmlFor="email">{t.email}</FieldLabel>
                     <Input
                       id="email"
                       name="email"
@@ -565,12 +880,12 @@ function CenterEditPage() {
                       inputMode="email"
                       value={formData.email}
                       onChange={handleInputChange}
-                      placeholder="Enter email"
+                      placeholder={t.emailPlaceholder}
                     />
                   </Field>
                 </div>
                 <Field>
-                  <FieldLabel htmlFor="website">Website</FieldLabel>
+                  <FieldLabel htmlFor="website">{t.website}</FieldLabel>
                   <Input
                     id="website"
                     name="website"
@@ -588,8 +903,8 @@ function CenterEditPage() {
               <div className="flex items-center gap-3">
                 <MessageCircle className="size-5 text-primary" />
                 <div>
-                  <CardTitle className="text-base sm:text-lg">Lead Follow-Up</CardTitle>
-                  <CardDescription>Email alerts go to assigned admin users; WhatsApp handoff uses the PIC number</CardDescription>
+                  <CardTitle className="text-base sm:text-lg">{t.leadFollowUp}</CardTitle>
+                  <CardDescription>{t.leadFollowUpDescription}</CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -597,18 +912,18 @@ function CenterEditPage() {
               <FieldGroup className="gap-4">
                 <div className="grid gap-4 md:grid-cols-2">
                   <Field>
-                    <FieldLabel htmlFor="whatsappPicName">PIC Name</FieldLabel>
+                    <FieldLabel htmlFor="whatsappPicName">{t.picName}</FieldLabel>
                     <Input
                       id="whatsappPicName"
                       name="whatsappPicName"
                       value={formData.whatsappPicName}
                       onChange={handleInputChange}
-                      placeholder="Enter PIC name"
+                      placeholder={t.picNamePlaceholder}
                     />
                   </Field>
                   <Field>
                     <FieldLabel htmlFor="whatsappPicPhoneNumber">
-                      PIC WhatsApp Number
+                      {t.picWhatsapp}
                     </FieldLabel>
                     <Input
                       inputMode="tel"
@@ -621,8 +936,7 @@ function CenterEditPage() {
                   </Field>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  SES lead emails are sent to assigned PIC/admin users for this center.
-                  If no user is assigned, the center email is used as fallback.
+                  {t.leadEmailNote}
                 </p>
               </FieldGroup>
             </CardContent>
@@ -633,39 +947,39 @@ function CenterEditPage() {
               <div className="flex items-center gap-3">
                 <MapPin className="size-5 text-primary" />
                 <div>
-                  <CardTitle className="text-base sm:text-lg">Location</CardTitle>
-                  <CardDescription>Address and location details</CardDescription>
+                  <CardTitle className="text-base sm:text-lg">{t.location}</CardTitle>
+                  <CardDescription>{t.locationDescription}</CardDescription>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
               <FieldGroup className="gap-4">
                 <Field>
-                  <FieldLabel htmlFor="address">Address</FieldLabel>
+                  <FieldLabel htmlFor="address">{t.address}</FieldLabel>
                   <Textarea
                     id="address"
                     name="address"
                     value={formData.address}
                     onChange={handleInputChange}
-                    placeholder="Enter full address"
+                    placeholder={t.addressPlaceholder}
                     rows={2}
                   />
                 </Field>
                 <Field>
                   <FieldLabel htmlFor="addressWithUnit">
-                    Address with Unit
+                    {t.addressWithUnit}
                   </FieldLabel>
                   <Input
                     id="addressWithUnit"
                     name="addressWithUnit"
                     value={formData.addressWithUnit}
                     onChange={handleInputChange}
-                    placeholder="Enter address with unit number"
+                    placeholder={t.addressWithUnitPlaceholder}
                   />
                 </Field>
                 <Field>
                   <FieldLabel htmlFor="googleMapsEmbed">
-                    Google Maps Embed
+                    {t.googleMapsEmbed}
                   </FieldLabel>
                   <Textarea
                     id="googleMapsEmbed"
@@ -680,28 +994,28 @@ function CenterEditPage() {
                         void resolveMapCoordinates(formData.googleMapsEmbed)
                       }
                     }}
-                    placeholder="Paste Google Maps share link, iframe, or coordinates"
+                    placeholder={t.googleMapsEmbedPlaceholder}
                     rows={4}
                   />
                   <p className="text-sm text-muted-foreground">
                     {formData.latitude != null && formData.longitude != null
-                      ? `Waze coordinates: ${formData.latitude}, ${formData.longitude}`
-                      : mapMessage || "Paste a Google Maps link to auto-fill Waze coordinates."}
+                      ? t.wazeCoordinates(formData.latitude, formData.longitude)
+                      : mapMessage || t.wazeHint}
                   </p>
                 </Field>
                 <div className="grid gap-4 md:grid-cols-2">
                   <Field>
-                    <FieldLabel htmlFor="town">Town</FieldLabel>
+                    <FieldLabel htmlFor="town">{t.town}</FieldLabel>
                     <Input
                       id="town"
                       name="town"
                       value={formData.town}
                       onChange={handleInputChange}
-                      placeholder="Enter town"
+                      placeholder={t.townPlaceholder}
                     />
                   </Field>
                   <Field>
-                    <FieldLabel htmlFor="stateId">State</FieldLabel>
+                    <FieldLabel htmlFor="stateId">{t.state}</FieldLabel>
                     <Select
                       value={formData.stateId}
                       onValueChange={(value) =>
@@ -709,7 +1023,7 @@ function CenterEditPage() {
                       }
                     >
                       <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select a state" />
+                        <SelectValue placeholder={t.statePlaceholder} />
                       </SelectTrigger>
                       <SelectContent>
                         {states?.map((state) => (
@@ -730,8 +1044,8 @@ function CenterEditPage() {
               <div className="flex items-center gap-3">
                 <Users className="size-5 text-primary" />
                 <div>
-                  <CardTitle className="text-base sm:text-lg">Staff Information</CardTitle>
-                  <CardDescription>Key personnel at the dialysis center</CardDescription>
+                  <CardTitle className="text-base sm:text-lg">{t.staffInfo}</CardTitle>
+                  <CardDescription>{t.staffInfoDescription}</CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -740,19 +1054,19 @@ function CenterEditPage() {
                 <div className="grid gap-4 md:grid-cols-2">
                   <Field>
                     <FieldLabel htmlFor="drInCharge">
-                      Doctor In Charge
+                      {t.drInCharge}
                     </FieldLabel>
                     <Input
                       id="drInCharge"
                       name="drInCharge"
                       value={formData.drInCharge}
                       onChange={handleInputChange}
-                      placeholder="Enter doctor name"
+                      placeholder={t.drInChargePlaceholder}
                     />
                   </Field>
                   <Field>
                     <FieldLabel htmlFor="drInChargeTel">
-                      Doctor Phone
+                      {t.drInChargeTel}
                     </FieldLabel>
                     <Input
                       inputMode="tel"
@@ -760,45 +1074,45 @@ function CenterEditPage() {
                       name="drInChargeTel"
                       value={formData.drInChargeTel}
                       onChange={handleInputChange}
-                      placeholder="Enter doctor phone"
+                      placeholder={t.drInChargeTelPlaceholder}
                     />
                   </Field>
                 </div>
                 <Field>
                   <FieldLabel htmlFor="panelNephrologist">
-                    Panel Nephrologist
+                    {t.panelNephrologist}
                   </FieldLabel>
                   <Input
                     id="panelNephrologist"
                     name="panelNephrologist"
                     value={formData.panelNephrologist}
                     onChange={handleInputChange}
-                    placeholder="Enter nephrologist name"
+                    placeholder={t.panelNephrologistPlaceholder}
                   />
                 </Field>
                 <div className="grid gap-4 md:grid-cols-2">
                   <Field>
                     <FieldLabel htmlFor="centreManager">
-                      Centre Manager
+                      {t.centreManager}
                     </FieldLabel>
                     <Input
                       id="centreManager"
                       name="centreManager"
                       value={formData.centreManager}
                       onChange={handleInputChange}
-                      placeholder="Enter manager name"
+                      placeholder={t.centreManagerPlaceholder}
                     />
                   </Field>
                   <Field>
                     <FieldLabel htmlFor="centreCoordinator">
-                      Centre Coordinator
+                      {t.centreCoordinator}
                     </FieldLabel>
                     <Input
                       id="centreCoordinator"
                       name="centreCoordinator"
                       value={formData.centreCoordinator}
                       onChange={handleInputChange}
-                      placeholder="Enter coordinator name"
+                      placeholder={t.centreCoordinatorPlaceholder}
                     />
                   </Field>
                 </div>
@@ -811,8 +1125,8 @@ function CenterEditPage() {
               <div className="flex items-center gap-3">
                 <Stethoscope className="size-5 text-primary" />
                 <div>
-                  <CardTitle className="text-base sm:text-lg">Facilities</CardTitle>
-                  <CardDescription>Equipment and services available</CardDescription>
+                  <CardTitle className="text-base sm:text-lg">{t.facilities}</CardTitle>
+                  <CardDescription>{t.facilitiesDescription}</CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -820,36 +1134,36 @@ function CenterEditPage() {
               <FieldGroup className="gap-4">
                 <div className="grid gap-4 md:grid-cols-2">
                   <Field>
-                    <FieldLabel htmlFor="units">Units</FieldLabel>
+                    <FieldLabel htmlFor="units">{t.units}</FieldLabel>
                     <Input
                       id="units"
                       name="units"
                       value={formData.units}
                       onChange={handleInputChange}
-                      placeholder="Number of units"
+                      placeholder={t.unitsPlaceholder}
                     />
                   </Field>
                   <Field>
                     <FieldLabel htmlFor="hepatitisBay">
-                      Hepatitis Bay
+                      {t.hepatitisBay}
                     </FieldLabel>
                     <Input
                       id="hepatitisBay"
                       name="hepatitisBay"
                       value={formData.hepatitisBay}
                       onChange={handleInputChange}
-                      placeholder="Enter hepatitis bay info"
+                      placeholder={t.hepatitisBayPlaceholder}
                     />
                   </Field>
                 </div>
                 <Field>
-                  <FieldLabel htmlFor="benefits">Benefits</FieldLabel>
+                  <FieldLabel htmlFor="benefits">{t.benefits}</FieldLabel>
                   <Textarea
                     id="benefits"
                     name="benefits"
                     value={formData.benefits}
                     onChange={handleInputChange}
-                    placeholder="Enter benefits and services offered"
+                    placeholder={t.benefitsPlaceholder}
                     rows={3}
                   />
                 </Field>
@@ -862,8 +1176,8 @@ function CenterEditPage() {
               <div className="flex items-center gap-3">
                 <ListChecks className="size-5 text-primary" />
                 <div>
-                  <CardTitle className="text-base sm:text-lg">Listing Details</CardTitle>
-                  <CardDescription>What families ask before they call</CardDescription>
+                  <CardTitle className="text-base sm:text-lg">{t.listingDetails}</CardTitle>
+                  <CardDescription>{t.listingDetailsDescription}</CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -871,47 +1185,47 @@ function CenterEditPage() {
               <FieldGroup className="gap-4">
                 <div className="grid gap-4 md:grid-cols-2">
                   <Field>
-                    <FieldLabel htmlFor="fees">Fees</FieldLabel>
+                    <FieldLabel htmlFor="fees">{t.fees}</FieldLabel>
                     <Textarea
                       id="fees"
                       name="fees"
                       value={formData.fees}
                       onChange={handleInputChange}
-                      placeholder="e.g., RM180 per session, EPO extra"
+                      placeholder={t.feesPlaceholder}
                       rows={3}
                     />
                   </Field>
                   <Field>
-                    <FieldLabel htmlFor="sessionSlots">Session Slots</FieldLabel>
+                    <FieldLabel htmlFor="sessionSlots">{t.sessionSlots}</FieldLabel>
                     <Textarea
                       id="sessionSlots"
                       name="sessionSlots"
                       value={formData.sessionSlots}
                       onChange={handleInputChange}
-                      placeholder="e.g., Morning 7am, Afternoon 12pm, Evening 5pm"
+                      placeholder={t.sessionSlotsPlaceholder}
                       rows={3}
                     />
                   </Field>
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
                   <Field>
-                    <FieldLabel htmlFor="languages">Languages Spoken</FieldLabel>
+                    <FieldLabel htmlFor="languages">{t.languages}</FieldLabel>
                     <Input
                       id="languages"
                       name="languages"
                       value={formData.languages}
                       onChange={handleInputChange}
-                      placeholder="e.g., Malay, English, Mandarin, Tamil"
+                      placeholder={t.languagesPlaceholder}
                     />
                   </Field>
                   <Field>
-                    <FieldLabel htmlFor="panels">Panels Accepted</FieldLabel>
+                    <FieldLabel htmlFor="panels">{t.panels}</FieldLabel>
                     <Input
                       id="panels"
                       name="panels"
                       value={formData.panels}
                       onChange={handleInputChange}
-                      placeholder="e.g., PERKESO, JPA, AIA"
+                      placeholder={t.panelsPlaceholder}
                     />
                   </Field>
                 </div>
@@ -923,9 +1237,9 @@ function CenterEditPage() {
         {isNewCenter ? (
           <Card>
             <CardHeader className="px-4 py-4 sm:px-6">
-              <CardTitle className="text-base sm:text-lg">Additional Details</CardTitle>
+              <CardTitle className="text-base sm:text-lg">{t.additionalDetails}</CardTitle>
               <CardDescription>
-                Create the center first to manage operating hours and FAQs.
+                {t.additionalDetailsDescription}
               </CardDescription>
             </CardHeader>
           </Card>
@@ -958,16 +1272,6 @@ function CenterEditPage() {
   )
 }
 
-const DAY_NAMES = [
-  "Sunday",
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-] as const
-
 type HourEntry = {
   dayOfWeek: number
   openTime: string
@@ -986,6 +1290,7 @@ type CenterData = Awaited<ReturnType<typeof getCenterById>>
 
 function PlanSection({ center }: { center: CenterData }) {
   const queryClient = useQueryClient()
+  const t = useCopy(COPY)
   const [plan, setPlan] = useState(center.plan)
   const [planEndsOn, setPlanEndsOn] = useState(toMytDayInput(center.planEndsAt))
   const [earlybird, setEarlybird] = useState(center.earlybird)
@@ -999,12 +1304,12 @@ function PlanSection({ center }: { center: CenterData }) {
     mutationFn: (data: Omit<Parameters<typeof updateCenterPlan>[0]["data"], "id">) =>
       updateCenterPlan({ data: { id: center.id, ...data } }),
     onSuccess: () => {
-      toast.success("Plan updated")
+      toast.success(t.planUpdated)
       queryClient.invalidateQueries({ queryKey: ["center", center.id] })
       queryClient.invalidateQueries({ queryKey: ["centers"] })
       queryClient.invalidateQueries({ queryKey: ["earlybirdSeats"] })
     },
-    onError: (error) => toast.error(error.message || "Failed to update plan"),
+    onError: (error) => toast.error(error.message || t.updatePlanFailed),
   })
 
   const seatsFull = !!seats && seats.used >= seats.total && !center.earlybird
@@ -1015,39 +1320,39 @@ function PlanSection({ center }: { center: CenterData }) {
       <CardHeader className="px-4 py-4 sm:px-6">
         <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
           <CreditCard className="size-5 text-primary" />
-          Plan
+          {t.plan}
           {active ? (
             <Badge>Pro</Badge>
           ) : (
             <Badge variant="secondary">
-              {center.plan === "pro" ? "Pro expired" : "Asas"}
+              {center.plan === "pro" ? t.proExpired : "Asas"}
             </Badge>
           )}
           {center.verifiedAt && (
             <Badge variant="outline">
               <BadgeCheck />
-              Verified
+              {t.verified}
             </Badge>
           )}
         </CardTitle>
-        <CardDescription>Superadmin only. Changes go live on the public site.</CardDescription>
+        <CardDescription>{t.planDescription}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4 px-4 pb-4 sm:px-6 sm:pb-6">
         <div className="grid gap-4 md:grid-cols-2">
           <Field>
-            <FieldLabel htmlFor="plan">Plan</FieldLabel>
+            <FieldLabel htmlFor="plan">{t.plan}</FieldLabel>
             <Select value={plan} onValueChange={(value) => setPlan(value as typeof plan)}>
               <SelectTrigger id="plan" className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="asas">Asas (free)</SelectItem>
+                <SelectItem value="asas">{t.asasFree}</SelectItem>
                 <SelectItem value="pro">Pro</SelectItem>
               </SelectContent>
             </Select>
           </Field>
           <Field>
-            <FieldLabel htmlFor="planEndsOn">Plan ends on</FieldLabel>
+            <FieldLabel htmlFor="planEndsOn">{t.planEndsOn}</FieldLabel>
             <Input
               id="planEndsOn"
               type="date"
@@ -1055,7 +1360,7 @@ function PlanSection({ center }: { center: CenterData }) {
               onChange={(e) => setPlanEndsOn(e.target.value)}
             />
             <p className="text-sm text-muted-foreground">
-              Last day of Pro (Malaysia time). Leave empty for no end date.
+              {t.planEndsOnHint}
             </p>
           </Field>
         </div>
@@ -1071,8 +1376,8 @@ function PlanSection({ center }: { center: CenterData }) {
           </div>
           <p className="text-sm text-muted-foreground tabular-nums">
             {seats
-              ? `${seats.used} / ${seats.total} earlybird seats used${seatsFull ? " · full" : ""}`
-              : "Loading seats..."}
+              ? t.earlybirdSeats(seats.used, seats.total, seatsFull)
+              : t.loadingSeats}
           </p>
         </Field>
         <div className="flex flex-col gap-2 border-t pt-4 sm:flex-row sm:items-center">
@@ -1088,7 +1393,7 @@ function PlanSection({ center }: { center: CenterData }) {
             disabled={saveMutation.isPending}
             className="h-10"
           >
-            {saveMutation.isPending ? "Saving..." : "Save plan"}
+            {saveMutation.isPending ? t.saving : t.savePlan}
           </Button>
           <Button
             variant="outline"
@@ -1104,11 +1409,11 @@ function PlanSection({ center }: { center: CenterData }) {
             className="h-10"
           >
             <BadgeCheck className="size-4" />
-            {center.verifiedAt ? "Unverify" : "Mark verified"}
+            {center.verifiedAt ? t.unverify : t.markVerified}
           </Button>
           {center.verifiedAt && (
             <span className="text-sm text-muted-foreground">
-              Verified on {toMytDayInput(center.verifiedAt)}
+              {t.verifiedOn(toMytDayInput(center.verifiedAt))}
             </span>
           )}
         </div>
@@ -1118,6 +1423,7 @@ function PlanSection({ center }: { center: CenterData }) {
 }
 
 function IntakeLeadsSection({ centerId }: { centerId: string }) {
+  const t = useCopy(COPY)
   const { data: leads = [], isLoading } = useQuery({
     queryKey: ["intakeLeads", centerId],
     queryFn: () => getIntakeLeads({ data: { centerId, limit: 20 } }),
@@ -1128,21 +1434,21 @@ function IntakeLeadsSection({ centerId }: { centerId: string }) {
       <CardHeader className="px-4 py-4 sm:px-6">
         <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
           <MessageCircle className="size-5 text-primary" />
-          Intake Leads
+          {t.intakeLeads}
         </CardTitle>
         <CardDescription>
-          Recent appointment requests from the public site
+          {t.intakeLeadsDescription}
         </CardDescription>
       </CardHeader>
       <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
         {isLoading ? (
           <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-            Loading leads...
+            {t.loadingLeads}
           </div>
         ) : (
           <IntakeLeadList
             leads={leads}
-            emptyMessage="No intake leads for this center yet."
+            emptyMessage={t.noLeads}
             showCenter={false}
           />
         )}
@@ -1153,6 +1459,7 @@ function IntakeLeadsSection({ centerId }: { centerId: string }) {
 
 function OperatingHoursSection({ centerId }: { centerId: string }) {
   const queryClient = useQueryClient()
+  const t = useCopy(COPY)
   const [hours, setHours] = useState<HourEntry[]>(DEFAULT_HOURS)
 
   const { data: savedHours } = useQuery({
@@ -1181,13 +1488,13 @@ function OperatingHoursSection({ centerId }: { centerId: string }) {
   const saveMutation = useMutation({
     mutationFn: () => upsertOperatingHours({ data: { centerId, hours } }),
     onSuccess: () => {
-      toast.success("Operating hours saved")
+      toast.success(t.hoursSaved)
       queryClient.invalidateQueries({
         queryKey: ["operatingHours", centerId],
       })
     },
     onError: (error) =>
-      toast.error(error.message || "Failed to save operating hours"),
+      toast.error(error.message || t.saveHoursFailed),
   })
 
   const updateDay = (dayOfWeek: number, field: keyof HourEntry, value: string | boolean) => {
@@ -1203,10 +1510,10 @@ function OperatingHoursSection({ centerId }: { centerId: string }) {
       <CardHeader className="px-4 py-4 sm:px-6">
         <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
           <Clock className="size-5 text-primary" />
-          Operating Hours
+          {t.operatingHours}
         </CardTitle>
         <CardDescription>
-          Set the opening and closing times for each day
+          {t.operatingHoursDescription}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3 px-4 pb-4 sm:px-6 sm:pb-6">
@@ -1217,7 +1524,7 @@ function OperatingHoursSection({ centerId }: { centerId: string }) {
           >
             <div className="mb-3 flex items-center justify-between gap-3">
               <span className="text-sm font-medium">
-                {DAY_NAMES[h.dayOfWeek]}
+                {t.days[h.dayOfWeek]}
               </span>
               <div className="flex items-center gap-2">
                 <Switch
@@ -1226,7 +1533,7 @@ function OperatingHoursSection({ centerId }: { centerId: string }) {
                     updateDay(h.dayOfWeek, "isClosed", checked)
                   }
                 />
-                <Label className="text-sm">Closed</Label>
+                <Label className="text-sm">{t.closed}</Label>
               </div>
             </div>
             <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
@@ -1238,7 +1545,7 @@ function OperatingHoursSection({ centerId }: { centerId: string }) {
                 }
                 disabled={h.isClosed}
               />
-              <span className="text-sm text-muted-foreground">to</span>
+              <span className="text-sm text-muted-foreground">{t.to}</span>
               <Input
                 type="time"
                 value={h.closeTime}
@@ -1256,7 +1563,7 @@ function OperatingHoursSection({ centerId }: { centerId: string }) {
           className="h-10 w-full sm:w-auto"
           size="sm"
         >
-          {saveMutation.isPending ? "Saving..." : "Save Hours"}
+          {saveMutation.isPending ? t.saving : t.saveHours}
         </Button>
       </CardContent>
     </Card>
@@ -1265,6 +1572,7 @@ function OperatingHoursSection({ centerId }: { centerId: string }) {
 
 function FaqSection({ centerId }: { centerId: string }) {
   const queryClient = useQueryClient()
+  const t = useCopy(COPY)
   const [newQuestion, setNewQuestion] = useState("")
   const [newAnswer, setNewAnswer] = useState("")
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -1283,32 +1591,32 @@ function FaqSection({ centerId }: { centerId: string }) {
     mutationFn: (data: { question: string; answer: string }) =>
       createFaq({ data: { centerId, ...data } }),
     onSuccess: () => {
-      toast.success("FAQ added")
+      toast.success(t.faqAdded)
       setNewQuestion("")
       setNewAnswer("")
       invalidateFaqs()
     },
-    onError: (error) => toast.error(error.message || "Failed to add FAQ"),
+    onError: (error) => toast.error(error.message || t.addFaqFailed),
   })
 
   const updateMutation = useMutation({
     mutationFn: (data: { faqId: string; question: string; answer: string }) =>
       updateFaq({ data }),
     onSuccess: () => {
-      toast.success("FAQ updated")
+      toast.success(t.faqUpdated)
       setEditingId(null)
       invalidateFaqs()
     },
-    onError: (error) => toast.error(error.message || "Failed to update FAQ"),
+    onError: (error) => toast.error(error.message || t.updateFaqFailed),
   })
 
   const deleteMutation = useMutation({
     mutationFn: (faqId: string) => deleteFaq({ data: { faqId } }),
     onSuccess: () => {
-      toast.success("FAQ deleted")
+      toast.success(t.faqDeleted)
       invalidateFaqs()
     },
-    onError: (error) => toast.error(error.message || "Failed to delete FAQ"),
+    onError: (error) => toast.error(error.message || t.deleteFaqFailed),
   })
 
   const handleAdd = (e: React.FormEvent) => {
@@ -1333,10 +1641,10 @@ function FaqSection({ centerId }: { centerId: string }) {
       <CardHeader className="px-4 py-4 sm:px-6">
         <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
           <FileQuestion className="size-5 text-primary" />
-          FAQs
+          {t.faqs}
         </CardTitle>
         <CardDescription>
-          Frequently asked questions for this center
+          {t.faqsDescription}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6 px-4 pb-4 sm:px-6 sm:pb-6">
@@ -1352,12 +1660,12 @@ function FaqSection({ centerId }: { centerId: string }) {
                     <Input
                       value={editQuestion}
                       onChange={(e) => setEditQuestion(e.target.value)}
-                      placeholder="Question"
+                      placeholder={t.question}
                     />
                     <Textarea
                       value={editAnswer}
                       onChange={(e) => setEditAnswer(e.target.value)}
-                      placeholder="Answer"
+                      placeholder={t.answer}
                       rows={3}
                     />
                     <div className="flex flex-col gap-2 sm:flex-row">
@@ -1366,14 +1674,14 @@ function FaqSection({ centerId }: { centerId: string }) {
                         onClick={() => handleUpdate(faq.id)}
                         disabled={updateMutation.isPending}
                       >
-                        Save
+                        {t.save}
                       </Button>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() => setEditingId(null)}
                       >
-                        Cancel
+                        {t.cancel}
                       </Button>
                     </div>
                   </>
@@ -1393,7 +1701,7 @@ function FaqSection({ centerId }: { centerId: string }) {
                         variant="outline"
                         onClick={() => startEditing(faq)}
                       >
-                        Edit
+                        {t.edit}
                       </Button>
                       <Button
                         size="sm"
@@ -1401,7 +1709,7 @@ function FaqSection({ centerId }: { centerId: string }) {
                         onClick={() => deleteMutation.mutate(faq.id)}
                         disabled={deleteMutation.isPending}
                       >
-                        Delete
+                        {t.delete}
                       </Button>
                     </div>
                   </>
@@ -1412,16 +1720,16 @@ function FaqSection({ centerId }: { centerId: string }) {
         )}
 
         <form onSubmit={handleAdd} className="space-y-3 rounded-lg border border-dashed p-4">
-          <p className="text-sm font-medium">Add New FAQ</p>
+          <p className="text-sm font-medium">{t.addNewFaq}</p>
           <Input
             value={newQuestion}
             onChange={(e) => setNewQuestion(e.target.value)}
-            placeholder="Question"
+            placeholder={t.question}
           />
           <Textarea
             value={newAnswer}
             onChange={(e) => setNewAnswer(e.target.value)}
-            placeholder="Answer"
+            placeholder={t.answer}
             rows={3}
           />
           <Button
@@ -1429,7 +1737,7 @@ function FaqSection({ centerId }: { centerId: string }) {
             size="sm"
             disabled={createMutation.isPending || !newQuestion.trim() || !newAnswer.trim()}
           >
-            {createMutation.isPending ? "Adding..." : "Add FAQ"}
+            {createMutation.isPending ? t.adding : t.addFaq}
           </Button>
         </form>
       </CardContent>

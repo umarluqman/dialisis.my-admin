@@ -9,6 +9,15 @@ const LOCALE_COOKIE = "locale"
 
 export const INTL_LOCALE: Record<Locale, string> = { en: "en-MY", ms: "ms-MY" }
 
+export function dateFormats(
+  options: Intl.DateTimeFormatOptions
+): Record<Locale, Intl.DateTimeFormat> {
+  return {
+    en: new Intl.DateTimeFormat(INTL_LOCALE.en, options),
+    ms: new Intl.DateTimeFormat(INTL_LOCALE.ms, options),
+  }
+}
+
 function toLocale(value: string | undefined): Locale {
   return value === "ms" ? "ms" : "en"
 }
