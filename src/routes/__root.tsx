@@ -13,12 +13,14 @@ import { DefaultCatchBoundary } from "@/components/default-catch-boundary";
 import { NotFound } from "@/components/not-found";
 import { ThemeProvider } from "@/components/theme";
 import { Toaster } from "@/components/ui/sonner";
+import { LocaleProvider, readLocale } from "@/lib/i18n";
 import appCss from "@/styles.css?url";
 import { seo } from "@/utils/seo";
 
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient;
 }>()({
+  beforeLoad: () => ({ locale: readLocale() }),
   head: () => ({
     meta: [
       {
@@ -68,13 +70,15 @@ function RootComponent() {
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  const locale = Route.useRouteContext().locale ?? "en";
+
   return (
-    <html>
+    <html lang={locale}>
       <head>
         <HeadContent />
       </head>
       <body>
-        {children}
+        <LocaleProvider initialLocale={locale}>{children}</LocaleProvider>
         <TanStackRouterDevtools position="bottom-right" />
         <ReactQueryDevtools buttonPosition="bottom-left" />
         <Scripts />
