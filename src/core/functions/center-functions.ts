@@ -226,10 +226,9 @@ const CreateCenterSchema = z.object({
   units: z.string(),
   hepatitisBay: z.string(),
   benefits: z.string(),
-  fees: z.string().default(""),
   sessionSlots: z.string().default(""),
   languages: z.string().default(""),
-  panels: z.string().default(""),
+  perkesoPanel: z.boolean().default(false),
   whatsappPicName: z.string().default(""),
   whatsappPicPhoneNumber: z.string().default(""),
 })
@@ -274,10 +273,9 @@ export const createCenter = createServerFn({ method: "POST" })
       units: data.units,
       hepatitisBay: data.hepatitisBay,
       benefits: data.benefits,
-      fees: data.fees.trim() || null,
       sessionSlots: data.sessionSlots.trim() || null,
       languages: data.languages.trim() || null,
-      panels: data.panels.trim() || null,
+      perkesoPanel: data.perkesoPanel,
       whatsappPicName: data.whatsappPicName.trim() || null,
       whatsappPicPhoneNumber: data.whatsappPicPhoneNumber.trim() || null,
     })
@@ -314,10 +312,9 @@ const UpdateCenterSchema = z.object({
     benefits: z.string().nullable().optional(),
     town: z.string().optional(),
     stateId: z.string().min(1).optional(),
-    fees: z.string().nullable().optional(),
     sessionSlots: z.string().nullable().optional(),
     languages: z.string().nullable().optional(),
-    panels: z.string().nullable().optional(),
+    perkesoPanel: z.boolean().optional(),
     whatsappPicName: z.string().nullable().optional(),
     whatsappPicPhoneNumber: z.string().nullable().optional(),
   }),
@@ -338,10 +335,8 @@ export const updateCenter = createServerFn({ method: "POST" })
 
     for (const key of [
       "googleMapsEmbed",
-      "fees",
       "sessionSlots",
       "languages",
-      "panels",
     ] as const) {
       if (key in updateData) {
         updateData[key] = updateData[key]?.trim() || null

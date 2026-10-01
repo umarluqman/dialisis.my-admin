@@ -177,14 +177,12 @@ const COPY = defineCopy({
     benefitsPlaceholder: "Enter benefits and services offered",
     listingDetails: "Listing Details",
     listingDetailsDescription: "What families ask before they call",
-    fees: "Fees",
-    feesPlaceholder: "e.g., RM180 per session, EPO extra",
     sessionSlots: "Session Slots",
     sessionSlotsPlaceholder: "e.g., Morning 7am, Afternoon 12pm, Evening 5pm",
     languages: "Languages Spoken",
     languagesPlaceholder: "e.g., Malay, English, Mandarin, Tamil",
-    panels: "Panels Accepted",
-    panelsPlaceholder: "e.g., PERKESO, JPA, AIA",
+    perkesoPanel: "PERKESO panel",
+    perkesoPanelHint: "Centre is on the PERKESO (SOCSO) dialysis panel",
     additionalDetails: "Additional Details",
     additionalDetailsDescription:
       "Create the center first to manage operating hours and FAQs.",
@@ -336,14 +334,12 @@ const COPY = defineCopy({
     benefitsPlaceholder: "Masukkan faedah dan perkhidmatan yang ditawarkan",
     listingDetails: "Butiran penyenaraian",
     listingDetailsDescription: "Perkara yang ditanya keluarga sebelum menghubungi",
-    fees: "Yuran",
-    feesPlaceholder: "cth. RM180 setiap sesi, EPO dicaj berasingan",
     sessionSlots: "Slot sesi",
     sessionSlotsPlaceholder: "cth. Pagi 7:00, Tengah hari 12:00, Petang 5:00",
     languages: "Bahasa dituturkan",
     languagesPlaceholder: "cth. Melayu, Inggeris, Mandarin, Tamil",
-    panels: "Panel diterima",
-    panelsPlaceholder: "cth. PERKESO, JPA, AIA",
+    perkesoPanel: "Panel PERKESO",
+    perkesoPanelHint: "Pusat ini panel dialisis PERKESO",
     additionalDetails: "Butiran tambahan",
     additionalDetailsDescription:
       "Cipta pusat dahulu untuk mengurus waktu operasi dan soalan lazim.",
@@ -430,10 +426,9 @@ type CenterFormData = {
   units: string
   hepatitisBay: string
   benefits: string
-  fees: string
   sessionSlots: string
   languages: string
-  panels: string
+  perkesoPanel: boolean
   whatsappPicName: string
   whatsappPicPhoneNumber: string
 }
@@ -462,10 +457,9 @@ const EMPTY_CENTER_FORM_DATA: CenterFormData = {
   units: "",
   hepatitisBay: "",
   benefits: "",
-  fees: "",
   sessionSlots: "",
   languages: "",
-  panels: "",
+  perkesoPanel: false,
   whatsappPicName: "",
   whatsappPicPhoneNumber: "",
 }
@@ -528,10 +522,9 @@ function CenterEditPage() {
         units: center.units ?? "",
         hepatitisBay: center.hepatitisBay ?? "",
         benefits: center.benefits ?? "",
-        fees: center.fees ?? "",
         sessionSlots: center.sessionSlots ?? "",
         languages: center.languages ?? "",
-        panels: center.panels ?? "",
+        perkesoPanel: center.perkesoPanel,
         whatsappPicName: center.whatsappPicName ?? "",
         whatsappPicPhoneNumber: center.whatsappPicPhoneNumber ?? "",
       })
@@ -1185,52 +1178,42 @@ function CenterEditPage() {
             </CardHeader>
             <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
               <FieldGroup className="gap-4">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <Field>
-                    <FieldLabel htmlFor="fees">{t.fees}</FieldLabel>
-                    <Textarea
-                      id="fees"
-                      name="fees"
-                      value={formData.fees}
-                      onChange={handleInputChange}
-                      placeholder={t.feesPlaceholder}
-                      rows={3}
-                    />
-                  </Field>
-                  <Field>
-                    <FieldLabel htmlFor="sessionSlots">{t.sessionSlots}</FieldLabel>
-                    <Textarea
-                      id="sessionSlots"
-                      name="sessionSlots"
-                      value={formData.sessionSlots}
-                      onChange={handleInputChange}
-                      placeholder={t.sessionSlotsPlaceholder}
-                      rows={3}
-                    />
-                  </Field>
-                </div>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <Field>
-                    <FieldLabel htmlFor="languages">{t.languages}</FieldLabel>
-                    <Input
-                      id="languages"
-                      name="languages"
-                      value={formData.languages}
-                      onChange={handleInputChange}
-                      placeholder={t.languagesPlaceholder}
-                    />
-                  </Field>
-                  <Field>
-                    <FieldLabel htmlFor="panels">{t.panels}</FieldLabel>
-                    <Input
-                      id="panels"
-                      name="panels"
-                      value={formData.panels}
-                      onChange={handleInputChange}
-                      placeholder={t.panelsPlaceholder}
-                    />
-                  </Field>
-                </div>
+                <Field>
+                  <FieldLabel htmlFor="sessionSlots">{t.sessionSlots}</FieldLabel>
+                  <Textarea
+                    id="sessionSlots"
+                    name="sessionSlots"
+                    value={formData.sessionSlots}
+                    onChange={handleInputChange}
+                    placeholder={t.sessionSlotsPlaceholder}
+                    rows={3}
+                  />
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="languages">{t.languages}</FieldLabel>
+                  <Input
+                    id="languages"
+                    name="languages"
+                    value={formData.languages}
+                    onChange={handleInputChange}
+                    placeholder={t.languagesPlaceholder}
+                  />
+                </Field>
+                <Field orientation="horizontal">
+                  <Switch
+                    id="perkesoPanel"
+                    checked={formData.perkesoPanel}
+                    onCheckedChange={(checked) =>
+                      setFormData((prev) => ({ ...prev, perkesoPanel: checked }))
+                    }
+                  />
+                  <div className="flex flex-col gap-0.5">
+                    <Label htmlFor="perkesoPanel">{t.perkesoPanel}</Label>
+                    <p className="text-sm text-muted-foreground">
+                      {t.perkesoPanelHint}
+                    </p>
+                  </div>
+                </Field>
               </FieldGroup>
             </CardContent>
           </Card>

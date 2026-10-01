@@ -96,10 +96,11 @@ export const dialysisCenter = sqliteTable(
     planEndsAt: text("planEndsAt"),
     earlybird: integer("earlybird", { mode: "boolean" }).default(false).notNull(),
     verifiedAt: text("verifiedAt"),
-    fees: text("fees"),
+    perkesoPanel: integer("perkesoPanel", { mode: "boolean" })
+      .default(false)
+      .notNull(),
     sessionSlots: text("sessionSlots"),
     languages: text("languages"),
-    panels: text("panels"),
     createdAt: integer("createdAt", { mode: "timestamp_ms" })
       .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
       .notNull(),
