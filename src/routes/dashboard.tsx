@@ -34,8 +34,13 @@ const DASHBOARD_TABS = [
   "invitations",
 ] as const
 export type DashboardTab = (typeof DASHBOARD_TABS)[number]
-const SUPERADMIN_TABS: DashboardTab[] = ["featured", "sales", "invitations"]
-const PREVIEW_HIDDEN_TABS: DashboardTab[] = ["leads", "follow-up"]
+const SUPERADMIN_TABS: DashboardTab[] = [
+  "leads",
+  "follow-up",
+  "featured",
+  "sales",
+  "invitations",
+]
 
 const searchSchema = z.object({
   tab: z.enum(DASHBOARD_TABS).optional().catch(undefined),
@@ -111,8 +116,7 @@ function DashboardPage() {
   const preview = userRole?.preview
   const isSuperadmin = userRole?.role === "superadmin"
   const tab =
-    (SUPERADMIN_TABS.includes(requestedTab) && !isSuperadmin) ||
-    (PREVIEW_HIDDEN_TABS.includes(requestedTab) && preview)
+    SUPERADMIN_TABS.includes(requestedTab) && !isSuperadmin
       ? "analytics"
       : requestedTab
   const newLeadCount =
@@ -157,7 +161,6 @@ function DashboardPage() {
             : session.user
         }
         role={userRole?.role}
-        hiddenTabs={preview ? PREVIEW_HIDDEN_TABS : []}
         newLeadCount={newLeadCount}
         followUpCount={followUpCount}
       />

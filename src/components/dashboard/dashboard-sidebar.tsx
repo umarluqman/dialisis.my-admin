@@ -33,8 +33,8 @@ import { PreviewPicker } from "./preview-picker"
 const NAV_ITEMS = [
   { tab: "analytics", icon: BarChart3 },
   { tab: "centers", icon: Building2 },
-  { tab: "leads", icon: MessageCircle },
-  { tab: "follow-up", icon: PhoneCall },
+  { tab: "leads", icon: MessageCircle, superadminOnly: true },
+  { tab: "follow-up", icon: PhoneCall, superadminOnly: true },
   { tab: "featured", icon: Star, superadminOnly: true },
   { tab: "sales", icon: TrendingUp, superadminOnly: true },
   { tab: "invitations", icon: UserPlus, superadminOnly: true },
@@ -75,7 +75,6 @@ type DashboardSidebarProps = {
   activeTab: DashboardTab
   user: { name: string; email: string }
   role: "pic" | "superadmin" | undefined
-  hiddenTabs: DashboardTab[]
   newLeadCount: number
   followUpCount: number
 }
@@ -84,7 +83,6 @@ export function DashboardSidebar({
   activeTab,
   user,
   role,
-  hiddenTabs,
   newLeadCount,
   followUpCount,
 }: DashboardSidebarProps) {
@@ -110,9 +108,7 @@ export function DashboardSidebar({
         <SidebarGroup>
           <SidebarMenu>
             {NAV_ITEMS.filter(
-              (item) =>
-                (!("superadminOnly" in item) || role === "superadmin") &&
-                !hiddenTabs.includes(item.tab)
+              (item) => !("superadminOnly" in item) || role === "superadmin"
             ).map(({ tab, icon: Icon }) => (
               <SidebarMenuItem key={tab}>
                 <SidebarMenuButton asChild isActive={activeTab === tab}>

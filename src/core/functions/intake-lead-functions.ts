@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start"
 import { z } from "zod"
-import { and, desc, eq, inArray, not, sql, type SQL } from "drizzle-orm"
+import { and, desc, eq, inArray, not, sql } from "drizzle-orm"
 import { db } from "@/db/connection"
 import { ensureAdminDatabaseSchema } from "@/db/ensure-schema"
 import { dialysisCenter, intakeLead } from "@/db/schema"
@@ -59,42 +59,7 @@ export const getIntakeLeads = createServerFn({ method: "GET" })
   .handler(async ({ context, data }) => {
     await ensureAdminDatabaseSchema()
 
-    const now = Date.now()
-    const { session } = context
-    const userId = session.user.id
-    const { centerIds: accessibleCenterIds, preview } = await getAccess(userId)
-    if (preview) return []
-    const conditions: SQL[] = []
-
-    if (data.centerId) {
-      conditions.push(eq(intakeLead.dialysisCenterId, data.centerId))
-    }
-
-    if (accessibleCenterIds) {
-      if (data.centerId && !accessibleCenterIds.includes(data.centerId)) {
-        throw new Error("Access denied")
-      }
-
-      if (accessibleCenterIds.length === 0) {
-        return []
-      }
-
-      conditions.push(inArray(intakeLead.dialysisCenterId, accessibleCenterIds))
-    }
-
-    if (conditions.length > 0) {
-      const rows = await db
-        .select(leadFields)
-        .from(intakeLead)
-        .innerJoin(
-          dialysisCenter,
-          eq(intakeLead.dialysisCenterId, dialysisCenter.id)
-        )
-        .where(and(...conditions))
-        .orderBy(desc(intakeLead.createdAt))
-        .limit(data.limit)
-      return rows.map((lead) => withQuality(lead, now))
-    }
+    if ((await getAccess(context.session.user.id)).role === "pic") return []
 
     const rows = await db
       .select(leadFields)
@@ -103,8 +68,12 @@ export const getIntakeLeads = createServerFn({ method: "GET" })
         dialysisCenter,
         eq(intakeLead.dialysisCenterId, dialysisCenter.id)
       )
+      .where(
+        data.centerId ? eq(intakeLead.dialysisCenterId, data.centerId) : undefined
+      )
       .orderBy(desc(intakeLead.createdAt))
       .limit(data.limit)
+    const now = Date.now()
     return rows.map((lead) => withQuality(lead, now))
   })
 
@@ -113,15 +82,7 @@ export const getFollowUpLeads = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     await ensureAdminDatabaseSchema()
 
-    const userId = context.session.user.id
-    const conditions: SQL[] = [eq(intakeLead.status, "new"), not(testLeadSql)]
-
-    const { centerIds: accessibleCenterIds, preview } = await getAccess(userId)
-    if (preview) return []
-    if (accessibleCenterIds) {
-      if (accessibleCenterIds.length === 0) return []
-      conditions.push(inArray(intakeLead.dialysisCenterId, accessibleCenterIds))
-    }
+    if ((await getAccess(context.session.user.id)).role === "pic") return []
 
     const rows = await db
       .select(leadFields)
@@ -130,7 +91,7 @@ export const getFollowUpLeads = createServerFn({ method: "GET" })
         dialysisCenter,
         eq(intakeLead.dialysisCenterId, dialysisCenter.id)
       )
-      .where(and(...conditions))
+      .where(and(eq(intakeLead.status, "new"), not(testLeadSql)))
       .orderBy(desc(intakeLead.createdAt))
 
     const now = Date.now()
@@ -163,21 +124,8 @@ export const updateIntakeLeadStatus = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     await ensureAdminDatabaseSchema()
 
-    const userId = context.session.user.id
-    const leads = await db
-      .select({ centerId: intakeLead.dialysisCenterId })
-      .from(intakeLead)
-      .where(inArray(intakeLead.id, data.ids))
-
-    if (leads.length !== new Set(data.ids).size) {
-      throw new Error("Lead not found")
-    }
-
-    const { centerIds: accessibleCenterIds } = await getAccess(userId)
-    if (accessibleCenterIds) {
-      if (leads.some((lead) => !accessibleCenterIds.includes(lead.centerId))) {
-        throw new Error("Access denied")
-      }
+    if ((await getAccess(context.session.user.id)).role === "pic") {
+      throw new Error("Access denied")
     }
 
     const now = toDbDate(Date.now())

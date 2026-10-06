@@ -1236,7 +1236,9 @@ function CenterEditPage() {
                 center={center}
               />
             )}
-            <IntakeLeadsSection centerId={centerId} />
+            {userRole?.role === "superadmin" && (
+              <IntakeLeadsSection centerId={centerId} />
+            )}
             <OperatingHoursSection centerId={centerId} />
             <FaqSection centerId={centerId} />
           </>
