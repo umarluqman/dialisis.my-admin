@@ -204,15 +204,12 @@ export const getCenterById = createServerFn({ method: "GET" })
 
 const CreateCenterSchema = z.object({
   dialysisCenterName: z.string().trim().min(1),
-  title: z.string(),
   sector: z.string(),
   description: z.string(),
-  tel: z.string(),
   phoneNumber: z.string(),
   email: z.string(),
   website: z.string(),
   address: z.string(),
-  addressWithUnit: z.string(),
   googleMapsEmbed: z.string().default(""),
   longitude: z.number().nullable().optional(),
   latitude: z.number().nullable().optional(),
@@ -227,7 +224,6 @@ const CreateCenterSchema = z.object({
   hepatitisBay: z.string(),
   benefits: z.string(),
   sessionSlots: z.string().default(""),
-  languages: z.string().default(""),
   perkesoPanel: z.boolean().default(false),
   whatsappPicName: z.string().default(""),
   whatsappPicPhoneNumber: z.string().default(""),
@@ -251,15 +247,15 @@ export const createCenter = createServerFn({ method: "POST" })
       id,
       slug,
       dialysisCenterName: data.dialysisCenterName,
-      title: data.title,
+      title: data.dialysisCenterName,
       sector: data.sector,
       description: data.description,
-      tel: data.tel,
+      tel: data.phoneNumber,
       phoneNumber: data.phoneNumber,
       email: data.email,
       website: data.website,
       address: data.address,
-      addressWithUnit: data.addressWithUnit,
+      addressWithUnit: data.address,
       googleMapsEmbed: data.googleMapsEmbed.trim() || null,
       longitude: data.longitude ?? null,
       latitude: data.latitude ?? null,
@@ -274,7 +270,6 @@ export const createCenter = createServerFn({ method: "POST" })
       hepatitisBay: data.hepatitisBay,
       benefits: data.benefits,
       sessionSlots: data.sessionSlots.trim() || null,
-      languages: data.languages.trim() || null,
       perkesoPanel: data.perkesoPanel,
       whatsappPicName: data.whatsappPicName.trim() || null,
       whatsappPicPhoneNumber: data.whatsappPicPhoneNumber.trim() || null,
@@ -294,8 +289,6 @@ const UpdateCenterSchema = z.object({
     drInCharge: z.string().optional(),
     drInChargeTel: z.string().optional(),
     address: z.string().optional(),
-    addressWithUnit: z.string().optional(),
-    tel: z.string().optional(),
     panelNephrologist: z.string().nullable().optional(),
     centreManager: z.string().nullable().optional(),
     centreCoordinator: z.string().nullable().optional(),
@@ -306,14 +299,12 @@ const UpdateCenterSchema = z.object({
     googleMapsEmbed: z.string().nullable().optional(),
     phoneNumber: z.string().optional(),
     website: z.string().nullable().optional(),
-    title: z.string().optional(),
     units: z.string().optional(),
     description: z.string().nullable().optional(),
     benefits: z.string().nullable().optional(),
     town: z.string().optional(),
     stateId: z.string().min(1).optional(),
     sessionSlots: z.string().nullable().optional(),
-    languages: z.string().nullable().optional(),
     perkesoPanel: z.boolean().optional(),
     whatsappPicName: z.string().nullable().optional(),
     whatsappPicPhoneNumber: z.string().nullable().optional(),
@@ -332,11 +323,13 @@ export const updateCenter = createServerFn({ method: "POST" })
     const updateData: Partial<typeof dialysisCenter.$inferInsert> = {
       ...data.data,
     }
+    if (data.data.dialysisCenterName !== undefined) updateData.title = data.data.dialysisCenterName
+    if (data.data.phoneNumber !== undefined) updateData.tel = data.data.phoneNumber
+    if (data.data.address !== undefined) updateData.addressWithUnit = data.data.address
 
     for (const key of [
       "googleMapsEmbed",
       "sessionSlots",
-      "languages",
     ] as const) {
       if (key in updateData) {
         updateData[key] = updateData[key]?.trim() || null

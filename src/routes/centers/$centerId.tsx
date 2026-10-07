@@ -1,8 +1,8 @@
 import { LocaleToggle } from "@/components/locale-toggle"
 import { PreviewBanner } from "@/components/dashboard/preview-banner"
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
+import { createFileRoute, Link, useBlocker, useNavigate } from "@tanstack/react-router"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { toast } from "sonner"
 import {
   getCenterById,
@@ -29,12 +29,23 @@ import { getIntakeLeads } from "@/core/functions/intake-lead-functions"
 import { useSession } from "@/lib/auth-client"
 import { extractGoogleMapsCoordinates } from "@/lib/google-maps-embed"
 import { endOfMytDay, isPlanActive, toMytDayInput } from "@/lib/plan"
+import {
+  HEPATITIS_BAYS,
+  SECTORS,
+  TREATMENT_UNITS,
+  fromHepatitisBay,
+  hasListValue,
+  mergePhoneNumbers,
+  toHepatitisBay,
+  toggleListValue,
+} from "@/lib/center-fields"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
+import { Checkbox } from "@/components/ui/checkbox"
 import { IntakeLeadList } from "@/components/intake-lead-list"
 import {
   Select,
@@ -62,10 +73,12 @@ import {
   MapPin,
   MessageCircle,
   Phone,
+  Plus,
   Save,
   Stethoscope,
   Trash2,
   Users,
+  X,
 } from "lucide-react"
 import {
   AlertDialog,
@@ -93,6 +106,9 @@ const COPY = defineCopy({
     createCenter: "Create Center",
     editCenter: "Edit Center",
     saveChanges: "Save Changes",
+    unsavedChanges: "Unsaved changes",
+    allChangesSaved: "All changes saved",
+    leaveConfirm: "You have unsaved changes. Leave without saving?",
     coordinatesFound: "Coordinates found.",
     findingCoordinates: "Finding coordinates...",
     coordinatesFoundFromLink: "Coordinates found from Google Maps link.",
@@ -116,18 +132,23 @@ const COPY = defineCopy({
     basicInfoDescription: "General details about the dialysis center",
     centerName: "Center Name",
     centerNamePlaceholder: "Enter center name",
-    title: "Title",
-    titlePlaceholder: "Enter title",
     sector: "Sector",
-    sectorPlaceholder: "e.g., Private, Government",
+    sectorPlaceholder: "Select a sector",
+    sectors: {
+      PRIVATE: "Private",
+      MOH: "Government (MOH)",
+      NGO: "NGO",
+      UNIVERSITY: "University",
+      "ARMED FORCE": "Armed Forces",
+    },
     description: "Description",
     descriptionPlaceholder: "Enter center description",
     contactInfo: "Contact Information",
     contactInfoDescription: "Phone, email, and website details",
-    telephone: "Telephone",
-    telephonePlaceholder: "Enter telephone",
-    phoneNumber: "Phone Number",
-    phoneNumberPlaceholder: "Enter phone number",
+    phoneNumbers: "Phone Numbers",
+    phoneNumberPlaceholder: "e.g., 03-1234 5678",
+    addPhoneNumber: "Add number",
+    removePhoneNumber: "Remove number",
     email: "Email",
     emailPlaceholder: "Enter email",
     website: "Website",
@@ -142,9 +163,7 @@ const COPY = defineCopy({
     location: "Location",
     locationDescription: "Address and location details",
     address: "Address",
-    addressPlaceholder: "Enter full address",
-    addressWithUnit: "Address with Unit",
-    addressWithUnitPlaceholder: "Enter address with unit number",
+    addressPlaceholder: "Full address including unit, floor or block (e.g. Level 2, Block B)",
     googleMapsEmbed: "Google Maps Embed",
     googleMapsEmbedPlaceholder:
       "Paste Google Maps share link, iframe, or coordinates",
@@ -169,18 +188,22 @@ const COPY = defineCopy({
     centreCoordinatorPlaceholder: "Enter coordinator name",
     facilities: "Facilities",
     facilitiesDescription: "Equipment and services available",
-    units: "Units",
-    unitsPlaceholder: "Number of units",
+    units: "Treatments Offered",
+    unitsHint: "Tick every treatment this centre provides.",
+    unitOptions: {
+      "CAPD Unit": "Peritoneal dialysis (CAPD)",
+      "HD Unit": "Haemodialysis (HD)",
+      "Tx Unit": "Kidney transplant",
+      "MRRB Unit": "MRRB",
+    },
     hepatitisBay: "Hepatitis Bay",
-    hepatitisBayPlaceholder: "Enter hepatitis bay info",
+    hepatitisBayHint: "Leave unticked if there is no hepatitis bay.",
     benefits: "Benefits",
     benefitsPlaceholder: "Enter benefits and services offered",
     listingDetails: "Listing Details",
     listingDetailsDescription: "What families ask before they call",
     sessionSlots: "Session Slots",
     sessionSlotsPlaceholder: "e.g., Morning 7am, Afternoon 12pm, Evening 5pm",
-    languages: "Languages Spoken",
-    languagesPlaceholder: "e.g., Malay, English, Mandarin, Tamil",
     perkesoPanel: "PERKESO panel",
     perkesoPanelHint: "Centre is on the PERKESO (SOCSO) dialysis panel",
     additionalDetails: "Additional Details",
@@ -250,6 +273,9 @@ const COPY = defineCopy({
     createCenter: "Cipta pusat",
     editCenter: "Sunting pusat",
     saveChanges: "Simpan perubahan",
+    unsavedChanges: "Belum disimpan",
+    allChangesSaved: "Semua telah disimpan",
+    leaveConfirm: "Ada perubahan belum disimpan. Keluar tanpa menyimpan?",
     coordinatesFound: "Koordinat ditemui.",
     findingCoordinates: "Mencari koordinat...",
     coordinatesFoundFromLink: "Koordinat ditemui daripada pautan Google Maps.",
@@ -273,18 +299,23 @@ const COPY = defineCopy({
     basicInfoDescription: "Butiran umum tentang pusat dialisis",
     centerName: "Nama pusat",
     centerNamePlaceholder: "Masukkan nama pusat",
-    title: "Tajuk",
-    titlePlaceholder: "Masukkan tajuk",
     sector: "Sektor",
-    sectorPlaceholder: "cth. Swasta, Kerajaan",
+    sectorPlaceholder: "Pilih sektor",
+    sectors: {
+      PRIVATE: "Swasta",
+      MOH: "Kerajaan (KKM)",
+      NGO: "NGO",
+      UNIVERSITY: "Universiti",
+      "ARMED FORCE": "Angkatan Tentera",
+    },
     description: "Penerangan",
     descriptionPlaceholder: "Masukkan penerangan pusat",
     contactInfo: "Maklumat hubungan",
     contactInfoDescription: "Butiran telefon, e-mel dan laman web",
-    telephone: "Telefon",
-    telephonePlaceholder: "Masukkan no. telefon",
-    phoneNumber: "No. telefon",
-    phoneNumberPlaceholder: "Masukkan no. telefon",
+    phoneNumbers: "No. telefon",
+    phoneNumberPlaceholder: "cth. 03-1234 5678",
+    addPhoneNumber: "Tambah nombor",
+    removePhoneNumber: "Buang nombor",
     email: "E-mel",
     emailPlaceholder: "Masukkan e-mel",
     website: "Laman web",
@@ -299,9 +330,7 @@ const COPY = defineCopy({
     location: "Lokasi",
     locationDescription: "Butiran alamat dan lokasi",
     address: "Alamat",
-    addressPlaceholder: "Masukkan alamat penuh",
-    addressWithUnit: "Alamat dengan no. unit",
-    addressWithUnitPlaceholder: "Masukkan alamat dengan no. unit",
+    addressPlaceholder: "Alamat penuh termasuk unit, tingkat atau blok (cth. Aras 2, Blok B)",
     googleMapsEmbed: "Benaman Google Maps",
     googleMapsEmbedPlaceholder:
       "Tampal pautan kongsi, iframe atau koordinat Google Maps",
@@ -326,18 +355,22 @@ const COPY = defineCopy({
     centreCoordinatorPlaceholder: "Masukkan nama penyelaras",
     facilities: "Kemudahan",
     facilitiesDescription: "Peralatan dan perkhidmatan yang tersedia",
-    units: "Unit",
-    unitsPlaceholder: "Bilangan unit",
+    units: "Rawatan ditawarkan",
+    unitsHint: "Tandakan semua rawatan yang disediakan pusat ini.",
+    unitOptions: {
+      "CAPD Unit": "Dialisis peritoneal (CAPD)",
+      "HD Unit": "Hemodialisis (HD)",
+      "Tx Unit": "Pemindahan buah pinggang",
+      "MRRB Unit": "MRRB",
+    },
     hepatitisBay: "Ruang hepatitis",
-    hepatitisBayPlaceholder: "Masukkan maklumat ruang hepatitis",
+    hepatitisBayHint: "Biarkan kosong jika tiada ruang hepatitis.",
     benefits: "Faedah",
     benefitsPlaceholder: "Masukkan faedah dan perkhidmatan yang ditawarkan",
     listingDetails: "Butiran penyenaraian",
     listingDetailsDescription: "Perkara yang ditanya keluarga sebelum menghubungi",
     sessionSlots: "Slot sesi",
     sessionSlotsPlaceholder: "cth. Pagi 7:00, Tengah hari 12:00, Petang 5:00",
-    languages: "Bahasa dituturkan",
-    languagesPlaceholder: "cth. Melayu, Inggeris, Mandarin, Tamil",
     perkesoPanel: "Panel PERKESO",
     perkesoPanelHint: "Pusat ini panel dialisis PERKESO",
     additionalDetails: "Butiran tambahan",
@@ -404,15 +437,12 @@ export const Route = createFileRoute("/centers/$centerId")({
 
 type CenterFormData = {
   dialysisCenterName: string
-  title: string
   sector: string
   description: string
-  tel: string
-  phoneNumber: string
+  phoneNumbers: string[]
   email: string
   website: string
   address: string
-  addressWithUnit: string
   googleMapsEmbed: string
   longitude: number | null
   latitude: number | null
@@ -427,7 +457,6 @@ type CenterFormData = {
   hepatitisBay: string
   benefits: string
   sessionSlots: string
-  languages: string
   perkesoPanel: boolean
   whatsappPicName: string
   whatsappPicPhoneNumber: string
@@ -435,15 +464,12 @@ type CenterFormData = {
 
 const EMPTY_CENTER_FORM_DATA: CenterFormData = {
   dialysisCenterName: "",
-  title: "",
   sector: "",
   description: "",
-  tel: "",
-  phoneNumber: "",
+  phoneNumbers: [""],
   email: "",
   website: "",
   address: "",
-  addressWithUnit: "",
   googleMapsEmbed: "",
   longitude: null,
   latitude: null,
@@ -458,10 +484,19 @@ const EMPTY_CENTER_FORM_DATA: CenterFormData = {
   hepatitisBay: "",
   benefits: "",
   sessionSlots: "",
-  languages: "",
   perkesoPanel: false,
   whatsappPicName: "",
   whatsappPicPhoneNumber: "",
+}
+
+type CenterPayload = Omit<CenterFormData, "phoneNumbers"> & { phoneNumber: string }
+
+function toCenterPayload({ phoneNumbers, ...data }: CenterFormData): CenterPayload {
+  return {
+    ...data,
+    phoneNumber: phoneNumbers.map((phone) => phone.trim()).filter(Boolean).join(", "),
+    hepatitisBay: toHepatitisBay(data.hepatitisBay),
+  }
 }
 
 function CenterEditPage() {
@@ -493,22 +528,22 @@ function CenterEditPage() {
   })
 
   const [formData, setFormData] = useState<CenterFormData>(EMPTY_CENTER_FORM_DATA)
+  const [savedData, setSavedData] = useState<CenterFormData>(EMPTY_CENTER_FORM_DATA)
+  const allowLeaveRef = useRef(false)
   const [isResolvingMap, setIsResolvingMap] = useState(false)
   const [mapMessage, setMapMessage] = useState("")
 
   useEffect(() => {
     if (center) {
-      setFormData({
+      const phoneNumbers = mergePhoneNumbers(center.phoneNumber, center.tel)
+      const data: CenterFormData = {
         dialysisCenterName: center.dialysisCenterName ?? "",
-        title: center.title ?? "",
-        sector: center.sector ?? "",
+        sector: (center.sector ?? "").toUpperCase(),
         description: center.description ?? "",
-        tel: center.tel ?? "",
-        phoneNumber: center.phoneNumber ?? "",
+        phoneNumbers: phoneNumbers.length ? phoneNumbers : [""],
         email: center.email ?? "",
         website: center.website ?? "",
-        address: center.address ?? "",
-        addressWithUnit: center.addressWithUnit ?? "",
+        address: center.addressWithUnit || center.address || "",
         googleMapsEmbed: center.googleMapsEmbed ?? "",
         longitude: center.longitude ?? null,
         latitude: center.latitude ?? null,
@@ -520,19 +555,20 @@ function CenterEditPage() {
         centreManager: center.centreManager ?? "",
         centreCoordinator: center.centreCoordinator ?? "",
         units: center.units ?? "",
-        hepatitisBay: center.hepatitisBay ?? "",
+        hepatitisBay: fromHepatitisBay(center.hepatitisBay),
         benefits: center.benefits ?? "",
         sessionSlots: center.sessionSlots ?? "",
-        languages: center.languages ?? "",
         perkesoPanel: center.perkesoPanel,
         whatsappPicName: center.whatsappPicName ?? "",
         whatsappPicPhoneNumber: center.whatsappPicPhoneNumber ?? "",
-      })
+      }
+      setFormData(data)
+      setSavedData(data)
     }
   }, [center])
 
   const updateMutation = useMutation({
-    mutationFn: (data: Partial<CenterFormData>) =>
+    mutationFn: (data: CenterPayload) =>
       updateCenter({ data: { id: centerId, data } }),
     onSuccess: () => {
       toast.success(t.centerUpdated)
@@ -549,6 +585,7 @@ function CenterEditPage() {
     mutationFn: () => deleteCenter({ data: { id: centerId } }),
     onSuccess: async () => {
       toast.success(t.centerDeleted)
+      allowLeaveRef.current = true
       await queryClient.invalidateQueries({ queryKey: ["centers"] })
       await queryClient.invalidateQueries({ queryKey: ["allCenters"] })
       navigate({ to: "/dashboard" })
@@ -557,9 +594,10 @@ function CenterEditPage() {
   })
 
   const createMutation = useMutation({
-    mutationFn: (data: CenterFormData) => createCenter({ data }),
+    mutationFn: (data: CenterPayload) => createCenter({ data }),
     onSuccess: async (createdCenter) => {
       toast.success(t.centerCreated)
+      allowLeaveRef.current = true
       await queryClient.invalidateQueries({ queryKey: ["centers"] })
       await queryClient.invalidateQueries({ queryKey: ["allCenters"] })
       navigate({
@@ -573,7 +611,14 @@ function CenterEditPage() {
   })
 
   const isSaving = updateMutation.isPending || createMutation.isPending
-  const isSubmitDisabled = isSaving || isResolvingMap
+  const isDirty = JSON.stringify(formData) !== JSON.stringify(savedData)
+  const isSubmitDisabled = !isDirty || isSaving || isResolvingMap
+
+  useBlocker({
+    shouldBlockFn: () =>
+      isDirty && !allowLeaveRef.current && !window.confirm(t.leaveConfirm),
+    enableBeforeUnload: () => isDirty && !allowLeaveRef.current,
+  })
   const saveButtonText = isResolvingMap
     ? t.findingMap
     : isSaving
@@ -652,12 +697,13 @@ function CenterEditPage() {
       }
     }
 
+    const payload = toCenterPayload(submitData)
     if (isNewCenter) {
-      createMutation.mutate(submitData)
+      createMutation.mutate(payload)
       return
     }
 
-    updateMutation.mutate(submitData)
+    updateMutation.mutate(payload)
   }
 
   const handleInputChange = (
@@ -666,6 +712,22 @@ function CenterEditPage() {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
+
+  const toggleList =
+    (key: "units" | "hepatitisBay", options: readonly string[]) =>
+    (option: string, checked: boolean) =>
+      setFormData((prev) => ({
+        ...prev,
+        [key]: toggleListValue(prev[key], option, checked, options),
+      }))
+  const toggleUnit = toggleList("units", TREATMENT_UNITS)
+  const toggleHepatitisBay = toggleList("hepatitisBay", HEPATITIS_BAYS)
+
+  const setPhoneNumber = (index: number, value: string) =>
+    setFormData((prev) => ({
+      ...prev,
+      phoneNumbers: prev.phoneNumbers.map((phone, i) => (i === index ? value : phone)),
+    }))
 
   const handleGoogleMapsEmbedChange = (
     e: React.ChangeEvent<HTMLTextAreaElement>
@@ -696,7 +758,7 @@ function CenterEditPage() {
   }
 
   return (
-    <div className="min-h-screen bg-muted/30 pb-24 sm:pb-8">
+    <div className="min-h-screen bg-muted/30 pb-24">
       {userRole?.preview && <PreviewBanner label={userRole.preview.label} />}
       <div className="mx-auto w-full max-w-5xl space-y-4 px-3 py-4 sm:space-y-6 sm:px-6 lg:px-8">
         <div className="sticky top-0 z-20 -mx-3 border-b bg-background/95 px-3 py-3 backdrop-blur sm:static sm:mx-0 sm:rounded-lg sm:border sm:px-4">
@@ -755,15 +817,6 @@ function CenterEditPage() {
                 </AlertDialogContent>
               </AlertDialog>
             )}
-            <Button
-              type="submit"
-              form="center-form"
-              disabled={isSubmitDisabled}
-              className="hidden h-10 gap-2 px-4 sm:inline-flex"
-            >
-              <Save className="size-4" />
-              {saveButtonText}
-            </Button>
           </div>
         </div>
 
@@ -792,28 +845,30 @@ function CenterEditPage() {
                     placeholder={t.centerNamePlaceholder}
                   />
                 </Field>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <Field>
-                    <FieldLabel htmlFor="title">{t.title}</FieldLabel>
-                    <Input
-                      id="title"
-                      name="title"
-                      value={formData.title}
-                      onChange={handleInputChange}
-                      placeholder={t.titlePlaceholder}
-                    />
-                  </Field>
-                  <Field>
-                    <FieldLabel htmlFor="sector">{t.sector}</FieldLabel>
-                    <Input
-                      id="sector"
-                      name="sector"
-                      value={formData.sector}
-                      onChange={handleInputChange}
-                      placeholder={t.sectorPlaceholder}
-                    />
-                  </Field>
-                </div>
+                <Field className="md:max-w-[calc(50%-0.5rem)]">
+                  <FieldLabel htmlFor="sector">{t.sector}</FieldLabel>
+                  <Select
+                    value={formData.sector}
+                    onValueChange={(value) =>
+                      setFormData((prev) => ({ ...prev, sector: value }))
+                    }
+                  >
+                    <SelectTrigger id="sector" className="w-full">
+                      <SelectValue placeholder={t.sectorPlaceholder} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SECTORS.map((sector) => (
+                        <SelectItem key={sector} value={sector}>
+                          {t.sectors[sector]}
+                        </SelectItem>
+                      ))}
+                      {formData.sector &&
+                        !SECTORS.includes(formData.sector as (typeof SECTORS)[number]) && (
+                          <SelectItem value={formData.sector}>{formData.sector}</SelectItem>
+                        )}
+                    </SelectContent>
+                  </Select>
+                </Field>
                 <Field>
                   <FieldLabel htmlFor="description">{t.description}</FieldLabel>
                   <Textarea
@@ -841,30 +896,53 @@ function CenterEditPage() {
             </CardHeader>
             <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
               <FieldGroup className="gap-4">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <Field>
-                    <FieldLabel htmlFor="tel">{t.telephone}</FieldLabel>
-                    <Input
-                      inputMode="tel"
-                      id="tel"
-                      name="tel"
-                      value={formData.tel}
-                      onChange={handleInputChange}
-                      placeholder={t.telephonePlaceholder}
-                    />
-                  </Field>
-                  <Field>
-                    <FieldLabel htmlFor="phoneNumber">{t.phoneNumber}</FieldLabel>
-                    <Input
-                      inputMode="tel"
-                      id="phoneNumber"
-                      name="phoneNumber"
-                      value={formData.phoneNumber}
-                      onChange={handleInputChange}
-                      placeholder={t.phoneNumberPlaceholder}
-                    />
-                  </Field>
-                </div>
+                <Field>
+                  <FieldLabel htmlFor="phoneNumber-0">{t.phoneNumbers}</FieldLabel>
+                  <div className="flex flex-col gap-2">
+                    {formData.phoneNumbers.map((phone, index) => (
+                      <div key={index} className="flex gap-2">
+                        <Input
+                          inputMode="tel"
+                          id={`phoneNumber-${index}`}
+                          value={phone}
+                          onChange={(e) => setPhoneNumber(index, e.target.value)}
+                          placeholder={t.phoneNumberPlaceholder}
+                        />
+                        {formData.phoneNumbers.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="shrink-0"
+                            aria-label={t.removePhoneNumber}
+                            onClick={() =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                phoneNumbers: prev.phoneNumbers.filter((_, i) => i !== index),
+                              }))
+                            }
+                          >
+                            <X className="size-4" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-fit gap-2"
+                      onClick={() =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          phoneNumbers: [...prev.phoneNumbers, ""],
+                        }))
+                      }
+                    >
+                      <Plus className="size-4" />
+                      {t.addPhoneNumber}
+                    </Button>
+                  </div>
+                </Field>
                 <div className="grid gap-4 md:grid-cols-2">
                   <Field>
                     <FieldLabel htmlFor="email">{t.email}</FieldLabel>
@@ -957,19 +1035,7 @@ function CenterEditPage() {
                     value={formData.address}
                     onChange={handleInputChange}
                     placeholder={t.addressPlaceholder}
-                    rows={2}
-                  />
-                </Field>
-                <Field>
-                  <FieldLabel htmlFor="addressWithUnit">
-                    {t.addressWithUnit}
-                  </FieldLabel>
-                  <Input
-                    id="addressWithUnit"
-                    name="addressWithUnit"
-                    value={formData.addressWithUnit}
-                    onChange={handleInputChange}
-                    placeholder={t.addressWithUnitPlaceholder}
+                    rows={3}
                   />
                 </Field>
                 <Field>
@@ -1017,7 +1083,7 @@ function CenterEditPage() {
                         setFormData((prev) => ({ ...prev, stateId: value }))
                       }
                     >
-                      <SelectTrigger className="w-full">
+                      <SelectTrigger id="stateId" className="w-full">
                         <SelectValue placeholder={t.statePlaceholder} />
                       </SelectTrigger>
                       <SelectContent>
@@ -1128,28 +1194,24 @@ function CenterEditPage() {
             <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
               <FieldGroup className="gap-4">
                 <div className="grid gap-4 md:grid-cols-2">
-                  <Field>
-                    <FieldLabel htmlFor="units">{t.units}</FieldLabel>
-                    <Input
-                      id="units"
-                      name="units"
-                      value={formData.units}
-                      onChange={handleInputChange}
-                      placeholder={t.unitsPlaceholder}
-                    />
-                  </Field>
-                  <Field>
-                    <FieldLabel htmlFor="hepatitisBay">
-                      {t.hepatitisBay}
-                    </FieldLabel>
-                    <Input
-                      id="hepatitisBay"
-                      name="hepatitisBay"
-                      value={formData.hepatitisBay}
-                      onChange={handleInputChange}
-                      placeholder={t.hepatitisBayPlaceholder}
-                    />
-                  </Field>
+                  <CheckboxGroup
+                    id="units"
+                    label={t.units}
+                    hint={t.unitsHint}
+                    options={TREATMENT_UNITS}
+                    labels={t.unitOptions}
+                    value={formData.units}
+                    onToggle={toggleUnit}
+                  />
+                  <CheckboxGroup
+                    id="hepatitisBay"
+                    label={t.hepatitisBay}
+                    hint={t.hepatitisBayHint}
+                    options={HEPATITIS_BAYS}
+                    labels={{ "Hep B": "Hepatitis B", "Hep C": "Hepatitis C" }}
+                    value={formData.hepatitisBay}
+                    onToggle={toggleHepatitisBay}
+                  />
                 </div>
                 <Field>
                   <FieldLabel htmlFor="benefits">{t.benefits}</FieldLabel>
@@ -1187,16 +1249,6 @@ function CenterEditPage() {
                     onChange={handleInputChange}
                     placeholder={t.sessionSlotsPlaceholder}
                     rows={3}
-                  />
-                </Field>
-                <Field>
-                  <FieldLabel htmlFor="languages">{t.languages}</FieldLabel>
-                  <Input
-                    id="languages"
-                    name="languages"
-                    value={formData.languages}
-                    onChange={handleInputChange}
-                    placeholder={t.languagesPlaceholder}
                   />
                 </Field>
                 <Field orientation="horizontal">
@@ -1244,18 +1296,58 @@ function CenterEditPage() {
           </>
         )}
       </div>
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 p-3 shadow-lg backdrop-blur sm:hidden">
-        <Button
-          type="submit"
-          form="center-form"
-          disabled={isSubmitDisabled}
-          className="h-11 w-full gap-2"
-        >
-          <Save className="size-4" />
-          {saveButtonText}
-        </Button>
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 shadow-lg backdrop-blur">
+        <div className="mx-auto flex w-full max-w-5xl items-center gap-3 px-3 py-3 sm:px-6 lg:px-8">
+          <p className="flex-1 text-sm text-muted-foreground" aria-live="polite">
+            {isDirty ? t.unsavedChanges : isNewCenter ? "" : t.allChangesSaved}
+          </p>
+          <Button
+            type="submit"
+            form="center-form"
+            disabled={isSubmitDisabled}
+            className="h-11 gap-2 px-5"
+          >
+            <Save className="size-4" />
+            {saveButtonText}
+          </Button>
+        </div>
       </div>
     </div>
+  )
+}
+
+function CheckboxGroup<T extends string>({
+  id,
+  label,
+  hint,
+  options,
+  labels,
+  value,
+  onToggle,
+}: {
+  id: string
+  label: string
+  hint: string
+  options: readonly T[]
+  labels: Record<T, string>
+  value: string
+  onToggle: (option: T, checked: boolean) => void
+}) {
+  return (
+    <fieldset className="flex flex-col gap-2">
+      <legend className="mb-2 text-sm font-medium">{label}</legend>
+      {options.map((option) => (
+        <Label key={option} className="flex h-9 items-center gap-3 font-normal">
+          <Checkbox
+            id={`${id}-${option}`}
+            checked={hasListValue(value, option)}
+            onCheckedChange={(checked) => onToggle(option, checked === true)}
+          />
+          {labels[option]}
+        </Label>
+      ))}
+      <p className="text-sm text-muted-foreground">{hint}</p>
+    </fieldset>
   )
 }
 

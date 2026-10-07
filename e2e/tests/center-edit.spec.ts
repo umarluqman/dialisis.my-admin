@@ -8,7 +8,7 @@ test.describe("Center Edit", () => {
     await centerEdit.goto(TEST_CENTERS[0].id)
 
     await expect(centerEdit.centerNameInput).toHaveValue(TEST_CENTERS[0].dialysisCenterName)
-    await expect(centerEdit.sectorInput).toHaveValue(TEST_CENTERS[0].sector)
+    await expect(centerEdit.sectorSelect).toHaveText("Private")
     await expect(centerEdit.townInput).toHaveValue(TEST_CENTERS[0].town)
   })
 

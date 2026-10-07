@@ -5,8 +5,7 @@ export class CenterEditPage {
   readonly backToDashboard: Locator
   readonly saveButton: Locator
   readonly centerNameInput: Locator
-  readonly titleInput: Locator
-  readonly sectorInput: Locator
+  readonly sectorSelect: Locator
   readonly descriptionInput: Locator
   readonly telephoneInput: Locator
   readonly emailInput: Locator
@@ -23,14 +22,13 @@ export class CenterEditPage {
       name: /save changes|create center/i,
     })
     this.centerNameInput = page.getByLabel("Center Name")
-    this.titleInput = page.getByLabel("Title")
-    this.sectorInput = page.getByLabel("Sector")
+    this.sectorSelect = page.locator("#sector")
     this.descriptionInput = page.getByLabel("Description")
-    this.telephoneInput = page.getByLabel("Telephone")
+    this.telephoneInput = page.locator("#phoneNumber-0")
     this.emailInput = page.getByLabel("Email")
     this.addressInput = page.getByLabel("Address")
     this.townInput = page.getByLabel("Town")
-    this.stateSelect = page.locator("[data-slot='select-trigger']").first()
+    this.stateSelect = page.locator("#stateId")
     this.successToast = page.getByText("Center updated successfully")
     this.createSuccessToast = page.getByText("Center created successfully")
   }

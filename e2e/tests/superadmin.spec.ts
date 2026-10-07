@@ -61,7 +61,8 @@ test.describe("Superadmin Features", () => {
     await expect(superadminPage).toHaveURL("/centers/new")
 
     await centerEdit.centerNameInput.fill(centerName)
-    await centerEdit.sectorInput.fill("Private")
+    await centerEdit.sectorSelect.click()
+    await superadminPage.getByRole("option", { name: "Private" }).click()
     await centerEdit.townInput.fill("Cyberjaya")
     await centerEdit.addressInput.fill("1 New Center Road")
     await centerEdit.telephoneInput.fill("03-22223333")
