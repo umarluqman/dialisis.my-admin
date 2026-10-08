@@ -39,13 +39,13 @@ const COPY = defineCopy({
   en: {
     sections: {
       invalid: {
-        title: "Before fix (delivery issue)",
+        title: "You may not have received these",
         description:
-          "Sent before 24 Sep 2026, 7:12 PM. The center was probably never told about these requests.",
+          "Sent before 24 Sep 2026. Our email to your centre did not go through, so no one may have called these patients yet.",
       },
       stale: {
-        title: "No response > 48h",
-        description: "Still marked New more than 48 hours after the patient asked.",
+        title: "Waiting more than 2 days",
+        description: "The patient sent this over 48 hours ago and has not been marked as contacted.",
       },
     } satisfies Record<Section, { title: string; description: string }>,
     emailFailed: "Email failed",
@@ -57,10 +57,10 @@ const COPY = defineCopy({
     marked: (name: string, status: string) => `${name} marked as ${status}`,
     loadFailed: "Failed to load leads.",
     empty:
-      "Nothing needs follow-up. Requests show up here if they are still New after 48 hours.",
+      "Everyone has been contacted. A request appears here if no one has reached the patient within 2 days.",
     explainerTitle: "These patients may still be waiting for you",
     explainerBug:
-      "Until 24 Sep 2026, 7:12 PM, a bug stopped appointment requests from reaching centers by email. Some patients may have been told their booking was confirmed, and most never got a call.",
+      "Before 24 Sep 2026, some appointment requests never reached centres by email. Those patients may think their booking is confirmed and are still waiting for a call.",
     explainerAction:
       "Call or WhatsApp each patient, then mark the outcome. Handled requests leave this list.",
     submittedTimes: (count: number) => `Submitted ${count}×`,
@@ -71,13 +71,13 @@ const COPY = defineCopy({
   ms: {
     sections: {
       invalid: {
-        title: "Sebelum pembetulan (isu penghantaran)",
+        title: "Anda mungkin tidak menerima permohonan ini",
         description:
-          "Dihantar sebelum 24 Sep 2026, 7:12 PTG. Pusat mungkin tidak pernah dimaklumkan tentang permohonan ini.",
+          "Dihantar sebelum 24 Sep 2026. E-mel kami kepada pusat anda tidak sampai, jadi pesakit ini mungkin belum dihubungi.",
       },
       stale: {
-        title: "Tiada maklum balas > 48 jam",
-        description: "Masih berstatus Baru lebih daripada 48 jam selepas pesakit memohon.",
+        title: "Menunggu lebih 2 hari",
+        description: "Pesakit menghantar permohonan ini lebih 48 jam lalu dan masih belum ditandakan sebagai dihubungi.",
       },
     },
     emailFailed: "E-mel gagal",
@@ -89,10 +89,10 @@ const COPY = defineCopy({
     marked: (name: string, status: string) => `${name} ditandakan sebagai ${status}`,
     loadFailed: "Gagal memuatkan permohonan.",
     empty:
-      "Tiada permohonan yang perlu susulan. Permohonan dipaparkan di sini jika masih Baru selepas 48 jam.",
+      "Semua pesakit telah dihubungi. Permohonan dipaparkan di sini jika pesakit belum dihubungi dalam masa 2 hari.",
     explainerTitle: "Pesakit ini mungkin masih menunggu anda",
     explainerBug:
-      "Sehingga 24 Sep 2026, 7:12 PTG, satu pepijat menghalang permohonan temujanji daripada sampai ke pusat melalui e-mel. Sesetengah pesakit mungkin dimaklumkan bahawa temujanji mereka telah disahkan, dan kebanyakannya tidak pernah menerima panggilan.",
+      "Sebelum 24 Sep 2026, sebahagian permohonan temujanji tidak sampai ke pusat melalui e-mel. Pesakit tersebut mungkin menyangka temujanji mereka telah disahkan dan masih menunggu panggilan.",
     explainerAction:
       "Hubungi setiap pesakit melalui telefon atau WhatsApp, kemudian tandakan hasilnya. Permohonan yang telah diuruskan akan dikeluarkan daripada senarai ini.",
     submittedTimes: (count: number) => `Dihantar ${count}×`,

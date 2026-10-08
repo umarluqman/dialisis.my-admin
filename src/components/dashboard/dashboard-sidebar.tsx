@@ -28,13 +28,14 @@ import {
 } from "@/components/ui/sidebar"
 import type { DashboardTab } from "@/routes/dashboard"
 import { defineCopy, useCopy } from "@/lib/i18n"
+import { ProBadge } from "@/components/pro-badge"
 import { PreviewPicker } from "./preview-picker"
 
 const NAV_ITEMS = [
   { tab: "analytics", icon: BarChart3 },
   { tab: "centers", icon: Building2 },
-  { tab: "leads", icon: MessageCircle, superadminOnly: true },
-  { tab: "follow-up", icon: PhoneCall, superadminOnly: true },
+  { tab: "leads", icon: MessageCircle, proOnly: true },
+  { tab: "follow-up", icon: PhoneCall, proOnly: true },
   { tab: "featured", icon: Star, superadminOnly: true },
   { tab: "sales", icon: TrendingUp, superadminOnly: true },
   { tab: "invitations", icon: UserPlus, superadminOnly: true },
@@ -53,6 +54,7 @@ const COPY = defineCopy({
     } satisfies Record<DashboardTab, string>,
     newLeads: (count: number) => `${count} new leads`,
     followUp: (count: number) => `${count} leads need follow-up`,
+    proHint: "Available on the Pro plan",
     signOut: "Sign out",
   },
   ms: {
@@ -67,6 +69,7 @@ const COPY = defineCopy({
     },
     newLeads: (count: number) => `${count} permohonan baru`,
     followUp: (count: number) => `${count} permohonan perlu susulan`,
+    proHint: "Tersedia dengan pelan Pro",
     signOut: "Log keluar",
   },
 })
@@ -75,6 +78,7 @@ type DashboardSidebarProps = {
   activeTab: DashboardTab
   user: { name: string; email: string }
   role: "pic" | "superadmin" | undefined
+  proLocked: boolean
   newLeadCount: number
   followUpCount: number
 }
@@ -83,6 +87,7 @@ export function DashboardSidebar({
   activeTab,
   user,
   role,
+  proLocked,
   newLeadCount,
   followUpCount,
 }: DashboardSidebarProps) {
@@ -109,36 +114,52 @@ export function DashboardSidebar({
           <SidebarMenu>
             {NAV_ITEMS.filter(
               (item) => !("superadminOnly" in item) || role === "superadmin"
-            ).map(({ tab, icon: Icon }) => (
-              <SidebarMenuItem key={tab}>
-                <SidebarMenuButton asChild isActive={activeTab === tab}>
-                  <Link
-                    to="/dashboard"
-                    search={{ tab }}
-                    onClick={() => setOpenMobile(false)}
+            ).map(({ tab, icon: Icon, ...item }) =>
+              "proOnly" in item && proLocked ? (
+                <SidebarMenuItem key={tab}>
+                  <SidebarMenuButton
+                    disabled
+                    title={t.proHint}
+                    className="text-muted-foreground"
                   >
                     <Icon />
                     <span>{t.tabs[tab]}</span>
-                  </Link>
-                </SidebarMenuButton>
-                {tab === "leads" && newLeadCount > 0 && (
-                  <SidebarMenuBadge
-                    className="bg-primary text-primary-foreground"
-                    aria-label={t.newLeads(newLeadCount)}
-                  >
-                    {newLeadCount}
+                  </SidebarMenuButton>
+                  <SidebarMenuBadge>
+                    <ProBadge title={t.proHint} />
                   </SidebarMenuBadge>
-                )}
-                {tab === "follow-up" && followUpCount > 0 && (
-                  <SidebarMenuBadge
-                    className="bg-destructive/10 text-destructive"
-                    aria-label={t.followUp(followUpCount)}
-                  >
-                    {followUpCount}
-                  </SidebarMenuBadge>
-                )}
-              </SidebarMenuItem>
-            ))}
+                </SidebarMenuItem>
+              ) : (
+                <SidebarMenuItem key={tab}>
+                  <SidebarMenuButton asChild isActive={activeTab === tab}>
+                    <Link
+                      to="/dashboard"
+                      search={{ tab }}
+                      onClick={() => setOpenMobile(false)}
+                    >
+                      <Icon />
+                      <span>{t.tabs[tab]}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                  {tab === "leads" && newLeadCount > 0 && (
+                    <SidebarMenuBadge
+                      className="bg-primary text-primary-foreground"
+                      aria-label={t.newLeads(newLeadCount)}
+                    >
+                      {newLeadCount}
+                    </SidebarMenuBadge>
+                  )}
+                  {tab === "follow-up" && followUpCount > 0 && (
+                    <SidebarMenuBadge
+                      className="bg-destructive/10 text-destructive"
+                      aria-label={t.followUp(followUpCount)}
+                    >
+                      {followUpCount}
+                    </SidebarMenuBadge>
+                  )}
+                </SidebarMenuItem>
+              )
+            )}
             {role === "superadmin" && <PreviewPicker />}
           </SidebarMenu>
         </SidebarGroup>

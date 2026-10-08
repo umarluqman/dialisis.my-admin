@@ -1,8 +1,9 @@
-import { eq } from "drizzle-orm"
+import { and, eq, gt, isNull, or } from "drizzle-orm"
 import { deleteCookie, getCookie, setCookie } from "@tanstack/react-start/server"
 import { z } from "zod"
 import { db } from "@/db/connection"
-import { userCenterAccess } from "@/db/schema"
+import { dialysisCenter, userCenterAccess } from "@/db/schema"
+import { isPlanActive } from "@/lib/plan"
 import { getUserRole } from "@/lib/user-role"
 
 // Lets a superadmin see the dashboard exactly as a PIC of these centres would.
@@ -65,4 +66,27 @@ export async function requireCenterAccess(userId: string, centerId: string) {
   if (centerIds && !centerIds.includes(centerId)) {
     throw new Error("Access denied")
   }
+}
+
+export async function isProCenter(centerId: string) {
+  const [center] = await db
+    .select({ plan: dialysisCenter.plan, planEndsAt: dialysisCenter.planEndsAt })
+    .from(dialysisCenter)
+    .where(eq(dialysisCenter.id, centerId))
+    .limit(1)
+  return !!center && isPlanActive(center)
+}
+
+export async function requireProCenterAccess(userId: string, centerId: string) {
+  const { role, centerIds } = await getAccess(userId)
+  if (role === "superadmin") return
+  if (!centerIds.includes(centerId)) throw new Error("Access denied")
+  if (!(await isProCenter(centerId))) throw new Error("Pro plan required")
+}
+
+export function activeProCenterSql(now: string) {
+  return and(
+    eq(dialysisCenter.plan, "pro"),
+    or(isNull(dialysisCenter.planEndsAt), gt(dialysisCenter.planEndsAt, now))
+  )
 }

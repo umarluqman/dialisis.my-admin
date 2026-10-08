@@ -1,5 +1,6 @@
 import { LocaleToggle } from "@/components/locale-toggle"
 import { PreviewBanner } from "@/components/dashboard/preview-banner"
+import { ProBadge } from "@/components/pro-badge"
 import { createFileRoute, Link, useBlocker, useNavigate } from "@tanstack/react-router"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useState, useEffect, useRef } from "react"
@@ -152,14 +153,14 @@ const COPY = defineCopy({
     email: "Email",
     emailPlaceholder: "Enter email",
     website: "Website",
-    leadFollowUp: "Lead Follow-Up",
+    leadFollowUp: "Appointment requests",
     leadFollowUpDescription:
-      "Email alerts go to assigned admin users; WhatsApp handoff uses the PIC number",
+      "Who gets notified when a patient requests an appointment",
     picName: "PIC Name",
     picNamePlaceholder: "Enter PIC name",
     picWhatsapp: "PIC WhatsApp Number",
     leadEmailNote:
-      "SES lead emails are sent to assigned PIC/admin users for this center. If no user is assigned, the center email is used as fallback.",
+      "Each request is emailed to the people managing this centre. If no one is assigned yet, it goes to the centre email above. Patients can also reach you on the WhatsApp number above.",
     location: "Location",
     locationDescription: "Address and location details",
     address: "Address",
@@ -200,6 +201,7 @@ const COPY = defineCopy({
     hepatitisBayHint: "Leave unticked if there is no hepatitis bay.",
     benefits: "Benefits",
     benefitsPlaceholder: "Enter benefits and services offered",
+    proHint: "Available on the Pro plan.",
     listingDetails: "Listing Details",
     listingDetailsDescription: "What families ask before they call",
     sessionSlots: "Session Slots",
@@ -319,14 +321,14 @@ const COPY = defineCopy({
     email: "E-mel",
     emailPlaceholder: "Masukkan e-mel",
     website: "Laman web",
-    leadFollowUp: "Susulan permohonan",
+    leadFollowUp: "Permohonan temujanji",
     leadFollowUpDescription:
-      "Makluman e-mel dihantar kepada pengguna pentadbir yang ditugaskan; WhatsApp disalurkan ke nombor PIC",
+      "Siapa yang dimaklumkan apabila pesakit memohon temujanji",
     picName: "Nama PIC",
     picNamePlaceholder: "Masukkan nama PIC",
     picWhatsapp: "No. WhatsApp PIC",
     leadEmailNote:
-      "E-mel permohonan SES dihantar kepada pengguna PIC/pentadbir yang ditugaskan untuk pusat ini. Jika tiada pengguna ditugaskan, e-mel pusat akan digunakan sebagai ganti.",
+      "Setiap permohonan dihantar melalui e-mel kepada mereka yang mengurus pusat ini. Jika belum ada yang ditugaskan, ia dihantar ke e-mel pusat di atas. Pesakit juga boleh menghubungi anda melalui nombor WhatsApp di atas.",
     location: "Lokasi",
     locationDescription: "Butiran alamat dan lokasi",
     address: "Alamat",
@@ -367,6 +369,7 @@ const COPY = defineCopy({
     hepatitisBayHint: "Biarkan kosong jika tiada ruang hepatitis.",
     benefits: "Faedah",
     benefitsPlaceholder: "Masukkan faedah dan perkhidmatan yang ditawarkan",
+    proHint: "Tersedia dengan pelan Pro.",
     listingDetails: "Butiran penyenaraian",
     listingDetailsDescription: "Perkara yang ditanya keluarga sebelum menghubungi",
     sessionSlots: "Slot sesi",
@@ -522,6 +525,7 @@ function CenterEditPage() {
   })
   const center = centerQuery.data
   const centerLoading = !isNewCenter && centerQuery.isLoading
+  const proLocked = userRole?.role === "pic" && !!center && !isPlanActive(center)
   const { data: states } = useQuery({
     queryKey: ["states"],
     queryFn: () => getStates(),
@@ -1214,14 +1218,18 @@ function CenterEditPage() {
                   />
                 </div>
                 <Field>
-                  <FieldLabel htmlFor="benefits">{t.benefits}</FieldLabel>
+                  <FieldLabel htmlFor="benefits" className="gap-2">
+                    {t.benefits}
+                    {proLocked && <ProBadge title={t.proHint} />}
+                  </FieldLabel>
                   <Textarea
                     id="benefits"
                     name="benefits"
                     value={formData.benefits}
                     onChange={handleInputChange}
-                    placeholder={t.benefitsPlaceholder}
+                    placeholder={proLocked ? t.proHint : t.benefitsPlaceholder}
                     rows={3}
+                    disabled={proLocked}
                   />
                 </Field>
               </FieldGroup>
@@ -1288,11 +1296,11 @@ function CenterEditPage() {
                 center={center}
               />
             )}
-            {userRole?.role === "superadmin" && (
+            {(userRole?.role === "superadmin" || (center && isPlanActive(center))) && (
               <IntakeLeadsSection centerId={centerId} />
             )}
             <OperatingHoursSection centerId={centerId} />
-            <FaqSection centerId={centerId} />
+            <FaqSection centerId={centerId} locked={proLocked} />
           </>
         )}
       </div>
@@ -1649,7 +1657,7 @@ function OperatingHoursSection({ centerId }: { centerId: string }) {
   )
 }
 
-function FaqSection({ centerId }: { centerId: string }) {
+function FaqSection({ centerId, locked }: { centerId: string; locked: boolean }) {
   const queryClient = useQueryClient()
   const t = useCopy(COPY)
   const [newQuestion, setNewQuestion] = useState("")
@@ -1721,12 +1729,14 @@ function FaqSection({ centerId }: { centerId: string }) {
         <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
           <FileQuestion className="size-5 text-primary" />
           {t.faqs}
+          {locked && <ProBadge title={t.proHint} />}
         </CardTitle>
         <CardDescription>
-          {t.faqsDescription}
+          {locked ? t.proHint : t.faqsDescription}
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6 px-4 pb-4 sm:px-6 sm:pb-6">
+      <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
+        <fieldset disabled={locked} className="min-w-0 space-y-6">
         {faqs.length > 0 && (
           <div className="space-y-4">
             {faqs.map((faq, index) => (
@@ -1819,6 +1829,7 @@ function FaqSection({ centerId }: { centerId: string }) {
             {createMutation.isPending ? t.adding : t.addFaq}
           </Button>
         </form>
+        </fieldset>
       </CardContent>
     </Card>
   )

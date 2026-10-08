@@ -23,6 +23,7 @@ import {
 import { LEAD_STATUSES, toLeadStatus } from "@/components/intake-lead-list"
 import { ANALYTICS_PRESETS, CONTACT_KINDS, SOURCE_KEYS } from "@/lib/analytics"
 import { defineCopy, useCopy } from "@/lib/i18n"
+import { isPlanActive } from "@/lib/plan"
 
 const DASHBOARD_TABS = [
   "analytics",
@@ -34,13 +35,8 @@ const DASHBOARD_TABS = [
   "invitations",
 ] as const
 export type DashboardTab = (typeof DASHBOARD_TABS)[number]
-const SUPERADMIN_TABS: DashboardTab[] = [
-  "leads",
-  "follow-up",
-  "featured",
-  "sales",
-  "invitations",
-]
+const SUPERADMIN_TABS: DashboardTab[] = ["featured", "sales", "invitations"]
+const PRO_TABS: DashboardTab[] = ["leads", "follow-up"]
 
 const searchSchema = z.object({
   tab: z.enum(DASHBOARD_TABS).optional().catch(undefined),
@@ -115,8 +111,10 @@ function DashboardPage() {
 
   const preview = userRole?.preview
   const isSuperadmin = userRole?.role === "superadmin"
+  const proLocked = !isSuperadmin && !!centers && !centers.some(isPlanActive)
   const tab =
-    SUPERADMIN_TABS.includes(requestedTab) && !isSuperadmin
+    (SUPERADMIN_TABS.includes(requestedTab) && !isSuperadmin) ||
+    (PRO_TABS.includes(requestedTab) && proLocked)
       ? "analytics"
       : requestedTab
   const newLeadCount =
@@ -161,6 +159,7 @@ function DashboardPage() {
             : session.user
         }
         role={userRole?.role}
+        proLocked={proLocked}
         newLeadCount={newLeadCount}
         followUpCount={followUpCount}
       />

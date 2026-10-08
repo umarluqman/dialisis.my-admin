@@ -20,7 +20,7 @@ import {
   extractGoogleMapsCoordinates,
   extractGoogleMapsUrl,
 } from "@/lib/google-maps-embed"
-import { getAccess, requireCenterAccess } from "@/lib/access"
+import { getAccess, isProCenter, requireCenterAccess } from "@/lib/access"
 import { toDbDate } from "@/lib/analytics"
 import { EARLYBIRD_SEATS } from "@/lib/plan"
 
@@ -322,6 +322,13 @@ export const updateCenter = createServerFn({ method: "POST" })
 
     const updateData: Partial<typeof dialysisCenter.$inferInsert> = {
       ...data.data,
+    }
+    if (
+      updateData.benefits !== undefined &&
+      (await getAccess(context.session.user.id)).role === "pic" &&
+      !(await isProCenter(data.id))
+    ) {
+      delete updateData.benefits
     }
     if (data.data.dialysisCenterName !== undefined) updateData.title = data.data.dialysisCenterName
     if (data.data.phoneNumber !== undefined) updateData.tel = data.data.phoneNumber

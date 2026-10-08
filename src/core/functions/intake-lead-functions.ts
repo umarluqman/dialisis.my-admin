@@ -5,9 +5,17 @@ import { db } from "@/db/connection"
 import { ensureAdminDatabaseSchema } from "@/db/ensure-schema"
 import { dialysisCenter, intakeLead } from "@/db/schema"
 import { authMiddleware } from "@/lib/middleware"
-import { getAccess } from "@/lib/access"
+import { activeProCenterSql, getAccess } from "@/lib/access"
 import { toDbDate } from "@/lib/analytics"
 import { getLeadQuality, leadDuplicateKey, testLeadSql } from "@/lib/lead-quality"
+
+// undefined = superadmin (no scope), null = PIC with no Pro centre
+async function picLeadScope(userId: string, now: number) {
+  const { role, centerIds } = await getAccess(userId)
+  if (role === "superadmin") return undefined
+  if (centerIds.length === 0) return null
+  return and(inArray(dialysisCenter.id, centerIds), activeProCenterSql(toDbDate(now)))
+}
 
 const GetIntakeLeadsSchema = z.object({
   centerId: z.string().optional(),
@@ -59,7 +67,9 @@ export const getIntakeLeads = createServerFn({ method: "GET" })
   .handler(async ({ context, data }) => {
     await ensureAdminDatabaseSchema()
 
-    if ((await getAccess(context.session.user.id)).role === "pic") return []
+    const now = Date.now()
+    const scope = await picLeadScope(context.session.user.id, now)
+    if (scope === null) return []
 
     const rows = await db
       .select(leadFields)
@@ -69,11 +79,13 @@ export const getIntakeLeads = createServerFn({ method: "GET" })
         eq(intakeLead.dialysisCenterId, dialysisCenter.id)
       )
       .where(
-        data.centerId ? eq(intakeLead.dialysisCenterId, data.centerId) : undefined
+        and(
+          data.centerId ? eq(intakeLead.dialysisCenterId, data.centerId) : undefined,
+          scope
+        )
       )
       .orderBy(desc(intakeLead.createdAt))
       .limit(data.limit)
-    const now = Date.now()
     return rows.map((lead) => withQuality(lead, now))
   })
 
@@ -82,7 +94,9 @@ export const getFollowUpLeads = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     await ensureAdminDatabaseSchema()
 
-    if ((await getAccess(context.session.user.id)).role === "pic") return []
+    const now = Date.now()
+    const scope = await picLeadScope(context.session.user.id, now)
+    if (scope === null) return []
 
     const rows = await db
       .select(leadFields)
@@ -91,10 +105,9 @@ export const getFollowUpLeads = createServerFn({ method: "GET" })
         dialysisCenter,
         eq(intakeLead.dialysisCenterId, dialysisCenter.id)
       )
-      .where(and(eq(intakeLead.status, "new"), not(testLeadSql)))
+      .where(and(eq(intakeLead.status, "new"), not(testLeadSql), scope))
       .orderBy(desc(intakeLead.createdAt))
 
-    const now = Date.now()
     const groups = new Map<
       string,
       ReturnType<typeof withQuality<(typeof rows)[number]>> & { ids: string[] }
@@ -124,8 +137,19 @@ export const updateIntakeLeadStatus = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     await ensureAdminDatabaseSchema()
 
-    if ((await getAccess(context.session.user.id)).role === "pic") {
-      throw new Error("Access denied")
+    const scope = await picLeadScope(context.session.user.id, Date.now())
+    if (scope !== undefined) {
+      const allowed = scope
+        ? await db
+            .select({ id: intakeLead.id })
+            .from(intakeLead)
+            .innerJoin(
+              dialysisCenter,
+              eq(intakeLead.dialysisCenterId, dialysisCenter.id)
+            )
+            .where(and(inArray(intakeLead.id, data.ids), scope))
+        : []
+      if (allowed.length !== data.ids.length) throw new Error("Access denied")
     }
 
     const now = toDbDate(Date.now())
