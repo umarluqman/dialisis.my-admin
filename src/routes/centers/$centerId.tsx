@@ -62,7 +62,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field"
 import {
   ArrowLeft,
   Building2,
@@ -199,8 +199,11 @@ const COPY = defineCopy({
     },
     hepatitisBay: "Hepatitis Bay",
     hepatitisBayHint: "Leave unticked if there is no hepatitis bay.",
-    benefits: "Benefits",
-    benefitsPlaceholder: "Enter benefits and services offered",
+    benefits: "Branch details",
+    benefitsPlaceholder: "One per line, e.g. Head nurse: Sister Aminah",
+    highlights: "Why choose this centre",
+    highlightsPlaceholder: "One per line, e.g. Free parking: Ample parking in front of the centre",
+    highlightsHint: "Shown as cards on your centre page. Leave empty to use the default cards.",
     proHint: "Available on the Pro plan.",
     listingDetails: "Listing Details",
     listingDetailsDescription: "What families ask before they call",
@@ -367,8 +370,11 @@ const COPY = defineCopy({
     },
     hepatitisBay: "Ruang hepatitis",
     hepatitisBayHint: "Biarkan kosong jika tiada ruang hepatitis.",
-    benefits: "Faedah",
-    benefitsPlaceholder: "Masukkan faedah dan perkhidmatan yang ditawarkan",
+    benefits: "Maklumat cawangan",
+    benefitsPlaceholder: "Satu setiap baris, cth. Ketua Jururawat: Sister Aminah",
+    highlights: "Kelebihan pusat",
+    highlightsPlaceholder: "Satu setiap baris, cth. Parkir percuma: Tempat letak kereta luas di hadapan pusat",
+    highlightsHint: "Dipaparkan sebagai kad di halaman pusat anda. Biarkan kosong untuk guna kad lalai.",
     proHint: "Tersedia dengan pelan Pro.",
     listingDetails: "Butiran penyenaraian",
     listingDetailsDescription: "Perkara yang ditanya keluarga sebelum menghubungi",
@@ -459,6 +465,7 @@ type CenterFormData = {
   units: string
   hepatitisBay: string
   benefits: string
+  highlights: string
   sessionSlots: string
   perkesoPanel: boolean
   whatsappPicName: string
@@ -486,6 +493,7 @@ const EMPTY_CENTER_FORM_DATA: CenterFormData = {
   units: "",
   hepatitisBay: "",
   benefits: "",
+  highlights: "",
   sessionSlots: "",
   perkesoPanel: false,
   whatsappPicName: "",
@@ -561,6 +569,7 @@ function CenterEditPage() {
         units: center.units ?? "",
         hepatitisBay: fromHepatitisBay(center.hepatitisBay),
         benefits: center.benefits ?? "",
+        highlights: center.highlights ?? "",
         sessionSlots: center.sessionSlots ?? "",
         perkesoPanel: center.perkesoPanel,
         whatsappPicName: center.whatsappPicName ?? "",
@@ -1231,6 +1240,22 @@ function CenterEditPage() {
                     rows={3}
                     disabled={proLocked}
                   />
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="highlights" className="gap-2">
+                    {t.highlights}
+                    {proLocked && <ProBadge title={t.proHint} />}
+                  </FieldLabel>
+                  <Textarea
+                    id="highlights"
+                    name="highlights"
+                    value={formData.highlights}
+                    onChange={handleInputChange}
+                    placeholder={proLocked ? t.proHint : t.highlightsPlaceholder}
+                    rows={4}
+                    disabled={proLocked}
+                  />
+                  {!proLocked && <FieldDescription>{t.highlightsHint}</FieldDescription>}
                 </Field>
               </FieldGroup>
             </CardContent>

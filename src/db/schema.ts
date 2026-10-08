@@ -82,6 +82,7 @@ export const dialysisCenter = sqliteTable(
     units: text("units").default("").notNull(),
     description: text("description"),
     benefits: text("benefits"),
+    highlights: text("highlights"),
     photos: text("photos"),
     videos: text("videos"),
     stateId: text("stateId")

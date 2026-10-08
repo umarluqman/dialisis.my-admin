@@ -223,6 +223,7 @@ const CreateCenterSchema = z.object({
   units: z.string(),
   hepatitisBay: z.string(),
   benefits: z.string(),
+  highlights: z.string().default(""),
   sessionSlots: z.string().default(""),
   perkesoPanel: z.boolean().default(false),
   whatsappPicName: z.string().default(""),
@@ -269,6 +270,7 @@ export const createCenter = createServerFn({ method: "POST" })
       units: data.units,
       hepatitisBay: data.hepatitisBay,
       benefits: data.benefits,
+      highlights: data.highlights.trim() || null,
       sessionSlots: data.sessionSlots.trim() || null,
       perkesoPanel: data.perkesoPanel,
       whatsappPicName: data.whatsappPicName.trim() || null,
@@ -302,6 +304,7 @@ const UpdateCenterSchema = z.object({
     units: z.string().optional(),
     description: z.string().nullable().optional(),
     benefits: z.string().nullable().optional(),
+    highlights: z.string().nullable().optional(),
     town: z.string().optional(),
     stateId: z.string().min(1).optional(),
     sessionSlots: z.string().nullable().optional(),
@@ -324,11 +327,12 @@ export const updateCenter = createServerFn({ method: "POST" })
       ...data.data,
     }
     if (
-      updateData.benefits !== undefined &&
+      (updateData.benefits !== undefined || updateData.highlights !== undefined) &&
       (await getAccess(context.session.user.id)).role === "pic" &&
       !(await isProCenter(data.id))
     ) {
       delete updateData.benefits
+      delete updateData.highlights
     }
     if (data.data.dialysisCenterName !== undefined) updateData.title = data.data.dialysisCenterName
     if (data.data.phoneNumber !== undefined) updateData.tel = data.data.phoneNumber
