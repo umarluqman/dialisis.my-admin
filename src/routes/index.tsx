@@ -1,8 +1,9 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
+import { hasSession } from "@/core/functions/session-functions";
 
 export const Route = createFileRoute("/")({
-  beforeLoad: () => {
-    throw redirect({ to: "/auth/sign-in" });
+  beforeLoad: async () => {
+    throw redirect({ to: (await hasSession()) ? "/dashboard" : "/auth/sign-in" });
   },
   component: () => null,
 });

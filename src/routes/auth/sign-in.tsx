@@ -1,4 +1,5 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
+import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router"
+import { hasSession } from "@/core/functions/session-functions"
 import { authClient, signIn } from "@/lib/auth-client"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -15,6 +16,9 @@ import { LocaleToggle } from "@/components/locale-toggle"
 import { defineCopy, useCopy } from "@/lib/i18n"
 
 export const Route = createFileRoute("/auth/sign-in")({
+  beforeLoad: async () => {
+    if (await hasSession()) throw redirect({ to: "/dashboard" })
+  },
   component: SignInPage,
 })
 
