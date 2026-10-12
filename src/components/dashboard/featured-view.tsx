@@ -18,7 +18,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -42,7 +41,6 @@ import { addYear, endOfMytDay, startOfMytDay, toMytDayInput } from "@/lib/plan"
 import { defineCopy, useCopy } from "@/lib/i18n"
 import { centersQuery, featuredSlotsQuery } from "./queries"
 
-type Scope = "town" | "state"
 type SlotStatus = "active" | "upcoming" | "expired"
 
 const COPY = defineCopy({
@@ -57,8 +55,8 @@ const COPY = defineCopy({
     cancelled: "Slot cancelled",
     ended: "Slot ended",
     endFailed: "Failed to end slot",
-    scopes: { town: "Town", state: "State" } satisfies Record<Scope, string>,
-    allOf: (state: string | null) => `All of ${state}`,
+    state: "State",
+    town: "Town",
     cancel: "Cancel",
     endNow: "End now",
     cancelTitle: "Cancel this slot?",
@@ -72,8 +70,7 @@ const COPY = defineCopy({
     createFailed: "Failed to create slot",
     newTitle: "New featured slot",
     newDescription:
-      "One centre per town and one per state at a time. The centre is moved to Pro until at least the end date.",
-    scope: "Scope",
+      "One centre per town at a time. The centre is moved to Pro until at least the end date.",
     selectState: "Select a state",
     selectTown: "Select a town",
     centre: "Centre",
@@ -94,8 +91,8 @@ const COPY = defineCopy({
     cancelled: "Slot dibatalkan",
     ended: "Slot ditamatkan",
     endFailed: "Gagal menamatkan slot",
-    scopes: { town: "Bandar", state: "Negeri" },
-    allOf: (state: string | null) => `Seluruh ${state}`,
+    state: "Negeri",
+    town: "Bandar",
     cancel: "Batal",
     endNow: "Tamatkan sekarang",
     cancelTitle: "Batalkan slot ini?",
@@ -109,8 +106,7 @@ const COPY = defineCopy({
     createFailed: "Gagal mencipta slot",
     newTitle: "Slot pilihan baru",
     newDescription:
-      "Satu pusat bagi setiap bandar dan satu bagi setiap negeri pada satu masa. Pusat ditukar ke pelan Pro sekurang-kurangnya hingga tarikh tamat.",
-    scope: "Skop",
+      "Satu pusat bagi setiap bandar pada satu masa. Pusat ditukar ke pelan Pro sekurang-kurangnya hingga tarikh tamat.",
     selectState: "Pilih negeri",
     selectTown: "Pilih bandar",
     centre: "Pusat",
@@ -183,14 +179,9 @@ function SlotGroup({
           {slots.map((slot) => (
             <li key={slot.id} className="flex flex-col gap-2 p-3 md:flex-row md:items-center md:gap-4 md:px-4">
               <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-medium">{slot.centerName}</span>
-                  <Badge variant="secondary">{t.scopes[slot.scope]}</Badge>
-                </div>
+                <p className="font-medium">{slot.centerName}</p>
                 <p className="text-sm text-muted-foreground">
-                  {slot.scope === "town"
-                    ? `${slot.town}, ${slot.stateName}`
-                    : t.allOf(slot.stateName)}
+                  {slot.town}, {slot.stateName}
                 </p>
               </div>
               <span className="text-sm tabular-nums text-muted-foreground">
@@ -209,10 +200,7 @@ function SlotGroup({
                         {status === "upcoming" ? t.cancelTitle : t.endTitle}
                       </AlertDialogTitle>
                       <AlertDialogDescription>
-                        {t.endDescription(
-                          slot.centerName,
-                          slot.scope === "town" ? slot.town : slot.stateName
-                        )}
+                        {t.endDescription(slot.centerName, slot.town)}
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -241,7 +229,6 @@ function CreateSlotCard() {
   const { data: centers = [] } = useQuery(centersQuery)
   const { data: states = [] } = useQuery({ queryKey: ["states"], queryFn: () => getStates() })
   const today = toMytDay(Date.now())
-  const [scope, setScope] = useState<Scope>("town")
   const [stateId, setStateId] = useState("")
   const [town, setTown] = useState("")
   const [centerId, setCenterId] = useState("")
@@ -251,15 +238,12 @@ function CreateSlotCard() {
   const inState = centers.filter((center) => center.stateId === stateId)
   const stateName = states.find((state) => state.id === stateId)?.name ?? ""
   const towns = citiesForState(stateName)
-  const candidates = inState.filter(
-    (center) => scope === "state" || (town && isCenterInTown(center, town))
-  )
+  const candidates = inState.filter((center) => town && isCenterInTown(center, town))
 
   const createMutation = useMutation({
     mutationFn: () =>
       createFeaturedSlot({
         data: {
-          scope,
           stateId,
           town,
           dialysisCenterId: centerId,
@@ -276,8 +260,7 @@ function CreateSlotCard() {
     onError: (error) => toast.error(error.message || t.createFailed),
   })
 
-  const canSubmit =
-    stateId && centerId && startsOn && endsOn && (scope === "state" || town)
+  const canSubmit = stateId && town && centerId && startsOn && endsOn
 
   return (
     <Card>
@@ -294,25 +277,7 @@ function CreateSlotCard() {
           }}
         >
           <Field>
-            <FieldLabel htmlFor="slot-scope">{t.scope}</FieldLabel>
-            <Select
-              value={scope}
-              onValueChange={(value) => {
-                setScope(value as Scope)
-                setCenterId("")
-              }}
-            >
-              <SelectTrigger id="slot-scope" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="town">{t.scopes.town}</SelectItem>
-                <SelectItem value="state">{t.scopes.state}</SelectItem>
-              </SelectContent>
-            </Select>
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="slot-state">{t.scopes.state}</FieldLabel>
+            <FieldLabel htmlFor="slot-state">{t.state}</FieldLabel>
             <Select
               value={stateId}
               onValueChange={(value) => {
@@ -333,9 +298,8 @@ function CreateSlotCard() {
               </SelectContent>
             </Select>
           </Field>
-          {scope === "town" && (
-            <Field>
-              <FieldLabel htmlFor="slot-town">{t.scopes.town}</FieldLabel>
+          <Field>
+            <FieldLabel htmlFor="slot-town">{t.town}</FieldLabel>
               <Select
                 value={town}
                 disabled={towns.length === 0}
@@ -355,13 +319,12 @@ function CreateSlotCard() {
                   ))}
                 </SelectContent>
               </Select>
-            </Field>
-          )}
+          </Field>
           <Field>
             <FieldLabel htmlFor="slot-center">{t.centre}</FieldLabel>
             <Select
               value={centerId}
-              disabled={candidates.length === 0 || (scope === "town" && !town)}
+              disabled={candidates.length === 0 || !town}
               onValueChange={setCenterId}
             >
               <SelectTrigger id="slot-center" className="w-full">

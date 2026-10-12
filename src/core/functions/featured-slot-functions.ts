@@ -34,7 +34,6 @@ export const getFeaturedSlots = createServerFn({ method: "GET" })
 export type FeaturedSlotRow = Awaited<ReturnType<typeof getFeaturedSlots>>[number]
 
 const CreateFeaturedSlotSchema = z.object({
-  scope: z.enum(["town", "state"]),
   stateId: z.string().min(1),
   town: z.string(),
   dialysisCenterId: z.string().min(1),
@@ -48,11 +47,11 @@ export const createFeaturedSlot = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     await requireSuperadmin(context.session.user.id)
 
-    const town = data.scope === "town" ? data.town.trim() : ""
+    const town = data.town.trim()
     const startsAt = toDbDate(Math.max(Date.parse(data.startsAt), Date.now()))
     const endsAt = toDbDate(Date.parse(data.endsAt))
 
-    if (data.scope === "town" && !town) {
+    if (!town) {
       throw new Error("Pick a town")
     }
     if (endsAt <= startsAt) {
@@ -90,7 +89,7 @@ export const createFeaturedSlot = createServerFn({ method: "POST" })
       .innerJoin(dialysisCenter, eq(featuredSlot.dialysisCenterId, dialysisCenter.id))
       .where(
         and(
-          eq(featuredSlot.scope, data.scope),
+          eq(featuredSlot.scope, "town"),
           eq(featuredSlot.stateId, data.stateId),
           sql`lower(${featuredSlot.town}) = lower(${town})`,
           lt(featuredSlot.startsAt, endsAt),
@@ -105,7 +104,7 @@ export const createFeaturedSlot = createServerFn({ method: "POST" })
 
     await db.insert(featuredSlot).values({
       id: crypto.randomUUID(),
-      scope: data.scope,
+      scope: "town",
       stateId: data.stateId,
       town,
       dialysisCenterId: data.dialysisCenterId,
