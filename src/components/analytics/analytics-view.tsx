@@ -2,7 +2,6 @@ import { useRef, useState, type ReactNode } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { Link, useNavigate, useSearch } from "@tanstack/react-router"
 import { ArrowLeft, ExternalLink } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -44,7 +43,6 @@ const COPY = defineCopy({
     retry: "Retry",
     noCenters: "No centers yet",
     noCentersBody: "Analytics appear here once a center is assigned to your account.",
-    newFeature: "New feature",
     viewsSince: "Page views tracked since",
     contactsSince: "Contacts and leads since",
     mytNote: "(Malaysia time).",
@@ -106,7 +104,6 @@ const COPY = defineCopy({
     retry: "Cuba lagi",
     noCenters: "Belum ada pusat",
     noCentersBody: "Analitik akan dipaparkan di sini selepas pusat ditetapkan kepada akaun anda.",
-    newFeature: "Ciri baru",
     viewsSince: "Paparan halaman dijejak sejak",
     contactsSince: "Hubungan dan permohonan sejak",
     mytNote: "(waktu Malaysia).",
@@ -270,9 +267,6 @@ export function AnalyticsView({ isSuperadmin }: { isSuperadmin: boolean }) {
     <div ref={topRef} className="scroll-mt-20 space-y-4">
       {overview && (
         <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-          <Badge variant="outline" className="bg-card">
-            {t.newFeature}
-          </Badge>
           <span>
             {t.viewsSince}{" "}
             <span className="text-foreground tabular-nums">
