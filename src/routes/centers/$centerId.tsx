@@ -40,6 +40,14 @@ import {
   toHepatitisBay,
   toggleListValue,
 } from "@/lib/center-fields"
+import {
+  HIGHLIGHT_PRESETS,
+  findHighlight,
+  isPresetHighlight,
+  parseHighlights,
+  serializeHighlights,
+  type Highlight,
+} from "@/lib/center-highlights"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -62,7 +70,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import {
   ArrowLeft,
   Building2,
@@ -202,8 +210,11 @@ const COPY = defineCopy({
     benefits: "Branch details",
     benefitsPlaceholder: "One per line, e.g. Head nurse: Sister Aminah",
     highlights: "Why choose this centre",
-    highlightsPlaceholder: "One per line, e.g. Free parking: Ample parking in front of the centre",
-    highlightsHint: "Shown as cards on your centre page. Leave empty to use the default cards.",
+    highlightsHint: "Tick what applies and edit the description. Shown as cards on your centre page; leave all unticked to use the default cards.",
+    customHighlightTitle: "Title, e.g. Free shuttle service",
+    highlightDescription: "Description",
+    addHighlight: "Add your own",
+    removeHighlight: "Remove",
     proHint: "Available on the Pro plan.",
     listingDetails: "Listing Details",
     listingDetailsDescription: "What families ask before they call",
@@ -373,8 +384,11 @@ const COPY = defineCopy({
     benefits: "Maklumat cawangan",
     benefitsPlaceholder: "Satu setiap baris, cth. Ketua Jururawat: Sister Aminah",
     highlights: "Kelebihan pusat",
-    highlightsPlaceholder: "Satu setiap baris, cth. Parkir percuma: Tempat letak kereta luas di hadapan pusat",
-    highlightsHint: "Dipaparkan sebagai kad di halaman pusat anda. Biarkan kosong untuk guna kad lalai.",
+    highlightsHint: "Tandakan yang berkenaan dan ubah penerangan jika perlu. Dipaparkan sebagai kad di halaman pusat anda; biarkan semua kosong untuk guna kad lalai.",
+    customHighlightTitle: "Tajuk, cth. Perkhidmatan van percuma",
+    highlightDescription: "Penerangan",
+    addHighlight: "Tambah kelebihan lain",
+    removeHighlight: "Buang",
     proHint: "Tersedia dengan pelan Pro.",
     listingDetails: "Butiran penyenaraian",
     listingDetailsDescription: "Perkara yang ditanya keluarga sebelum menghubungi",
@@ -465,7 +479,7 @@ type CenterFormData = {
   units: string
   hepatitisBay: string
   benefits: string
-  highlights: string
+  highlights: Highlight[]
   sessionSlots: string
   perkesoPanel: boolean
   whatsappPicName: string
@@ -493,20 +507,24 @@ const EMPTY_CENTER_FORM_DATA: CenterFormData = {
   units: "",
   hepatitisBay: "",
   benefits: "",
-  highlights: "",
+  highlights: [],
   sessionSlots: "",
   perkesoPanel: false,
   whatsappPicName: "",
   whatsappPicPhoneNumber: "",
 }
 
-type CenterPayload = Omit<CenterFormData, "phoneNumbers"> & { phoneNumber: string }
+type CenterPayload = Omit<CenterFormData, "phoneNumbers" | "highlights"> & {
+  phoneNumber: string
+  highlights: string
+}
 
 function toCenterPayload({ phoneNumbers, ...data }: CenterFormData): CenterPayload {
   return {
     ...data,
     phoneNumber: phoneNumbers.map((phone) => phone.trim()).filter(Boolean).join(", "),
     hepatitisBay: toHepatitisBay(data.hepatitisBay),
+    highlights: serializeHighlights(data.highlights),
   }
 }
 
@@ -569,7 +587,7 @@ function CenterEditPage() {
         units: center.units ?? "",
         hepatitisBay: fromHepatitisBay(center.hepatitisBay),
         benefits: center.benefits ?? "",
-        highlights: center.highlights ?? "",
+        highlights: parseHighlights(center.highlights),
         sessionSlots: center.sessionSlots ?? "",
         perkesoPanel: center.perkesoPanel,
         whatsappPicName: center.whatsappPicName ?? "",
@@ -1241,22 +1259,11 @@ function CenterEditPage() {
                     disabled={proLocked}
                   />
                 </Field>
-                <Field>
-                  <FieldLabel htmlFor="highlights" className="gap-2">
-                    {t.highlights}
-                    {proLocked && <ProBadge title={t.proHint} />}
-                  </FieldLabel>
-                  <Textarea
-                    id="highlights"
-                    name="highlights"
-                    value={formData.highlights}
-                    onChange={handleInputChange}
-                    placeholder={proLocked ? t.proHint : t.highlightsPlaceholder}
-                    rows={4}
-                    disabled={proLocked}
-                  />
-                  {!proLocked && <FieldDescription>{t.highlightsHint}</FieldDescription>}
-                </Field>
+                <HighlightsPicker
+                  value={formData.highlights}
+                  onChange={(highlights) => setFormData((prev) => ({ ...prev, highlights }))}
+                  locked={proLocked}
+                />
               </FieldGroup>
             </CardContent>
           </Card>
@@ -1346,6 +1353,96 @@ function CenterEditPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+function HighlightsPicker({
+  value,
+  onChange,
+  locked,
+}: {
+  value: Highlight[]
+  onChange: (value: Highlight[]) => void
+  locked: boolean
+}) {
+  const t = useCopy(COPY)
+  const update = (item: Highlight, patch: Partial<Highlight>) =>
+    onChange(value.map((current) => (current === item ? { ...current, ...patch } : current)))
+  const togglePreset = (preset: Highlight, checked: boolean) =>
+    onChange(
+      checked
+        ? [...value, { ...preset }]
+        : value.filter((item) => item !== findHighlight(value, preset.title))
+    )
+  const customItems = value.filter((item) => !isPresetHighlight(item.title))
+
+  return (
+    <fieldset className="flex flex-col gap-3" disabled={locked}>
+      <legend className="mb-2 flex items-center gap-2 text-sm font-medium">
+        {t.highlights}
+        {locked && <ProBadge title={t.proHint} />}
+      </legend>
+      {HIGHLIGHT_PRESETS.map((preset) => {
+        const item = findHighlight(value, preset.title)
+        return (
+          <div key={preset.title} className="flex flex-col gap-2">
+            <Label className="flex min-h-9 items-center gap-3 font-normal">
+              <Checkbox
+                checked={!!item}
+                onCheckedChange={(checked) => togglePreset(preset, checked === true)}
+              />
+              {preset.title}
+            </Label>
+            {item && (
+              <Textarea
+                aria-label={`${preset.title} — ${t.highlightDescription}`}
+                value={item.description}
+                onChange={(e) => update(item, { description: e.target.value })}
+                placeholder={preset.description}
+                rows={2}
+                className="ml-7 w-auto"
+              />
+            )}
+          </div>
+        )
+      })}
+      {customItems.map((item, index) => (
+        <div key={index} className="flex flex-col gap-2 rounded-lg border p-3">
+          <div className="flex items-center gap-2">
+            <Input
+              value={item.title}
+              onChange={(e) => update(item, { title: e.target.value })}
+              placeholder={t.customHighlightTitle}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label={t.removeHighlight}
+              onClick={() => onChange(value.filter((current) => current !== item))}
+            >
+              <X />
+            </Button>
+          </div>
+          <Textarea
+            value={item.description}
+            onChange={(e) => update(item, { description: e.target.value })}
+            placeholder={t.highlightDescription}
+            rows={2}
+          />
+        </div>
+      ))}
+      <Button
+        type="button"
+        variant="outline"
+        className="self-start"
+        onClick={() => onChange([...value, { title: "", description: "" }])}
+      >
+        <Plus />
+        {t.addHighlight}
+      </Button>
+      <p className="text-sm text-muted-foreground">{locked ? t.proHint : t.highlightsHint}</p>
+    </fieldset>
   )
 }
 
