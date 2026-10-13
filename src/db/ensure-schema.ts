@@ -231,4 +231,24 @@ async function ensureSchema() {
   `)
   await client.execute("create index if not exists salesProspect_stage_idx on sales_prospect (stage)")
   await client.execute("create index if not exists salesProspect_dialysisCenterId_idx on sales_prospect (dialysis_center_id)")
+
+  await client.execute(`
+    create table if not exists sales_prospect_center (
+      prospect_id text not null,
+      dialysis_center_id text not null,
+      primary key (prospect_id, dialysis_center_id),
+      foreign key (prospect_id) references sales_prospect(id) on delete cascade,
+      foreign key (dialysis_center_id) references DialysisCenter(id) on delete cascade
+    )
+  `)
+  await client.execute("create index if not exists salesProspectCenter_dialysisCenterId_idx on sales_prospect_center (dialysis_center_id)")
+  // Moves the old single-centre link across; nulling it keeps removed centres from coming back.
+  await client.batch(
+    [
+      `insert or ignore into sales_prospect_center (prospect_id, dialysis_center_id)
+        select id, dialysis_center_id from sales_prospect where dialysis_center_id is not null`,
+      "update sales_prospect set dialysis_center_id = null where dialysis_center_id is not null",
+    ],
+    "write"
+  )
 }

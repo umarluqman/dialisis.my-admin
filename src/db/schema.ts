@@ -4,6 +4,7 @@ import {
   integer,
   index,
   uniqueIndex,
+  primaryKey,
   real,
 } from "drizzle-orm/sqlite-core"
 import { sql, relations } from "drizzle-orm"
@@ -323,6 +324,22 @@ export const salesProspect = sqliteTable(
   (table) => [
     index("salesProspect_stage_idx").on(table.stage),
     index("salesProspect_dialysisCenterId_idx").on(table.dialysisCenterId),
+  ]
+)
+
+export const salesProspectCenter = sqliteTable(
+  "sales_prospect_center",
+  {
+    prospectId: text("prospect_id")
+      .notNull()
+      .references(() => salesProspect.id, { onDelete: "cascade" }),
+    dialysisCenterId: text("dialysis_center_id")
+      .notNull()
+      .references(() => dialysisCenter.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.prospectId, table.dialysisCenterId] }),
+    index("salesProspectCenter_dialysisCenterId_idx").on(table.dialysisCenterId),
   ]
 )
 

@@ -10,11 +10,15 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Combobox,
+  ComboboxChip,
+  ComboboxChips,
+  ComboboxChipsInput,
   ComboboxContent,
   ComboboxEmpty,
-  ComboboxInput,
   ComboboxItem,
   ComboboxList,
+  ComboboxValue,
+  useComboboxAnchor,
 } from "@/components/ui/combobox"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
@@ -61,7 +65,7 @@ const COPY = defineCopy({
     saved: "Prospect saved",
     newProspect: "New prospect",
     organization: "Organisation or chain",
-    centre: "Centre (optional)",
+    centres: "Centres (optional)",
     searchCentres: "Search centres",
     noCentres: "No centres found.",
     contactName: "Contact name",
@@ -99,7 +103,7 @@ const COPY = defineCopy({
     saved: "Prospek disimpan",
     newProspect: "Prospek baru",
     organization: "Organisasi atau rangkaian",
-    centre: "Pusat (tidak wajib)",
+    centres: "Pusat (tidak wajib)",
     searchCentres: "Cari pusat",
     noCentres: "Tiada pusat dijumpai.",
     contactName: "Nama kenalan",
@@ -132,7 +136,7 @@ function toInput(prospect: SalesProspectRow): ProspectInput {
   return {
     id: prospect.id,
     organization: prospect.organization,
-    dialysisCenterId: prospect.dialysisCenterId,
+    dialysisCenterIds: prospect.centers.map((c) => c.id),
     contactName: prospect.contactName,
     phone: prospect.phone,
     stage: prospect.stage,
@@ -244,7 +248,7 @@ function ProspectRow({
       <div className="min-w-0 flex-1">
         <p className="font-medium">{prospect.organization}</p>
         <p className="truncate text-sm text-muted-foreground">
-          {[prospect.contactName, prospect.phone, prospect.centerName].filter(Boolean).join(" · ") || "-"}
+          {[prospect.contactName, prospect.phone, ...prospect.centers.map((c) => c.name)].filter(Boolean).join(" · ") || "-"}
         </p>
         {(prospect.stage === "lost" && prospect.lostReason) || prospect.notes ? (
           <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
@@ -306,11 +310,8 @@ function ProspectForm({
     notes: prospect?.notes ?? "",
     nextFollowUpOn: prospect?.nextFollowUpAt ? toMytDay(prospect.nextFollowUpAt.getTime()) : "",
   }))
-  const [center, setCenter] = useState<CenterOption | null>(
-    prospect?.dialysisCenterId
-      ? { id: prospect.dialysisCenterId, name: prospect.centerName ?? "" }
-      : null
-  )
+  const [centerIds, setCenterIds] = useState(() => prospect?.centers.map((c) => c.id) ?? [])
+  const centersAnchor = useComboboxAnchor()
   const saveMutation = useSaveProspect(() => {
     toast.success(t.saved)
     onDone()
@@ -337,7 +338,7 @@ function ProspectForm({
             saveMutation.mutate({
               id: prospect?.id,
               organization: form.organization,
-              dialysisCenterId: center?.id ?? null,
+              dialysisCenterIds: centerIds,
               contactName: form.contactName,
               phone: form.phone,
               stage: form.stage,
@@ -359,16 +360,33 @@ function ProspectForm({
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor="prospect-center">{t.centre}</FieldLabel>
+            <FieldLabel htmlFor="prospect-center">{t.centres}</FieldLabel>
             <Combobox
+              multiple
               items={centerOptions}
-              value={center}
-              onValueChange={setCenter}
+              value={centerOptions.filter((c) => centerIds.includes(c.id))}
+              onValueChange={(items: CenterOption[]) => setCenterIds(items.map((c) => c.id))}
               itemToStringLabel={(item: CenterOption) => item.name}
               isItemEqualToValue={(item: CenterOption, value: CenterOption) => item.id === value.id}
             >
-              <ComboboxInput id="prospect-center" placeholder={t.searchCentres} showClear />
-              <ComboboxContent>
+              <ComboboxChips ref={centersAnchor}>
+                <ComboboxValue>
+                  {(selected: CenterOption[]) => (
+                    <>
+                      {selected.map((item) => (
+                        <ComboboxChip key={item.id} className="max-w-full">
+                          <span className="truncate">{item.name}</span>
+                        </ComboboxChip>
+                      ))}
+                      <ComboboxChipsInput
+                        id="prospect-center"
+                        placeholder={selected.length ? undefined : t.searchCentres}
+                      />
+                    </>
+                  )}
+                </ComboboxValue>
+              </ComboboxChips>
+              <ComboboxContent anchor={centersAnchor}>
                 <ComboboxEmpty>{t.noCentres}</ComboboxEmpty>
                 <ComboboxList>
                   {(item: CenterOption) => (

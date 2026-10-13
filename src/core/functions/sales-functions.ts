@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start"
 import { z } from "zod"
 import { desc, eq } from "drizzle-orm"
 import { db } from "@/db/connection"
-import { dialysisCenter, salesProspect } from "@/db/schema"
+import { dialysisCenter, salesProspect, salesProspectCenter } from "@/db/schema"
 import { SALES_STAGES } from "@/lib/sales"
 import { ensureAdminDatabaseSchema } from "@/db/ensure-schema"
 import { authMiddleware } from "@/lib/middleware"
@@ -14,16 +14,24 @@ export const getSalesProspects = createServerFn({ method: "GET" })
     await requireSuperadmin(context.session.user.id)
     await ensureAdminDatabaseSchema()
 
-    const rows = await db
-      .select({
-        prospect: salesProspect,
-        centerName: dialysisCenter.dialysisCenterName,
-      })
-      .from(salesProspect)
-      .leftJoin(dialysisCenter, eq(salesProspect.dialysisCenterId, dialysisCenter.id))
-      .orderBy(desc(salesProspect.updatedAt))
+    const [prospects, links] = await Promise.all([
+      db.select().from(salesProspect).orderBy(desc(salesProspect.updatedAt)),
+      db
+        .select({
+          prospectId: salesProspectCenter.prospectId,
+          id: dialysisCenter.id,
+          name: dialysisCenter.dialysisCenterName,
+        })
+        .from(salesProspectCenter)
+        .innerJoin(dialysisCenter, eq(salesProspectCenter.dialysisCenterId, dialysisCenter.id)),
+    ])
 
-    return rows.map((row) => ({ ...row.prospect, centerName: row.centerName }))
+    return prospects.map(({ dialysisCenterId: _, ...prospect }) => ({
+      ...prospect,
+      centers: links
+        .filter((link) => link.prospectId === prospect.id)
+        .map(({ id, name }) => ({ id, name })),
+    }))
   })
 
 export type SalesProspectRow = Awaited<ReturnType<typeof getSalesProspects>>[number]
@@ -36,7 +44,7 @@ const optionalText = z
 const SaveSalesProspectSchema = z.object({
   id: z.string().min(1).optional(),
   organization: z.string().trim().min(1),
-  dialysisCenterId: z.string().min(1).nullable(),
+  dialysisCenterIds: z.array(z.string().min(1)),
   contactName: optionalText,
   phone: optionalText,
   stage: z.enum(SALES_STAGES),
@@ -60,7 +68,8 @@ export const saveSalesProspect = createServerFn({ method: "POST" })
     await requireSuperadmin(userId)
     await ensureAdminDatabaseSchema()
 
-    const { id, ...fields } = data
+    const { id, dialysisCenterIds, ...fields } = data
+    const prospectId = id ?? crypto.randomUUID()
     const [existing] = id
       ? await db.select().from(salesProspect).where(eq(salesProspect.id, id)).limit(1)
       : []
@@ -80,11 +89,18 @@ export const saveSalesProspect = createServerFn({ method: "POST" })
         .where(eq(salesProspect.id, existing.id))
     } else {
       await db.insert(salesProspect).values({
-        id: crypto.randomUUID(),
+        id: prospectId,
         ...fields,
         ...reachedAt,
         createdBy: userId,
       })
+    }
+
+    await db.delete(salesProspectCenter).where(eq(salesProspectCenter.prospectId, prospectId))
+    if (dialysisCenterIds.length > 0) {
+      await db.insert(salesProspectCenter).values(
+        [...new Set(dialysisCenterIds)].map((dialysisCenterId) => ({ prospectId, dialysisCenterId }))
+      )
     }
 
     return { success: true }
