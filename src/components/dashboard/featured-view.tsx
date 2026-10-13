@@ -4,6 +4,7 @@ import { toast } from "sonner"
 import {
   createFeaturedSlot,
   endFeaturedSlot,
+  type CompanyRow,
   type FeaturedSlotRow,
 } from "@/core/functions/featured-slot-functions"
 import { getStates } from "@/core/functions/center-functions"
@@ -39,7 +40,9 @@ import { toMytDay } from "@/lib/analytics"
 import { citiesForState, isCenterInTown } from "@/lib/cities"
 import { addYear, endOfMytDay, startOfMytDay, toMytDayInput } from "@/lib/plan"
 import { defineCopy, useCopy } from "@/lib/i18n"
-import { centersQuery, featuredSlotsQuery } from "./queries"
+import { centersQuery, companiesQuery, featuredSlotsQuery } from "./queries"
+
+const ALL = "all"
 
 type SlotStatus = "active" | "upcoming" | "expired"
 
@@ -55,6 +58,8 @@ const COPY = defineCopy({
     cancelled: "Slot cancelled",
     ended: "Slot ended",
     endFailed: "Failed to end slot",
+    brand: "Brand",
+    allBrands: "All brands",
     state: "State",
     town: "Town",
     cancel: "Cancel",
@@ -91,6 +96,8 @@ const COPY = defineCopy({
     cancelled: "Slot dibatalkan",
     ended: "Slot ditamatkan",
     endFailed: "Gagal menamatkan slot",
+    brand: "Jenama",
+    allBrands: "Semua jenama",
     state: "Negeri",
     town: "Bandar",
     cancel: "Batal",
@@ -127,15 +134,30 @@ function slotStatus(slot: FeaturedSlotRow, now: number): SlotStatus {
 export function FeaturedView() {
   const t = useCopy(COPY)
   const { data: slots = [], isLoading } = useQuery(featuredSlotsQuery)
+  const { data: companies = [] } = useQuery(companiesQuery)
+  const [brandId, setBrandId] = useState(ALL)
+  const slotBrands = companies.filter((company) =>
+    slots.some((slot) => slot.companyId === company.id)
+  )
+  const visibleSlots =
+    brandId === ALL ? slots : slots.filter((slot) => slot.companyId === brandId)
   const now = Date.now()
   const groups = (["active", "upcoming", "expired"] as const).map((status) => ({
     status,
-    slots: slots.filter((slot) => slotStatus(slot, now) === status),
+    slots: visibleSlots.filter((slot) => slotStatus(slot, now) === status),
   }))
 
   return (
     <div className="space-y-4">
       <CreateSlotCard />
+      {slotBrands.length > 0 && (
+        <BrandSelect
+          value={brandId}
+          onValueChange={setBrandId}
+          companies={slotBrands}
+          className="w-full md:w-64"
+        />
+      )}
       {isLoading ? (
         <p className="rounded-lg border p-8 text-center text-muted-foreground">{t.loading}</p>
       ) : (
@@ -144,6 +166,38 @@ export function FeaturedView() {
         ))
       )}
     </div>
+  )
+}
+
+function BrandSelect({
+  id,
+  value,
+  onValueChange,
+  companies,
+  className,
+}: {
+  id?: string
+  value: string
+  onValueChange: (value: string) => void
+  companies: CompanyRow[]
+  className: string
+}) {
+  const t = useCopy(COPY)
+
+  return (
+    <Select value={value} onValueChange={onValueChange}>
+      <SelectTrigger id={id} aria-label={t.brand} className={className}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value={ALL}>{t.allBrands}</SelectItem>
+        {companies.map((company) => (
+          <SelectItem key={company.id} value={company.id}>
+            {company.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   )
 }
 
@@ -228,6 +282,8 @@ function CreateSlotCard() {
   const queryClient = useQueryClient()
   const { data: centers = [] } = useQuery(centersQuery)
   const { data: states = [] } = useQuery({ queryKey: ["states"], queryFn: () => getStates() })
+  const { data: companies = [] } = useQuery(companiesQuery)
+  const [brandId, setBrandId] = useState(ALL)
   const today = toMytDay(Date.now())
   const [stateId, setStateId] = useState("")
   const [town, setTown] = useState("")
@@ -235,9 +291,16 @@ function CreateSlotCard() {
   const [startsOn, setStartsOn] = useState(today)
   const [endsOn, setEndsOn] = useState(addYear(today))
 
-  const inState = centers.filter((center) => center.stateId === stateId)
+  const branded = brandId !== ALL
+  const pool = branded ? centers.filter((center) => center.companyId === brandId) : centers
+  const stateOptions = branded
+    ? states.filter((state) => pool.some((center) => center.stateId === state.id))
+    : states
+  const inState = pool.filter((center) => center.stateId === stateId)
   const stateName = states.find((state) => state.id === stateId)?.name ?? ""
-  const towns = citiesForState(stateName)
+  const towns = citiesForState(stateName).filter(
+    (name) => !branded || inState.some((center) => isCenterInTown(center, name))
+  )
   const candidates = inState.filter((center) => town && isCenterInTown(center, town))
 
   const createMutation = useMutation({
@@ -277,6 +340,21 @@ function CreateSlotCard() {
           }}
         >
           <Field>
+            <FieldLabel htmlFor="slot-brand">{t.brand}</FieldLabel>
+            <BrandSelect
+              id="slot-brand"
+              value={brandId}
+              onValueChange={(value) => {
+                setBrandId(value)
+                setStateId("")
+                setTown("")
+                setCenterId("")
+              }}
+              companies={companies}
+              className="w-full"
+            />
+          </Field>
+          <Field>
             <FieldLabel htmlFor="slot-state">{t.state}</FieldLabel>
             <Select
               value={stateId}
@@ -290,7 +368,7 @@ function CreateSlotCard() {
                 <SelectValue placeholder={t.selectState} />
               </SelectTrigger>
               <SelectContent>
-                {states.map((state) => (
+                {stateOptions.map((state) => (
                   <SelectItem key={state.id} value={state.id}>
                     {state.name}
                   </SelectItem>

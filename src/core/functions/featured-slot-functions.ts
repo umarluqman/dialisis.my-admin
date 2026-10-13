@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start"
 import { z } from "zod"
 import { and, desc, eq, gt, lt, sql } from "drizzle-orm"
 import { db } from "@/db/connection"
-import { dialysisCenter, featuredSlot, state } from "@/db/schema"
+import { company, dialysisCenter, featuredSlot, state } from "@/db/schema"
 import { authMiddleware } from "@/lib/middleware"
 import { toDbDate } from "@/lib/analytics"
 import { citiesForState, isCenterInTown } from "@/lib/cities"
@@ -22,6 +22,7 @@ export const getFeaturedSlots = createServerFn({ method: "GET" })
         town: featuredSlot.town,
         centerId: featuredSlot.dialysisCenterId,
         centerName: dialysisCenter.dialysisCenterName,
+        companyId: dialysisCenter.companyId,
         startsAt: featuredSlot.startsAt,
         endsAt: featuredSlot.endsAt,
       })
@@ -32,6 +33,19 @@ export const getFeaturedSlots = createServerFn({ method: "GET" })
   })
 
 export type FeaturedSlotRow = Awaited<ReturnType<typeof getFeaturedSlots>>[number]
+
+export const getCompanies = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .handler(async ({ context }) => {
+    await requireSuperadmin(context.session.user.id)
+
+    return await db
+      .select({ id: company.id, name: company.name })
+      .from(company)
+      .orderBy(company.name)
+  })
+
+export type CompanyRow = Awaited<ReturnType<typeof getCompanies>>[number]
 
 const CreateFeaturedSlotSchema = z.object({
   stateId: z.string().min(1),

@@ -4,7 +4,10 @@ import {
   getCurrentUserRole,
 } from "@/core/functions/center-functions"
 import { getAllCenters } from "@/core/functions/invitation-functions"
-import { getFeaturedSlots } from "@/core/functions/featured-slot-functions"
+import {
+  getCompanies,
+  getFeaturedSlots,
+} from "@/core/functions/featured-slot-functions"
 import { getSalesProspects } from "@/core/functions/sales-functions"
 import {
   getFollowUpLeads,
@@ -43,6 +46,11 @@ export const followUpLeadsQuery = queryOptions({
 export const featuredSlotsQuery = queryOptions({
   queryKey: ["featuredSlots"],
   queryFn: () => getFeaturedSlots(),
+})
+
+export const companiesQuery = queryOptions({
+  queryKey: ["companies"],
+  queryFn: () => getCompanies(),
 })
 
 export const salesProspectsQuery = queryOptions({
