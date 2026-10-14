@@ -5,6 +5,8 @@ export type PublicCenterRevalidationInput = {
   town?: string | null
   oldStateName?: string | null
   oldTown?: string | null
+  companySlug?: string | null
+  oldCompanySlug?: string | null
 }
 
 type PublicSiteRevalidationResult =

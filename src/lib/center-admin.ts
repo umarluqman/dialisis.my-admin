@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm"
 import { db } from "@/db/connection"
-import { dialysisCenter, state } from "@/db/schema"
+import { company, dialysisCenter, state } from "@/db/schema"
 import {
   revalidatePublicCenterQuietly,
   type PublicCenterRevalidationInput,
@@ -11,6 +11,7 @@ type PublicCenterSnapshot = {
   slug: string
   town: string
   stateName: string | null
+  companySlug: string | null
 }
 
 export async function getPublicCenterSnapshot(
@@ -21,9 +22,11 @@ export async function getPublicCenterSnapshot(
       slug: dialysisCenter.slug,
       town: dialysisCenter.town,
       stateName: state.name,
+      companySlug: company.slug,
     })
     .from(dialysisCenter)
     .leftJoin(state, eq(dialysisCenter.stateId, state.id))
+    .leftJoin(company, eq(dialysisCenter.companyId, company.id))
     .where(eq(dialysisCenter.id, id))
     .limit(1)
 
@@ -48,6 +51,8 @@ export async function revalidatePublicCenterChange({
     town: after?.town,
     oldStateName: before?.stateName,
     oldTown: before?.town,
+    companySlug: after?.companySlug,
+    oldCompanySlug: before?.companySlug,
   }
 
   await revalidatePublicCenterQuietly(payload)
