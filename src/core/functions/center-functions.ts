@@ -189,16 +189,9 @@ export const getCenterById = createServerFn({ method: "GET" })
       throw new Error("Center not found")
     }
 
-    const images = await db
-      .select()
-      .from(centerImage)
-      .where(eq(centerImage.dialysisCenterId, data.id))
-      .orderBy(centerImage.displayOrder)
-
     return {
       ...center.DialysisCenter,
       state: center.State,
-      images,
     }
   })
 

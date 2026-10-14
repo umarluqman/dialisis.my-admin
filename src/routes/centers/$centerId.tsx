@@ -1,6 +1,7 @@
 import { LocaleToggle } from "@/components/locale-toggle"
 import { PreviewBanner } from "@/components/dashboard/preview-banner"
 import { ProBadge } from "@/components/pro-badge"
+import { CenterImagesSection } from "@/components/center-images-section"
 import { createFileRoute, Link, useBlocker, useNavigate } from "@tanstack/react-router"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useState, useEffect, useRef } from "react"
@@ -1331,6 +1332,7 @@ function CenterEditPage() {
             {(userRole?.role === "superadmin" || (center && isPlanActive(center))) && (
               <IntakeLeadsSection centerId={centerId} />
             )}
+            <CenterImagesSection centerId={centerId} locked={proLocked} />
             <OperatingHoursSection centerId={centerId} />
             <FaqSection centerId={centerId} locked={proLocked} />
           </>

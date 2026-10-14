@@ -131,13 +131,8 @@ export const centerImage = sqliteTable(
     dialysisCenterId: text("dialysisCenterId")
       .notNull()
       .references(() => dialysisCenter.id, { onDelete: "cascade" }),
-    createdAt: integer("createdAt", { mode: "timestamp_ms" })
-      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-      .notNull(),
-    updatedAt: integer("updatedAt", { mode: "timestamp_ms" })
-      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-      .$onUpdate(() => new Date())
-      .notNull(),
+    createdAt: text("createdAt").default(sql`CURRENT_TIMESTAMP`).notNull(),
+    updatedAt: text("updatedAt").notNull(),
   },
   (table) => [
     index("centerImage_dialysisCenterId_idx").on(table.dialysisCenterId),
