@@ -14,6 +14,10 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
+import {
+  LeadOutreachDrafts,
+  type LeadOutreach,
+} from "@/components/lead-outreach-drafts"
 import type { LeadQuality } from "@/lib/lead-quality"
 import {
   dateFormats,
@@ -144,6 +148,7 @@ export type IntakeLeadListItem = {
   createdAt: Date | string | number
   quality: LeadQuality
   duplicateKey: string
+  outreach?: LeadOutreach | null
 }
 
 const PAGE_SIZE = 25
@@ -452,6 +457,7 @@ export function IntakeLeadDetails({ lead }: { lead: IntakeLeadListItem }) {
           {notificationIssue}
         </p>
       )}
+      {lead.outreach && <LeadOutreachDrafts lead={lead} outreach={lead.outreach} />}
     </>
   )
 }

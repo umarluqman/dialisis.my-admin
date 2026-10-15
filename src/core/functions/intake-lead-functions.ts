@@ -72,7 +72,12 @@ export const getIntakeLeads = createServerFn({ method: "GET" })
     if (scope === null) return []
 
     const rows = await db
-      .select(leadFields)
+      .select({
+        ...leadFields,
+        accessToken: intakeLead.accessToken,
+        centerEmail: dialysisCenter.email,
+        centerPhoneNumber: dialysisCenter.phoneNumber,
+      })
       .from(intakeLead)
       .innerJoin(
         dialysisCenter,
@@ -86,7 +91,11 @@ export const getIntakeLeads = createServerFn({ method: "GET" })
       )
       .orderBy(desc(intakeLead.createdAt))
       .limit(data.limit)
-    return rows.map((lead) => withQuality(lead, now))
+    return rows.map(({ accessToken, centerEmail, centerPhoneNumber, ...lead }) => ({
+      ...withQuality(lead, now),
+      outreach:
+        scope === undefined ? { accessToken, centerEmail, centerPhoneNumber } : null,
+    }))
   })
 
 export const getFollowUpLeads = createServerFn({ method: "GET" })
