@@ -79,6 +79,8 @@ Kami terima permohonan daripada pesakit baharu yang ingin mendapatkan rawatan di
 Butiran penuh pesakit (termasuk keputusan makmal, jika ada) boleh dilihat di pautan ini:
 ${link}
 
+Pesakit mungkin turut memohon di pusat lain, jadi mohon hubungi pesakit secepat mungkin (sebaiknya hari ini) supaya tidak terlepas.
+
 Pautan aktif 7 hari. Tiada sebarang caj, kami cuma ingin bantu pesakit dapat tempat. Mohon pihak tuan/puan hubungi pesakit terus. Di halaman itu juga ada butang untuk kemas kini status (dihubungi / temujanji disahkan).
 
 Terima kasih 🙏`
@@ -97,6 +99,8 @@ Kami telah menerima permohonan daripada seorang pesakit baharu yang ingin mendap
 Butiran penuh pesakit (nama, nombor telefon, alamat dan keputusan makmal, jika ada) boleh dilihat di pautan selamat berikut:
 ${link}
 
+Pesakit mungkin turut memohon di beberapa pusat lain, jadi kami sarankan tuan/puan menghubungi pesakit secepat mungkin, sebaiknya pada hari ini, supaya tidak terlepas peluang.
+
 Pautan ini aktif selama 7 hari sahaja. Di halaman yang sama, tuan/puan boleh menghubungi pesakit terus melalui panggilan atau WhatsApp, dan mengemas kini status susulan.
 
 Perkhidmatan ini percuma, tiada sebarang caj. Kami hanya ingin membantu pesakit mendapatkan tempat rawatan secepat mungkin.
@@ -109,7 +113,7 @@ Salam hormat,
 Umar Luqman
 Dialisis.my`
 
-  const patientWhatsapp = `Assalamualaikum / Salam sejahtera ${lead.fullName}. Ini Umar dari Dialisis.my.
+  const patientWhatsapp = `Assalamualaikum / Salam sejahtera tuan/puan. Ini Umar dari Dialisis.my.
 
 Permohonan anda telah kami hantar kepada ${center}. Pihak pusat akan menghubungi anda terus untuk sahkan slot dan dokumen yang diperlukan.
 
