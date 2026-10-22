@@ -15,6 +15,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
@@ -32,6 +33,7 @@ const COPY = defineCopy({
     markOutcome: "Mark outcome",
     updateFailed: "Failed to update lead",
     marked: (status: string) => `Marked as ${status}`,
+    resetStatus: "Undo, set back to New",
   },
   ms: {
     backToDashboard: "Kembali ke papan pemuka",
@@ -39,6 +41,7 @@ const COPY = defineCopy({
     markOutcome: "Tandakan hasil",
     updateFailed: "Gagal mengemas kini permohonan",
     marked: (status: string) => `Ditandakan sebagai ${status}`,
+    resetStatus: "Batal, tetapkan semula ke Baru",
   },
 })
 
@@ -62,7 +65,7 @@ function LeadPage() {
   const lead = leads[0]
 
   const mutation = useMutation({
-    mutationFn: (status: (typeof OUTCOMES)[number]) =>
+    mutationFn: (status: (typeof OUTCOMES)[number] | "new") =>
       updateIntakeLeadStatus({ data: { ids: [leadId], status } }),
     onError: (err) => toast.error(err.message || t.updateFailed),
     onSuccess: (_data, status) => toast.success(t.marked(statusLabels[status])),
@@ -113,6 +116,14 @@ function LeadPage() {
                       {statusLabels[status]}
                     </DropdownMenuItem>
                   ))}
+                  {toLeadStatus(lead.status) !== "new" && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onSelect={() => mutation.mutate("new")}>
+                        {t.resetStatus}
+                      </DropdownMenuItem>
+                    </>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>

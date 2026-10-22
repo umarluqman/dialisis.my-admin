@@ -144,7 +144,7 @@ export const updateIntakeLeadStatus = createServerFn({ method: "POST" })
   .inputValidator(
     z.object({
       ids: z.array(z.string().min(1)).min(1).max(50),
-      status: z.enum(["contacted", "booked", "rejected"]),
+      status: z.enum(["new", "contacted", "booked", "rejected"]),
     })
   )
   .handler(async ({ context, data }) => {
@@ -168,6 +168,10 @@ export const updateIntakeLeadStatus = createServerFn({ method: "POST" })
     const now = toDbDate(Date.now())
     await db
       .update(intakeLead)
-      .set({ status: data.status, statusUpdatedAt: now, updatedAt: sql`${now}` })
+      .set({
+        status: data.status,
+        statusUpdatedAt: data.status === "new" ? null : now,
+        updatedAt: sql`${now}`,
+      })
       .where(inArray(intakeLead.id, data.ids))
   })
