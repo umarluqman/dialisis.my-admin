@@ -6,9 +6,19 @@ import {
   uniqueIndex,
   primaryKey,
   real,
+  customType,
 } from "drizzle-orm/sqlite-core"
 import { sql, relations } from "drizzle-orm"
 import { SALES_STAGES } from "@/lib/sales"
+
+// Prisma (dialisis.my) stores DateTime as ISO text; integers sort below text in SQLite,
+// so mixed formats break max/order by. Reads legacy integer rows too.
+const isoDate = customType<{ data: Date; driverData: string | number }>({
+  dataType: () => "text",
+  toDriver: (value) => value.toISOString(),
+  fromDriver: (value) => new Date(value),
+})
+const ISO_NOW = sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`
 
 export const user = sqliteTable("user", {
   id: text("id").primaryKey(),
@@ -71,9 +81,7 @@ export const dialysisCenter = sqliteTable(
     phoneNumber: text("phoneNumber").default("").notNull(),
     whatsappPicName: text("whatsappPicName"),
     whatsappPicPhoneNumber: text("whatsappPicPhoneNumber"),
-    whatsappPicOptedInAt: integer("whatsappPicOptedInAt", {
-      mode: "timestamp_ms",
-    }),
+    whatsappPicOptedInAt: isoDate("whatsappPicOptedInAt"),
     whatsappTemplateName: text("whatsappTemplateName"),
     whatsappTemplateLanguageCode: text("whatsappTemplateLanguageCode").default(
       "ms"
@@ -103,11 +111,9 @@ export const dialysisCenter = sqliteTable(
       .notNull(),
     sessionSlots: text("sessionSlots"),
     languages: text("languages"),
-    createdAt: integer("createdAt", { mode: "timestamp_ms" })
-      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-      .notNull(),
-    updatedAt: integer("updatedAt", { mode: "timestamp_ms" })
-      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+    createdAt: isoDate("createdAt").default(ISO_NOW).notNull(),
+    updatedAt: isoDate("updatedAt")
+      .default(ISO_NOW)
       .$onUpdate(() => new Date())
       .notNull(),
   },
