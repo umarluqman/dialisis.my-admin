@@ -561,9 +561,14 @@ function CenterEditPage() {
   const [formData, setFormData] = useState<CenterFormData>(EMPTY_CENTER_FORM_DATA)
   const [savedData, setSavedData] = useState<CenterFormData>(EMPTY_CENTER_FORM_DATA)
   const allowLeaveRef = useRef(false)
+  const isDirtyRef = useRef(false)
+  const loadedCenterIdRef = useRef<string | null>(null)
+  const justSavedRef = useRef(false)
   const [isResolvingMap, setIsResolvingMap] = useState(false)
   const [mapMessage, setMapMessage] = useState("")
 
+  // Refetches (window focus, plan changes) return a new `center` object, so only
+  // overwrite the form when it has no unsaved edits.
   useEffect(() => {
     if (center) {
       const phoneNumbers = mergePhoneNumbers(center.phoneNumber, center.tel)
@@ -594,8 +599,16 @@ function CenterEditPage() {
         whatsappPicName: center.whatsappPicName ?? "",
         whatsappPicPhoneNumber: center.whatsappPicPhoneNumber ?? "",
       }
-      setFormData(data)
+      if (
+        !isDirtyRef.current ||
+        justSavedRef.current ||
+        loadedCenterIdRef.current !== center.id
+      ) {
+        setFormData(data)
+      }
       setSavedData(data)
+      loadedCenterIdRef.current = center.id
+      justSavedRef.current = false
     }
   }, [center])
 
@@ -604,6 +617,7 @@ function CenterEditPage() {
       updateCenter({ data: { id: centerId, data } }),
     onSuccess: () => {
       toast.success(t.centerUpdated)
+      justSavedRef.current = true
       queryClient.invalidateQueries({ queryKey: ["center", centerId] })
       queryClient.invalidateQueries({ queryKey: ["centers"] })
       queryClient.invalidateQueries({ queryKey: ["allCenters"] })
@@ -644,6 +658,7 @@ function CenterEditPage() {
 
   const isSaving = updateMutation.isPending || createMutation.isPending
   const isDirty = JSON.stringify(formData) !== JSON.stringify(savedData)
+  isDirtyRef.current = isDirty
   const isSubmitDisabled = !isDirty || isSaving || isResolvingMap
 
   useBlocker({
