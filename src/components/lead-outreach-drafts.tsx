@@ -25,6 +25,7 @@ const COPY = defineCopy({
     copied: "Copied",
     openWhatsapp: "Open WhatsApp",
     openEmail: "Open email",
+    noWhatsapp: "Landline only, not on WhatsApp. Call or email instead.",
   },
   ms: {
     tempLink: (date: string) => `Pautan permohonan (pusat, tamat ${date})`,
@@ -40,6 +41,7 @@ const COPY = defineCopy({
     copied: "Disalin",
     openWhatsapp: "Buka WhatsApp",
     openEmail: "Buka e-mel",
+    noWhatsapp: "Telefon rumah/pejabat sahaja, tiada WhatsApp. Hubungi melalui panggilan atau e-mel.",
   },
 })
 
@@ -50,11 +52,13 @@ const msDateFormatter = new Intl.DateTimeFormat("ms-MY", {
   year: "numeric",
 })
 
+// WhatsApp needs a Malaysian mobile (01x); landlines (03, 04, ...) are skipped.
 function whatsappUrl(phone: string, text: string) {
-  const digits = phone.split(/[,;/\n]/)[0].replace(/\D/g, "")
-  if (!digits) return undefined
-  const number = digits.startsWith("0") ? `6${digits}` : digits
-  return `https://wa.me/${number}?text=${encodeURIComponent(text)}`
+  const number = phone
+    .split(/[,;/\n]/)
+    .map((part) => part.replace(/\D/g, "").replace(/^0/, "60"))
+    .find((digits) => digits.startsWith("601"))
+  return number && `https://wa.me/${number}?text=${encodeURIComponent(text)}`
 }
 
 export function LeadOutreachDrafts({
@@ -140,6 +144,7 @@ Jika tiada sebarang maklum balas dalam 2 hari bekerja, sila maklumkan kepada kam
         text={centerWhatsapp}
         href={whatsappUrl(outreach.centerPhoneNumber, centerWhatsapp)}
         hrefLabel={t.openWhatsapp}
+        missingNote={t.noWhatsapp}
       />
       <Draft label={t.centerEmailSubject} text={emailSubject} />
       <Draft
@@ -157,6 +162,7 @@ Jika tiada sebarang maklum balas dalam 2 hari bekerja, sila maklumkan kepada kam
         text={patientWhatsapp}
         href={whatsappUrl(lead.phoneNumber, patientWhatsapp)}
         hrefLabel={t.openWhatsapp}
+        missingNote={t.noWhatsapp}
       />
     </section>
   )
@@ -167,11 +173,13 @@ function Draft({
   text,
   href,
   hrefLabel,
+  missingNote,
 }: {
   label: string
   text: string
   href?: string
   hrefLabel?: string
+  missingNote?: string
 }) {
   const t = useCopy(COPY)
   const [copied, setCopied] = useState(false)
@@ -186,6 +194,12 @@ function Draft({
     <div className="space-y-1.5">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs text-muted-foreground">{label}</span>
+        {!href && missingNote && (
+          <span className="flex items-center gap-1 text-xs text-destructive">
+            <AlertCircle className="size-3.5 shrink-0" />
+            {missingNote}
+          </span>
+        )}
         <div className="ml-auto flex gap-2">
           {href && (
             <Button asChild size="sm" variant="ghost">
