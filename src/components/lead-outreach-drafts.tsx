@@ -12,6 +12,9 @@ export type LeadOutreach = {
 
 const COPY = defineCopy({
   en: {
+    tempLink: (date: string) => `Lead link (center, expires ${date})`,
+    permanentLink: "Permanent link (admin, update status)",
+    open: "Open",
     title: "Forward manually",
     linkExpired: "The lead link has expired. The center won't be able to open it.",
     centerWhatsapp: "Center – WhatsApp",
@@ -24,6 +27,9 @@ const COPY = defineCopy({
     openEmail: "Open email",
   },
   ms: {
+    tempLink: (date: string) => `Pautan permohonan (pusat, tamat ${date})`,
+    permanentLink: "Pautan kekal (admin, kemas kini status)",
+    open: "Buka",
     title: "Hantar secara manual",
     linkExpired: "Pautan permohonan telah tamat tempoh. Pusat tidak dapat membukanya.",
     centerWhatsapp: "Pusat – WhatsApp",
@@ -60,6 +66,7 @@ export function LeadOutreachDrafts({
 }) {
   const t = useCopy(COPY)
   const link = `https://dialisis.my/intake-leads/${outreach.accessToken}`
+  const permanentLink = `https://admin.dialisis.my/leads/${lead.id}`
   const expired = new Date(lead.accessExpiresAt).getTime() < Date.now()
   const date = msDateFormatter.format(new Date(lead.preferredDate))
   const session = lead.preferredSession.toLowerCase()
@@ -110,13 +117,20 @@ Jika tiada sebarang maklum balas dalam 2 hari bekerja, sila maklumkan kepada kam
 
   return (
     <section className="mt-4 space-y-3 border-t pt-4">
-      <h3 className="font-medium">{t.title}</h3>
+      <Draft
+        label={t.tempLink(msDateFormatter.format(new Date(lead.accessExpiresAt)))}
+        text={link}
+        href={link}
+        hrefLabel={t.open}
+      />
       {expired && (
         <p className="flex items-center gap-2 text-destructive">
           <AlertCircle className="size-4 shrink-0" />
           {t.linkExpired}
         </p>
       )}
+      <Draft label={t.permanentLink} text={permanentLink} href={permanentLink} hrefLabel={t.open} />
+      <h3 className="pt-2 font-medium">{t.title}</h3>
       <Draft
         label={t.centerWhatsapp}
         text={centerWhatsapp}

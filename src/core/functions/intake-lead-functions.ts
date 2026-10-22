@@ -18,6 +18,7 @@ async function picLeadScope(userId: string, now: number) {
 }
 
 const GetIntakeLeadsSchema = z.object({
+  id: z.string().optional(),
   centerId: z.string().optional(),
   limit: z.number().int().min(1).max(100).default(50),
 })
@@ -85,6 +86,7 @@ export const getIntakeLeads = createServerFn({ method: "GET" })
       )
       .where(
         and(
+          data.id ? eq(intakeLead.id, data.id) : undefined,
           data.centerId ? eq(intakeLead.dialysisCenterId, data.centerId) : undefined,
           scope
         )
