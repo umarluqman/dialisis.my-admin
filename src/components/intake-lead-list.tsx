@@ -67,6 +67,8 @@ const COPY = defineCopy({
     address: "Address",
     picViewed: "PIC viewed",
     notYet: "Not yet",
+    centerEmail: "Center email",
+    notSet: "Not set",
     notes: "Notes",
     linkExpires: (date: string) => `Lead link expires ${date}`,
     noEmail: "No PIC or center email is configured, so no email was sent.",
@@ -101,6 +103,8 @@ const COPY = defineCopy({
     address: "Alamat",
     picViewed: "Dilihat PIC",
     notYet: "Belum",
+    centerEmail: "E-mel pusat",
+    notSet: "Tiada",
     notes: "Catatan",
     linkExpires: (date: string) => `Pautan permohonan tamat tempoh pada ${date}`,
     noEmail:
@@ -423,6 +427,20 @@ export function IntakeLeadDetails({ lead }: { lead: IntakeLeadListItem }) {
         <Detail label={t.picViewed}>
           {lead.viewedAt ? formatDateTime(lead.viewedAt, locale) : t.notYet}
         </Detail>
+        {lead.outreach && (
+          <Detail label={t.centerEmail} className="sm:col-span-3">
+            {lead.outreach.centerEmail ? (
+              <a
+                className="break-all underline-offset-4 hover:underline"
+                href={`mailto:${lead.outreach.centerEmail}`}
+              >
+                {lead.outreach.centerEmail}
+              </a>
+            ) : (
+              t.notSet
+            )}
+          </Detail>
+        )}
         {lead.additionalNotes && (
           <Detail label={t.notes} className="sm:col-span-3">
             {lead.additionalNotes}
