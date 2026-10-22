@@ -27,6 +27,7 @@ const leadFields = {
   id: intakeLead.id,
   dialysisCenterId: intakeLead.dialysisCenterId,
   centerName: dialysisCenter.dialysisCenterName,
+  centerSlug: dialysisCenter.slug,
   centerTown: dialysisCenter.town,
   fullName: intakeLead.fullName,
   myKadNumber: intakeLead.myKadNumber,

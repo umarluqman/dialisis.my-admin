@@ -73,6 +73,7 @@ const COPY = defineCopy({
       existing: "Existing patient",
       transit: "Transit patient",
     } as Record<string, string>,
+    centerPage: "Center page",
     centerEmail: "Center email",
     notSet: "Not set",
     notes: "Notes",
@@ -115,6 +116,7 @@ const COPY = defineCopy({
       existing: "Pesakit sedia ada",
       transit: "Pesakit tumpang",
     } as Record<string, string>,
+    centerPage: "Halaman pusat",
     centerEmail: "E-mel pusat",
     notSet: "Tiada",
     notes: "Catatan",
@@ -145,6 +147,7 @@ export type IntakeLeadListItem = {
   id: string
   dialysisCenterId: string
   centerName: string
+  centerSlug: string
   centerTown: string | null
   fullName: string
   myKadNumber: string
@@ -473,7 +476,19 @@ export function IntakeLeadDetails({ lead }: { lead: IntakeLeadListItem }) {
           </span>
         )}
         <span>{t.linkExpires(formatDateTime(lead.accessExpiresAt, locale))}</span>
-        <Button asChild size="sm" className="ml-auto">
+        {lead.centerSlug && (
+          <Button asChild size="sm" variant="outline" className="ml-auto">
+            <a
+              href={`https://www.dialisis.my/${lead.centerSlug}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {t.centerPage}
+              <ExternalLink />
+            </a>
+          </Button>
+        )}
+        <Button asChild size="sm" className={cn(!lead.centerSlug && "ml-auto")}>
           <a href={lead.whatsappHandoffUrl} target="_blank" rel="noreferrer">
             <MessageCircle />
             WhatsApp
