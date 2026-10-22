@@ -207,6 +207,7 @@ export const intakeLead = sqliteTable(
     preferredDate: integer("preferredDate", { mode: "timestamp_ms" }).notNull(),
     preferredSession: text("preferredSession").notNull(),
     phoneNumber: text("phoneNumber").notNull(),
+    patientType: text("patientType"),
     labResultUrl: text("labResultUrl"),
     labResultS3Key: text("labResultS3Key"),
     labResultOriginalName: text("labResultOriginalName"),

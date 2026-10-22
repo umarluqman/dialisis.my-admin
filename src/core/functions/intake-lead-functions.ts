@@ -34,6 +34,7 @@ const leadFields = {
   preferredDate: intakeLead.preferredDate,
   preferredSession: intakeLead.preferredSession,
   phoneNumber: intakeLead.phoneNumber,
+  patientType: intakeLead.patientType,
   labResultOriginalName: intakeLead.labResultOriginalName,
   additionalNotes: intakeLead.additionalNotes,
   whatsappHandoffUrl: intakeLead.whatsappHandoffUrl,

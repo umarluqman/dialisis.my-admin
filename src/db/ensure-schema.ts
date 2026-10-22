@@ -202,6 +202,7 @@ async function ensureSchema() {
       foreign key (dialysisCenterId) references DialysisCenter(id) on delete cascade
     )
   `)
+  await addColumnIfMissing("IntakeLead", "patientType", "patientType text")
   await client.execute("create unique index if not exists IntakeLead_accessToken_unique on IntakeLead (accessToken)")
   await client.execute("create index if not exists IntakeLead_dialysisCenterId_idx on IntakeLead (dialysisCenterId)")
   await client.execute("create index if not exists IntakeLead_createdAt_idx on IntakeLead (createdAt)")

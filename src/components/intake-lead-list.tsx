@@ -67,6 +67,12 @@ const COPY = defineCopy({
     address: "Address",
     picViewed: "PIC viewed",
     notYet: "Not yet",
+    patientType: "Patient type",
+    patientTypes: {
+      new: "New patient",
+      existing: "Existing patient",
+      transit: "Transit patient",
+    } as Record<string, string>,
     centerEmail: "Center email",
     notSet: "Not set",
     notes: "Notes",
@@ -103,6 +109,12 @@ const COPY = defineCopy({
     address: "Alamat",
     picViewed: "Dilihat PIC",
     notYet: "Belum",
+    patientType: "Jenis pesakit",
+    patientTypes: {
+      new: "Pesakit baru",
+      existing: "Pesakit sedia ada",
+      transit: "Pesakit tumpang",
+    } as Record<string, string>,
     centerEmail: "E-mel pusat",
     notSet: "Tiada",
     notes: "Catatan",
@@ -140,6 +152,7 @@ export type IntakeLeadListItem = {
   preferredDate: Date | string | number
   preferredSession: string
   phoneNumber: string
+  patientType: string | null
   labResultOriginalName: string | null
   additionalNotes: string | null
   whatsappHandoffUrl: string
@@ -420,6 +433,11 @@ export function IntakeLeadDetails({ lead }: { lead: IntakeLeadListItem }) {
           </a>
         </Detail>
         <Detail label="MyKad">{lead.myKadNumber}</Detail>
+        <Detail label={t.patientType}>
+          {lead.patientType
+            ? t.patientTypes[lead.patientType] ?? lead.patientType
+            : t.notSet}
+        </Detail>
         <Detail label={t.submitted}>{formatDateTime(lead.createdAt, locale)}</Detail>
         <Detail label={t.address} className="sm:col-span-2">
           {lead.homeAddress}
@@ -428,7 +446,7 @@ export function IntakeLeadDetails({ lead }: { lead: IntakeLeadListItem }) {
           {lead.viewedAt ? formatDateTime(lead.viewedAt, locale) : t.notYet}
         </Detail>
         {lead.outreach && (
-          <Detail label={t.centerEmail} className="sm:col-span-3">
+          <Detail label={t.centerEmail} className="sm:col-span-2">
             {lead.outreach.centerEmail ? (
               <a
                 className="break-all underline-offset-4 hover:underline"
