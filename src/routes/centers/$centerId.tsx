@@ -900,10 +900,11 @@ function CenterEditPage() {
                 </Field>
                 <Field className="md:max-w-[calc(50%-0.5rem)]">
                   <FieldLabel htmlFor="sector">{t.sector}</FieldLabel>
+                  {/* Radix Select fires "" for a value set after mount; no option is empty, so ignore it. */}
                   <Select
                     value={formData.sector}
                     onValueChange={(value) =>
-                      setFormData((prev) => ({ ...prev, sector: value }))
+                      value && setFormData((prev) => ({ ...prev, sector: value }))
                     }
                   >
                     <SelectTrigger id="sector" className="w-full">
@@ -1133,7 +1134,6 @@ function CenterEditPage() {
                     <FieldLabel htmlFor="stateId">{t.state}</FieldLabel>
                     <Select
                       value={formData.stateId}
-                      // Radix fires "" when the value arrives before the state options load.
                       onValueChange={(value) =>
                         value &&
                         setFormData((prev) =>
