@@ -1133,7 +1133,9 @@ function CenterEditPage() {
                     <FieldLabel htmlFor="stateId">{t.state}</FieldLabel>
                     <Select
                       value={formData.stateId}
+                      // Radix fires "" when the value arrives before the state options load.
                       onValueChange={(value) =>
+                        value &&
                         setFormData((prev) =>
                           prev.stateId === value ? prev : { ...prev, stateId: value, townId: "" }
                         )
