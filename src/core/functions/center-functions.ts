@@ -23,6 +23,7 @@ import {
 import { getAccess, isProCenter, requireCenterAccess } from "@/lib/access"
 import { toDbDate } from "@/lib/analytics"
 import { EARLYBIRD_SEATS } from "@/lib/plan"
+import { requireTownInState } from "@/lib/towns"
 
 function slugifyCenterName(name: string) {
   return name
@@ -206,7 +207,7 @@ const CreateCenterSchema = z.object({
   googleMapsEmbed: z.string().default(""),
   longitude: z.number().nullable().optional(),
   latitude: z.number().nullable().optional(),
-  town: z.string(),
+  townId: z.string().trim().min(1),
   stateId: z.string().trim().min(1),
   drInCharge: z.string(),
   drInChargeTel: z.string(),
@@ -236,6 +237,7 @@ export const createCenter = createServerFn({ method: "POST" })
 
     const id = crypto.randomUUID()
     const slug = await generateUniqueCenterSlug(data.dialysisCenterName)
+    const { name: townName } = await requireTownInState(data.townId, data.stateId)
 
     await db.insert(dialysisCenter).values({
       id,
@@ -253,7 +255,8 @@ export const createCenter = createServerFn({ method: "POST" })
       googleMapsEmbed: data.googleMapsEmbed.trim() || null,
       longitude: data.longitude ?? null,
       latitude: data.latitude ?? null,
-      town: data.town,
+      town: townName,
+      townId: data.townId,
       stateId: data.stateId,
       drInCharge: data.drInCharge,
       drInChargeTel: data.drInChargeTel,
@@ -298,7 +301,7 @@ const UpdateCenterSchema = z.object({
     description: z.string().nullable().optional(),
     benefits: z.string().nullable().optional(),
     highlights: z.string().nullable().optional(),
-    town: z.string().optional(),
+    townId: z.string().min(1).optional(),
     stateId: z.string().min(1).optional(),
     sessionSlots: z.string().nullable().optional(),
     perkesoPanel: z.boolean().optional(),
@@ -319,13 +322,27 @@ export const updateCenter = createServerFn({ method: "POST" })
     const updateData: Partial<typeof dialysisCenter.$inferInsert> = {
       ...data.data,
     }
+    const isPic = (await getAccess(context.session.user.id)).role === "pic"
     if (
       (updateData.benefits !== undefined || updateData.highlights !== undefined) &&
-      (await getAccess(context.session.user.id)).role === "pic" &&
+      isPic &&
       !(await isProCenter(data.id))
     ) {
       delete updateData.benefits
       delete updateData.highlights
+    }
+    // Featured slots are sold per town, so only superadmins move a centre.
+    if (isPic) {
+      delete updateData.townId
+      delete updateData.stateId
+    }
+    if (updateData.stateId !== undefined && updateData.townId === undefined) {
+      throw new Error("Pick a town in the new state")
+    }
+    if (updateData.townId) {
+      const stateId = updateData.stateId ?? beforeCenter?.stateId
+      if (!stateId) throw new Error("Center not found")
+      updateData.town = (await requireTownInState(updateData.townId, stateId)).name
     }
     if (data.data.dialysisCenterName !== undefined) updateData.title = data.data.dialysisCenterName
     if (data.data.phoneNumber !== undefined) updateData.tel = data.data.phoneNumber

@@ -29,7 +29,6 @@ import { ensureAdminDatabaseSchema } from "@/db/ensure-schema"
 import { authMiddleware } from "@/lib/middleware"
 import { getAccess } from "@/lib/access"
 import { requireSuperadmin } from "@/lib/center-admin"
-import { isCenterInTown, townForCenter } from "@/lib/cities"
 import {
   clampRange,
   CONTACT_KINDS,
@@ -358,11 +357,6 @@ export const getAnalyticsOverview = createServerFn({ method: "GET" })
     }
   })
 
-function inTownSql(town: string) {
-  const pattern = `%${town}%`
-  return sql`(${dialysisCenter.town} like ${pattern} or ${dialysisCenter.address} like ${pattern} or ${dialysisCenter.addressWithUnit} like ${pattern})`
-}
-
 export const getTownComparison = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .inputValidator(
@@ -373,22 +367,15 @@ export const getTownComparison = createServerFn({ method: "GET" })
     const { range, views: viewRange } = getTrackedRanges(data)
 
     const [center] = await db
-      .select({
-        stateId: dialysisCenter.stateId,
-        stateName: state.name,
-        town: dialysisCenter.town,
-        address: dialysisCenter.address,
-        addressWithUnit: dialysisCenter.addressWithUnit,
-      })
+      .select({ town: dialysisCenter.town, townId: dialysisCenter.townId })
       .from(dialysisCenter)
-      .leftJoin(state, eq(dialysisCenter.stateId, state.id))
       .where(eq(dialysisCenter.id, data.centerId))
       .limit(1)
 
-    const town = center && townForCenter(center, center.stateName ?? "")
-    if (!town) return null
+    if (!center?.townId) return null
+    const { town } = center
 
-    const inTown = and(eq(dialysisCenter.stateId, center.stateId), inTownSql(town))
+    const inTown = eq(dialysisCenter.townId, center.townId)
 
     const [[{ centers }], rows] = await Promise.all([
       db.select({ centers: count() }).from(dialysisCenter).where(inTown),
@@ -439,12 +426,7 @@ export const getLocationDemand = createServerFn({ method: "GET" })
         .where(and(gte(locationView.createdAt, since), lt(locationView.createdAt, until)))
         .groupBy(locationView.stateId, locationView.town),
       db
-        .select({
-          stateId: dialysisCenter.stateId,
-          town: dialysisCenter.town,
-          address: dialysisCenter.address,
-          addressWithUnit: dialysisCenter.addressWithUnit,
-        })
+        .select({ stateId: dialysisCenter.stateId, town: dialysisCenter.town })
         .from(dialysisCenter),
       db
         .select({ stateId: featuredSlot.stateId, town: featuredSlot.town })
@@ -452,7 +434,8 @@ export const getLocationDemand = createServerFn({ method: "GET" })
         .where(and(lte(featuredSlot.startsAt, now), gt(featuredSlot.endsAt, now))),
     ])
 
-    const slotKey = (stateId: string, town: string) => `${stateId}|${town.toLowerCase()}`
+    // LocationView, FeaturedSlot and DialysisCenter all store the canonical Town name.
+    const slotKey = (stateId: string, town: string) => `${stateId}|${town}`
     const takenSlots = new Set(slots.map((slot) => slotKey(slot.stateId, slot.town)))
 
     return views
@@ -460,7 +443,7 @@ export const getLocationDemand = createServerFn({ method: "GET" })
         ...row,
         centers: centers.filter(
           (center) =>
-            center.stateId === row.stateId && (!row.town || isCenterInTown(center, row.town))
+            center.stateId === row.stateId && (!row.town || center.town === row.town)
         ).length,
         slotTaken: takenSlots.has(slotKey(row.stateId, row.town)),
       }))

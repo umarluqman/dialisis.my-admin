@@ -2,6 +2,7 @@ import { LocaleToggle } from "@/components/locale-toggle"
 import { PreviewBanner } from "@/components/dashboard/preview-banner"
 import { ProBadge } from "@/components/pro-badge"
 import { CenterImagesSection } from "@/components/center-images-section"
+import { TownCombobox } from "@/components/town-combobox"
 import { createFileRoute, Link, useBlocker, useNavigate } from "@tanstack/react-router"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useState, useEffect, useRef } from "react"
@@ -126,6 +127,7 @@ const COPY = defineCopy({
     mapLinkUnresolved: "Could not resolve this Google Maps link.",
     enterCenterName: "Please enter a center name",
     selectState: "Please select a state",
+    selectTown: "Please select a town",
     mapCoordinatesNotFound: "Could not find map coordinates",
     pasteMapHint: "Paste a Google Maps share link, embed, or coordinates.",
     loading: "Loading...",
@@ -181,7 +183,6 @@ const COPY = defineCopy({
       `Waze coordinates: ${lat}, ${lng}`,
     wazeHint: "Paste a Google Maps link to auto-fill Waze coordinates.",
     town: "Town",
-    townPlaceholder: "Enter town",
     state: "State",
     statePlaceholder: "Select a state",
     staffInfo: "Staff Information",
@@ -300,6 +301,7 @@ const COPY = defineCopy({
     mapLinkUnresolved: "Tidak dapat memproses pautan Google Maps ini.",
     enterCenterName: "Sila masukkan nama pusat",
     selectState: "Sila pilih negeri",
+    selectTown: "Sila pilih bandar",
     mapCoordinatesNotFound: "Koordinat peta tidak ditemui",
     pasteMapHint: "Tampal pautan kongsi, benaman atau koordinat Google Maps.",
     loading: "Memuatkan...",
@@ -355,7 +357,6 @@ const COPY = defineCopy({
       `Koordinat Waze: ${lat}, ${lng}`,
     wazeHint: "Tampal pautan Google Maps untuk mengisi koordinat Waze secara automatik.",
     town: "Bandar",
-    townPlaceholder: "Masukkan bandar",
     state: "Negeri",
     statePlaceholder: "Pilih negeri",
     staffInfo: "Maklumat kakitangan",
@@ -470,7 +471,7 @@ type CenterFormData = {
   googleMapsEmbed: string
   longitude: number | null
   latitude: number | null
-  town: string
+  townId: string
   stateId: string
   drInCharge: string
   drInChargeTel: string
@@ -498,7 +499,7 @@ const EMPTY_CENTER_FORM_DATA: CenterFormData = {
   googleMapsEmbed: "",
   longitude: null,
   latitude: null,
-  town: "",
+  townId: "",
   stateId: "",
   drInCharge: "",
   drInChargeTel: "",
@@ -583,7 +584,7 @@ function CenterEditPage() {
         googleMapsEmbed: center.googleMapsEmbed ?? "",
         longitude: center.longitude ?? null,
         latitude: center.latitude ?? null,
-        town: center.town ?? "",
+        townId: center.townId ?? "",
         stateId: center.stateId ?? "",
         drInCharge: center.drInCharge ?? "",
         drInChargeTel: center.drInChargeTel ?? "",
@@ -723,6 +724,11 @@ function CenterEditPage() {
 
     if (!formData.stateId) {
       toast.error(t.selectState)
+      return
+    }
+
+    if (!formData.townId) {
+      toast.error(t.selectTown)
       return
     }
 
@@ -1114,12 +1120,13 @@ function CenterEditPage() {
                 <div className="grid gap-4 md:grid-cols-2">
                   <Field>
                     <FieldLabel htmlFor="town">{t.town}</FieldLabel>
-                    <Input
+                    <TownCombobox
                       id="town"
-                      name="town"
-                      value={formData.town}
-                      onChange={handleInputChange}
-                      placeholder={t.townPlaceholder}
+                      stateId={formData.stateId}
+                      value={formData.townId}
+                      onChange={(townId) => setFormData((prev) => ({ ...prev, townId }))}
+                      canCreate={userRole?.role === "superadmin"}
+                      disabled={userRole?.role === "pic"}
                     />
                   </Field>
                   <Field>
@@ -1127,8 +1134,11 @@ function CenterEditPage() {
                     <Select
                       value={formData.stateId}
                       onValueChange={(value) =>
-                        setFormData((prev) => ({ ...prev, stateId: value }))
+                        setFormData((prev) =>
+                          prev.stateId === value ? prev : { ...prev, stateId: value, townId: "" }
+                        )
                       }
+                      disabled={userRole?.role === "pic"}
                     >
                       <SelectTrigger id="stateId" className="w-full">
                         <SelectValue placeholder={t.statePlaceholder} />

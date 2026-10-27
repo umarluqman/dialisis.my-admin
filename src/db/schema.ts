@@ -58,6 +58,28 @@ export const company = sqliteTable("Company", {
   slug: text("slug").notNull().unique(),
 })
 
+// Owned by dialisis.my (Prisma). redirectFrom: comma-separated old slugs that 301 here.
+export const town = sqliteTable(
+  "Town",
+  {
+    id: text("id").primaryKey(),
+    stateId: text("stateId")
+      .notNull()
+      .references(() => state.id),
+    name: text("name").notNull(),
+    slug: text("slug").notNull(),
+    latitude: real("latitude"),
+    longitude: real("longitude"),
+    redirectFrom: text("redirectFrom").default("").notNull(),
+    createdAt: isoDate("createdAt").default(ISO_NOW).notNull(),
+    updatedAt: isoDate("updatedAt")
+      .default(ISO_NOW)
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [uniqueIndex("Town_stateId_slug_key").on(table.stateId, table.slug)]
+)
+
 export const dialysisCenter = sqliteTable(
   "DialysisCenter",
   {
@@ -98,6 +120,7 @@ export const dialysisCenter = sqliteTable(
       .notNull()
       .references(() => state.id),
     town: text("town").default("").notNull(),
+    townId: text("townId").references(() => town.id, { onDelete: "set null" }),
     companyId: text("companyId").references(() => company.id, {
       onDelete: "set null",
     }),
@@ -120,6 +143,7 @@ export const dialysisCenter = sqliteTable(
   (table) => [
     index("dialysisCenter_sector_idx").on(table.sector),
     index("dialysisCenter_town_idx").on(table.town),
+    index("DialysisCenter_townId_idx").on(table.townId),
     index("DialysisCenter_plan_idx").on(table.plan),
   ]
 )
@@ -453,6 +477,7 @@ export const featuredSlot = sqliteTable(
       .notNull()
       .references(() => state.id),
     town: text("town").default("").notNull(),
+    townId: text("townId").references(() => town.id, { onDelete: "set null" }),
     dialysisCenterId: text("dialysisCenterId")
       .notNull()
       .references(() => dialysisCenter.id, { onDelete: "cascade" }),
@@ -469,6 +494,7 @@ export const featuredSlot = sqliteTable(
       table.endsAt
     ),
     index("FeaturedSlot_dialysisCenterId_idx").on(table.dialysisCenterId),
+    index("FeaturedSlot_townId_idx").on(table.townId),
   ]
 )
 
@@ -567,6 +593,13 @@ export const stateRelations = relations(state, ({ many }) => ({
   dialysisCenters: many(dialysisCenter),
   locationViews: many(locationView),
   featuredSlots: many(featuredSlot),
+  towns: many(town),
+}))
+
+export const townRelations = relations(town, ({ one, many }) => ({
+  state: one(state, { fields: [town.stateId], references: [state.id] }),
+  dialysisCenters: many(dialysisCenter),
+  featuredSlots: many(featuredSlot),
 }))
 
 export const dialysisCenterRelations = relations(
@@ -583,6 +616,10 @@ export const dialysisCenterRelations = relations(
     intakeLeads: many(intakeLead),
     featuredEvents: many(featuredEvent),
     featuredSlots: many(featuredSlot),
+    town: one(town, {
+      fields: [dialysisCenter.townId],
+      references: [town.id],
+    }),
   })
 )
 
@@ -654,6 +691,7 @@ export const featuredSlotRelations = relations(featuredSlot, ({ one }) => ({
     fields: [featuredSlot.dialysisCenterId],
     references: [dialysisCenter.id],
   }),
+  town: one(town, { fields: [featuredSlot.townId], references: [town.id] }),
 }))
 
 export const salesProspectRelations = relations(salesProspect, ({ one }) => ({

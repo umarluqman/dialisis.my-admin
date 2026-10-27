@@ -1,11 +1,11 @@
 import { createServerFn } from "@tanstack/react-start"
 import { z } from "zod"
-import { and, desc, eq, gt, lt, sql } from "drizzle-orm"
+import { and, desc, eq, gt, lt } from "drizzle-orm"
 import { db } from "@/db/connection"
 import { company, dialysisCenter, featuredSlot, state } from "@/db/schema"
 import { authMiddleware } from "@/lib/middleware"
 import { toDbDate } from "@/lib/analytics"
-import { citiesForState, isCenterInTown } from "@/lib/cities"
+import { requireTownInState } from "@/lib/towns"
 import { revalidateCenter, requireSuperadmin } from "@/lib/center-admin"
 
 export const getFeaturedSlots = createServerFn({ method: "GET" })
@@ -49,7 +49,7 @@ export type CompanyRow = Awaited<ReturnType<typeof getCompanies>>[number]
 
 const CreateFeaturedSlotSchema = z.object({
   stateId: z.string().min(1),
-  town: z.string(),
+  townId: z.string().min(1),
   dialysisCenterId: z.string().min(1),
   startsAt: z.iso.datetime({ offset: true }),
   endsAt: z.iso.datetime({ offset: true }),
@@ -61,13 +61,10 @@ export const createFeaturedSlot = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     await requireSuperadmin(context.session.user.id)
 
-    const town = data.town.trim()
+    const { name: town } = await requireTownInState(data.townId, data.stateId)
     const startsAt = toDbDate(Math.max(Date.parse(data.startsAt), Date.now()))
     const endsAt = toDbDate(Date.parse(data.endsAt))
 
-    if (!town) {
-      throw new Error("Pick a town")
-    }
     if (endsAt <= startsAt) {
       throw new Error("End date must be after the start date")
     }
@@ -75,25 +72,18 @@ export const createFeaturedSlot = createServerFn({ method: "POST" })
     const [center] = await db
       .select({
         stateId: dialysisCenter.stateId,
-        stateName: state.name,
-        town: dialysisCenter.town,
-        address: dialysisCenter.address,
-        addressWithUnit: dialysisCenter.addressWithUnit,
+        townId: dialysisCenter.townId,
         plan: dialysisCenter.plan,
         planEndsAt: dialysisCenter.planEndsAt,
       })
       .from(dialysisCenter)
-      .leftJoin(state, eq(dialysisCenter.stateId, state.id))
       .where(eq(dialysisCenter.id, data.dialysisCenterId))
       .limit(1)
 
     if (!center) {
       throw new Error("Center not found")
     }
-    if (town && !citiesForState(center.stateName ?? "").includes(town)) {
-      throw new Error("Pick a town from the public town pages")
-    }
-    if (center.stateId !== data.stateId || (town && !isCenterInTown(center, town))) {
+    if (center.stateId !== data.stateId || center.townId !== data.townId) {
       throw new Error("Center is not in this location")
     }
 
@@ -104,8 +94,7 @@ export const createFeaturedSlot = createServerFn({ method: "POST" })
       .where(
         and(
           eq(featuredSlot.scope, "town"),
-          eq(featuredSlot.stateId, data.stateId),
-          sql`lower(${featuredSlot.town}) = lower(${town})`,
+          eq(featuredSlot.townId, data.townId),
           lt(featuredSlot.startsAt, endsAt),
           gt(featuredSlot.endsAt, startsAt)
         )
@@ -121,6 +110,7 @@ export const createFeaturedSlot = createServerFn({ method: "POST" })
       scope: "town",
       stateId: data.stateId,
       town,
+      townId: data.townId,
       dialysisCenterId: data.dialysisCenterId,
       startsAt,
       endsAt,

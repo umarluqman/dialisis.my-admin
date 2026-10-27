@@ -10,6 +10,7 @@ import { getAccess } from "@/lib/access"
 type PublicCenterSnapshot = {
   slug: string
   town: string
+  stateId: string
   stateName: string | null
   companySlug: string | null
 }
@@ -21,6 +22,7 @@ export async function getPublicCenterSnapshot(
     .select({
       slug: dialysisCenter.slug,
       town: dialysisCenter.town,
+      stateId: dialysisCenter.stateId,
       stateName: state.name,
       companySlug: company.slug,
     })

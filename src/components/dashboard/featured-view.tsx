@@ -37,10 +37,10 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { toMytDay } from "@/lib/analytics"
-import { citiesForState, isCenterInTown } from "@/lib/cities"
 import { addYear, endOfMytDay, startOfMytDay, toMytDayInput } from "@/lib/plan"
 import { defineCopy, useCopy } from "@/lib/i18n"
 import { centersQuery, companiesQuery, featuredSlotsQuery } from "./queries"
+import { useTowns } from "@/components/town-combobox"
 
 const ALL = "all"
 
@@ -283,10 +283,11 @@ function CreateSlotCard() {
   const { data: centers = [] } = useQuery(centersQuery)
   const { data: states = [] } = useQuery({ queryKey: ["states"], queryFn: () => getStates() })
   const { data: companies = [] } = useQuery(companiesQuery)
+  const { data: allTowns = [] } = useTowns()
   const [brandId, setBrandId] = useState(ALL)
   const today = toMytDay(Date.now())
   const [stateId, setStateId] = useState("")
-  const [town, setTown] = useState("")
+  const [townId, setTownId] = useState("")
   const [centerId, setCenterId] = useState("")
   const [startsOn, setStartsOn] = useState(today)
   const [endsOn, setEndsOn] = useState(addYear(today))
@@ -297,18 +298,19 @@ function CreateSlotCard() {
     ? states.filter((state) => pool.some((center) => center.stateId === state.id))
     : states
   const inState = pool.filter((center) => center.stateId === stateId)
-  const stateName = states.find((state) => state.id === stateId)?.name ?? ""
-  const towns = citiesForState(stateName).filter(
-    (name) => !branded || inState.some((center) => isCenterInTown(center, name))
+  const towns = allTowns.filter(
+    (town) =>
+      town.stateId === stateId &&
+      (!branded || inState.some((center) => center.townId === town.id))
   )
-  const candidates = inState.filter((center) => town && isCenterInTown(center, town))
+  const candidates = inState.filter((center) => townId && center.townId === townId)
 
   const createMutation = useMutation({
     mutationFn: () =>
       createFeaturedSlot({
         data: {
           stateId,
-          town,
+          townId,
           dialysisCenterId: centerId,
           startsAt: startOfMytDay(startsOn),
           endsAt: endOfMytDay(endsOn),
@@ -323,7 +325,7 @@ function CreateSlotCard() {
     onError: (error) => toast.error(error.message || t.createFailed),
   })
 
-  const canSubmit = stateId && town && centerId && startsOn && endsOn
+  const canSubmit = stateId && townId && centerId && startsOn && endsOn
 
   return (
     <Card>
@@ -347,7 +349,7 @@ function CreateSlotCard() {
               onValueChange={(value) => {
                 setBrandId(value)
                 setStateId("")
-                setTown("")
+                setTownId("")
                 setCenterId("")
               }}
               companies={companies}
@@ -360,7 +362,7 @@ function CreateSlotCard() {
               value={stateId}
               onValueChange={(value) => {
                 setStateId(value)
-                setTown("")
+                setTownId("")
                 setCenterId("")
               }}
             >
@@ -379,10 +381,10 @@ function CreateSlotCard() {
           <Field>
             <FieldLabel htmlFor="slot-town">{t.town}</FieldLabel>
               <Select
-                value={town}
+                value={townId}
                 disabled={towns.length === 0}
                 onValueChange={(value) => {
-                  setTown(value)
+                  setTownId(value)
                   setCenterId("")
                 }}
               >
@@ -390,9 +392,9 @@ function CreateSlotCard() {
                   <SelectValue placeholder={t.selectTown} />
                 </SelectTrigger>
                 <SelectContent>
-                  {towns.map((name) => (
-                    <SelectItem key={name} value={name}>
-                      {name}
+                  {towns.map((town) => (
+                    <SelectItem key={town.id} value={town.id}>
+                      {town.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -402,7 +404,7 @@ function CreateSlotCard() {
             <FieldLabel htmlFor="slot-center">{t.centre}</FieldLabel>
             <Select
               value={centerId}
-              disabled={candidates.length === 0 || !town}
+              disabled={candidates.length === 0 || !townId}
               onValueChange={setCenterId}
             >
               <SelectTrigger id="slot-center" className="w-full">
