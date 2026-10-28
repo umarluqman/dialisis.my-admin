@@ -17,12 +17,12 @@ export const Route = createFileRoute("/auth/forgot-password")({
 const COPY = defineCopy({
   en: {
     title: "Password Removed",
-    description: "Dialisis Admin now uses one-time email codes.",
+    description: "DialisisMY Admin now uses one-time email codes.",
     signIn: "Sign in with email code",
   },
   ms: {
     title: "Kata laluan dibuang",
-    description: "Dialisis Admin kini menggunakan kod e-mel sekali guna.",
+    description: "DialisisMY Admin kini menggunakan kod e-mel sekali guna.",
     signIn: "Log masuk dengan kod e-mel",
   },
 })

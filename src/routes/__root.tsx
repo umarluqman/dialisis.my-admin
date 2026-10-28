@@ -31,7 +31,7 @@ export const Route = createRootRouteWithContext<{
         content: "width=device-width, initial-scale=1",
       },
       ...seo({
-        title: "Dialisis Admin",
+        title: "DialisisMY Admin",
         description: "Manage dialysis centers and their details.",
       }),
     ],

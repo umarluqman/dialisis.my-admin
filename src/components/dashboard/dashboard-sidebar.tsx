@@ -106,7 +106,7 @@ export function DashboardSidebar({
       <SidebarHeader className="px-4 py-3">
         <div className="flex items-center gap-2">
           <img src="/favicon.svg" alt="" className="size-6" />
-          <span className="font-semibold">Dialisis Admin</span>
+          <span className="font-semibold">DialisisMY Admin</span>
         </div>
       </SidebarHeader>
       <SidebarContent>

@@ -278,7 +278,7 @@ export function createOtpEmail(otp: string) {
       <body style="margin:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#0f172a;">
         <div style="max-width:520px;margin:0 auto;padding:24px;">
           <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:24px;text-align:center;">
-            <p style="margin:0 0 8px;color:#0f766e;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;">Dialisis Admin</p>
+            <p style="margin:0 0 8px;color:#0f766e;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;">DialisisMY Admin</p>
             <h1 style="margin:0 0 12px;font-size:22px;">Your sign-in code</h1>
             <p style="margin:0 0 20px;color:#64748b;">Use this code to sign in. It expires in 5 minutes.</p>
             <div style="display:inline-block;font-size:32px;letter-spacing:8px;font-weight:800;background:#f1f5f9;border-radius:10px;padding:14px 18px;">${otp}</div>
@@ -291,6 +291,6 @@ export function createOtpEmail(otp: string) {
 
   return {
     html,
-    text: `Your Dialisis Admin sign-in code is ${otp}. It expires in 5 minutes.`,
+    text: `Your DialisisMY Admin sign-in code is ${otp}. It expires in 5 minutes.`,
   }
 }

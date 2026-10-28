@@ -137,7 +137,7 @@ export const auth = betterAuth({
         const message = createOtpEmail(otp);
         await sendEmail({
           to: email,
-          subject: "Your Dialisis Admin sign-in code",
+          subject: "Your DialisisMY Admin sign-in code",
           html: message.html,
           text: message.text,
         });

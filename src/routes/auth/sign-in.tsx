@@ -118,6 +118,7 @@ function SignInPage() {
       <LocaleToggle className="absolute top-4 right-4" />
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
+          <img src="/favicon.svg" alt="DialisisMY Admin" className="mb-3 size-10" />
           <CardTitle className="text-2xl font-bold">{t.title}</CardTitle>
           <CardDescription>
             {codeSent ? t.enterCode : t.enterEmail}
