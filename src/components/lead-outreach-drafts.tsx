@@ -76,7 +76,7 @@ export function LeadOutreachDrafts({
   const session = lead.preferredSession.toLowerCase()
   const center = lead.centerName
 
-  const centerWhatsapp = `Assalamualaikum / Salam sejahtera. Saya Umar dari Dialisis.my, direktori pusat dialisis di Malaysia.
+  const centerWhatsapp = `Assalamualaikum / Salam sejahtera. Saya Luqman dari Dialisis.my, direktori pusat dialisis di Malaysia.
 
 Kami terima permohonan daripada pesakit baharu yang ingin mendapatkan rawatan di ${center}, sesi pilihan ${session}, mulai ${date}.
 
@@ -93,7 +93,7 @@ Terima kasih 🙏`
 
   const emailBody = `Assalamualaikum / Salam sejahtera tuan/puan,
 
-Saya Umar dari Dialisis.my, direktori pusat dialisis di Malaysia (https://dialisis.my).
+Saya Luqman dari Dialisis.my, direktori pusat dialisis di Malaysia (https://dialisis.my).
 
 Kami telah menerima permohonan daripada seorang pesakit baharu yang ingin mendapatkan rawatan dialisis di ${center}:
 
@@ -114,10 +114,10 @@ Jika ada sebarang pertanyaan, sila balas e-mel ini. Saya juga ingin mengemas kin
 Terima kasih.
 
 Salam hormat,
-Umar Luqman
+Luqman
 Dialisis.my`
 
-  const patientWhatsapp = `Assalamualaikum / Salam sejahtera tuan/puan. Ini Umar dari Dialisis.my.
+  const patientWhatsapp = `Assalamualaikum / Salam sejahtera tuan/puan. Ini Luqman dari Dialisis.my.
 
 Permohonan anda telah kami hantar kepada ${center}. Pihak pusat akan menghubungi anda terus untuk sahkan slot dan dokumen yang diperlukan.
 
