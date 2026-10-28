@@ -85,7 +85,7 @@ ${link}
 
 Pesakit mungkin turut memohon di pusat lain, jadi mohon hubungi pesakit secepat mungkin (sebaiknya hari ini) supaya tidak terlepas.
 
-Pautan aktif 7 hari. Tiada sebarang caj, kami cuma ingin bantu pesakit dapat tempat. Mohon pihak tuan/puan hubungi pesakit terus. Di halaman itu juga ada butang untuk kemas kini status (dihubungi / temujanji disahkan).
+Pautan aktif 10 hari. Tiada sebarang caj, kami cuma ingin bantu pesakit dapat tempat. Mohon pihak tuan/puan hubungi pesakit terus. Di halaman itu juga ada butang untuk kemas kini status (dihubungi / temujanji disahkan).
 
 Terima kasih 🙏`
 
@@ -105,7 +105,7 @@ ${link}
 
 Pesakit mungkin turut memohon di beberapa pusat lain, jadi kami sarankan tuan/puan menghubungi pesakit secepat mungkin, sebaiknya pada hari ini, supaya tidak terlepas peluang.
 
-Pautan ini aktif selama 7 hari sahaja. Di halaman yang sama, tuan/puan boleh menghubungi pesakit terus melalui panggilan atau WhatsApp, dan mengemas kini status susulan.
+Pautan ini aktif selama 10 hari sahaja. Di halaman yang sama, tuan/puan boleh menghubungi pesakit terus melalui panggilan atau WhatsApp, dan mengemas kini status susulan.
 
 Perkhidmatan ini percuma, tiada sebarang caj. Kami hanya ingin membantu pesakit mendapatkan tempat rawatan secepat mungkin.
 
