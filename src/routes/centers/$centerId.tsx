@@ -877,7 +877,7 @@ function CenterEditPage() {
           <Card className="overflow-hidden">
             <CardHeader className="gap-2 px-4 py-4 sm:px-6">
               <div className="flex items-center gap-3">
-                <Building2 className="size-5 text-primary" />
+                <Building2 className="size-5 text-foreground" />
                 <div>
                   <CardTitle className="text-base sm:text-lg">{t.basicInfo}</CardTitle>
                   <CardDescription>{t.basicInfoDescription}</CardDescription>
@@ -941,7 +941,7 @@ function CenterEditPage() {
           <Card>
             <CardHeader className="gap-2 px-4 py-4 sm:px-6">
               <div className="flex items-center gap-3">
-                <Phone className="size-5 text-primary" />
+                <Phone className="size-5 text-foreground" />
                 <div>
                   <CardTitle className="text-base sm:text-lg">{t.contactInfo}</CardTitle>
                   <CardDescription>{t.contactInfoDescription}</CardDescription>
@@ -1028,7 +1028,7 @@ function CenterEditPage() {
           <Card>
             <CardHeader className="gap-2 px-4 py-4 sm:px-6">
               <div className="flex items-center gap-3">
-                <MessageCircle className="size-5 text-primary" />
+                <MessageCircle className="size-5 text-foreground" />
                 <div>
                   <CardTitle className="text-base sm:text-lg">{t.leadFollowUp}</CardTitle>
                   <CardDescription>{t.leadFollowUpDescription}</CardDescription>
@@ -1072,7 +1072,7 @@ function CenterEditPage() {
           <Card>
             <CardHeader className="gap-2 px-4 py-4 sm:px-6">
               <div className="flex items-center gap-3">
-                <MapPin className="size-5 text-primary" />
+                <MapPin className="size-5 text-foreground" />
                 <div>
                   <CardTitle className="text-base sm:text-lg">{t.location}</CardTitle>
                   <CardDescription>{t.locationDescription}</CardDescription>
@@ -1162,7 +1162,7 @@ function CenterEditPage() {
           <Card>
             <CardHeader className="gap-2 px-4 py-4 sm:px-6">
               <div className="flex items-center gap-3">
-                <Users className="size-5 text-primary" />
+                <Users className="size-5 text-foreground" />
                 <div>
                   <CardTitle className="text-base sm:text-lg">{t.staffInfo}</CardTitle>
                   <CardDescription>{t.staffInfoDescription}</CardDescription>
@@ -1243,7 +1243,7 @@ function CenterEditPage() {
           <Card>
             <CardHeader className="gap-2 px-4 py-4 sm:px-6">
               <div className="flex items-center gap-3">
-                <Stethoscope className="size-5 text-primary" />
+                <Stethoscope className="size-5 text-foreground" />
                 <div>
                   <CardTitle className="text-base sm:text-lg">{t.facilities}</CardTitle>
                   <CardDescription>{t.facilitiesDescription}</CardDescription>
@@ -1299,7 +1299,7 @@ function CenterEditPage() {
           <Card>
             <CardHeader className="gap-2 px-4 py-4 sm:px-6">
               <div className="flex items-center gap-3">
-                <ListChecks className="size-5 text-primary" />
+                <ListChecks className="size-5 text-foreground" />
                 <div>
                   <CardTitle className="text-base sm:text-lg">{t.listingDetails}</CardTitle>
                   <CardDescription>{t.listingDetailsDescription}</CardDescription>
@@ -1557,7 +1557,7 @@ function PlanSection({ center }: { center: CenterData }) {
     <Card>
       <CardHeader className="px-4 py-4 sm:px-6">
         <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-          <CreditCard className="size-5 text-primary" />
+          <CreditCard className="size-5 text-foreground" />
           {t.plan}
           {active ? (
             <Badge>Pro</Badge>
@@ -1671,7 +1671,7 @@ function IntakeLeadsSection({ centerId }: { centerId: string }) {
     <Card>
       <CardHeader className="px-4 py-4 sm:px-6">
         <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-          <MessageCircle className="size-5 text-primary" />
+          <MessageCircle className="size-5 text-foreground" />
           {t.intakeLeads}
         </CardTitle>
         <CardDescription>
@@ -1747,7 +1747,7 @@ function OperatingHoursSection({ centerId }: { centerId: string }) {
     <Card>
       <CardHeader className="px-4 py-4 sm:px-6">
         <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-          <Clock className="size-5 text-primary" />
+          <Clock className="size-5 text-foreground" />
           {t.operatingHours}
         </CardTitle>
         <CardDescription>
@@ -1878,7 +1878,7 @@ function FaqSection({ centerId, locked }: { centerId: string; locked: boolean })
     <Card>
       <CardHeader className="px-4 py-4 sm:px-6">
         <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-          <FileQuestion className="size-5 text-primary" />
+          <FileQuestion className="size-5 text-foreground" />
           {t.faqs}
           {locked && <ProBadge title={t.proHint} />}
         </CardTitle>

@@ -34,9 +34,9 @@ code {
   --popover-foreground:
     oklch(0.141 0.005 285.823);
   --primary:
-    oklch(0.852 0.199 91.936);
+    #C2EF08;
   --primary-foreground:
-    oklch(0.421 0.095 57.708);
+    #1d2622;
   --secondary:
     oklch(0.967 0.001 286.375);
   --secondary-foreground:
@@ -59,15 +59,15 @@ code {
   --ring:
     oklch(0.705 0.015 286.067);
   --chart-1:
-    oklch(0.905 0.182 98.111);
+    #E3F98A;
   --chart-2:
-    oklch(0.795 0.184 86.047);
+    #C2EF08;
   --chart-3:
-    oklch(0.681 0.162 75.834);
+    #9BC006;
   --chart-4:
-    oklch(0.554 0.135 66.442);
+    #6F8A05;
   --chart-5:
-    oklch(0.476 0.114 61.907);
+    #4A5C04;
   --series-1: #2a78d6;
   --series-2: #eb6834;
   --series-3: #1baf7a;
@@ -78,9 +78,9 @@ code {
   --sidebar-foreground:
     oklch(0.141 0.005 285.823);
   --sidebar-primary:
-    oklch(0.681 0.162 75.834);
+    #C2EF08;
   --sidebar-primary-foreground:
-    oklch(0.987 0.026 102.212);
+    #1d2622;
   --sidebar-accent:
     oklch(0.967 0.001 286.375);
   --sidebar-accent-foreground:
@@ -109,9 +109,9 @@ code {
   --popover-foreground:
     oklch(0.985 0 0);
   --primary:
-    oklch(0.795 0.184 86.047);
+    #C2EF08;
   --primary-foreground:
-    oklch(0.421 0.095 57.708);
+    #1d2622;
   --secondary:
     oklch(0.274 0.006 286.033);
   --secondary-foreground:
@@ -134,15 +134,15 @@ code {
   --ring:
     oklch(0.552 0.016 285.938);
   --chart-1:
-    oklch(0.905 0.182 98.111);
+    #E3F98A;
   --chart-2:
-    oklch(0.795 0.184 86.047);
+    #C2EF08;
   --chart-3:
-    oklch(0.681 0.162 75.834);
+    #9BC006;
   --chart-4:
-    oklch(0.554 0.135 66.442);
+    #6F8A05;
   --chart-5:
-    oklch(0.476 0.114 61.907);
+    #4A5C04;
   --series-1: #3987e5;
   --series-2: #d95926;
   --series-3: #199e70;
@@ -151,9 +151,9 @@ code {
   --sidebar-foreground:
     oklch(0.985 0 0);
   --sidebar-primary:
-    oklch(0.795 0.184 86.047);
+    #C2EF08;
   --sidebar-primary-foreground:
-    oklch(0.987 0.026 102.212);
+    #1d2622;
   --sidebar-accent:
     oklch(0.274 0.006 286.033);
   --sidebar-accent-foreground:

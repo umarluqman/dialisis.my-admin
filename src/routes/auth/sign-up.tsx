@@ -322,7 +322,7 @@ function SignUpPage() {
                 {t.haveAccount}{" "}
                 <Link
                   to="/auth/sign-in"
-                  className="text-primary underline-offset-4 hover:underline"
+                  className="font-medium text-foreground underline underline-offset-4"
                 >
                   {t.signIn}
                 </Link>
