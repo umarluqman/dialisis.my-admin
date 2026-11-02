@@ -29,6 +29,7 @@ import {
 import type { DashboardTab } from "@/routes/dashboard"
 import { defineCopy, useCopy } from "@/lib/i18n"
 import { ProBadge } from "@/components/pro-badge"
+import { UpgradeToProButton } from "@/components/upgrade-to-pro-button"
 import { PreviewPicker } from "./preview-picker"
 
 const NAV_ITEMS = [
@@ -62,13 +63,13 @@ const COPY = defineCopy({
       analytics: "Analitik",
       centers: "Pusat",
       leads: "Permohonan temujanji",
-      "follow-up": "Perlu susulan",
+      "follow-up": "Lead untuk dihubungi",
       featured: "Slot pilihan",
       sales: "Saluran jualan",
       invitations: "Jemputan",
     },
     newLeads: (count: number) => `${count} permohonan baru`,
-    followUp: (count: number) => `${count} permohonan perlu susulan`,
+    followUp: (count: number) => `${count} lead perlu dihubungi`,
     proHint: "Tersedia dengan pelan Pro",
     signOut: "Log keluar",
   },
@@ -79,6 +80,7 @@ type DashboardSidebarProps = {
   user: { name: string; email: string }
   role: "pic" | "superadmin" | undefined
   proLocked: boolean
+  upgradeCenterId: string | undefined
   newLeadCount: number
   followUpCount: number
 }
@@ -88,6 +90,7 @@ export function DashboardSidebar({
   user,
   role,
   proLocked,
+  upgradeCenterId,
   newLeadCount,
   followUpCount,
 }: DashboardSidebarProps) {
@@ -165,6 +168,9 @@ export function DashboardSidebar({
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="border-t">
+        {proLocked && upgradeCenterId && (
+          <UpgradeToProButton centerId={upgradeCenterId} className="w-full" />
+        )}
         <div className="flex items-center gap-2 px-1 py-1">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">

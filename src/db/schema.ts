@@ -418,6 +418,24 @@ export const contactClick = sqliteTable(
   ]
 )
 
+export const proInterest = sqliteTable(
+  "ProInterest",
+  {
+    id: text("id").primaryKey(),
+    dialysisCenterId: text("dialysisCenterId").references(() => dialysisCenter.id, {
+      onDelete: "set null",
+    }),
+    step: text("step", { enum: ["upgrade_click", "pro", "bandar"] }).notNull(),
+    source: text("source", { enum: ["admin", "site"] }).notNull(),
+    name: text("name"),
+    phone: text("phone"),
+    title: text("title"),
+    townId: text("townId").references(() => town.id, { onDelete: "set null" }),
+    createdAt: text("createdAt").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  },
+  (table) => [index("ProInterest_createdAt_idx").on(table.createdAt)]
+)
+
 export const locationView = sqliteTable(
   "LocationView",
   {

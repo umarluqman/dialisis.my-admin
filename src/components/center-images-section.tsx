@@ -9,6 +9,7 @@ import {
   uploadCenterImage,
 } from "@/core/functions/image-functions"
 import { ProBadge } from "@/components/pro-badge"
+import { UpgradeToProButton } from "@/components/upgrade-to-pro-button"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -162,6 +163,7 @@ export function CenterImagesSection({
           {locked && <ProBadge title={t.proHint} />}
         </CardTitle>
         <CardDescription>{locked ? t.proHint : t.imagesDescription}</CardDescription>
+        {locked && <UpgradeToProButton centerId={centerId} className="mt-2 w-fit" />}
       </CardHeader>
       <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
         <fieldset disabled={locked || busy} className="min-w-0 space-y-4">

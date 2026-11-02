@@ -21,6 +21,7 @@ import {
   useComboboxAnchor,
 } from "@/components/ui/combobox"
 import { Field, FieldLabel } from "@/components/ui/field"
+import { ProInterestCard } from "./pro-interest-card"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -178,6 +179,8 @@ export function SalesView() {
           </Card>
         ))}
       </section>
+
+      <ProInterestCard />
 
       <div className="flex flex-wrap items-center gap-2">
         <div role="group" aria-label={t.filterByStage} className="-mx-4 flex flex-1 gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0">

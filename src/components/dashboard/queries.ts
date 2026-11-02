@@ -9,6 +9,7 @@ import {
   getFeaturedSlots,
 } from "@/core/functions/featured-slot-functions"
 import { getSalesProspects } from "@/core/functions/sales-functions"
+import { getProInterest } from "@/core/functions/pro-interest-functions"
 import {
   getFollowUpLeads,
   getIntakeLeads,
@@ -56,4 +57,9 @@ export const companiesQuery = queryOptions({
 export const salesProspectsQuery = queryOptions({
   queryKey: ["salesProspects"],
   queryFn: () => getSalesProspects(),
+})
+
+export const proInterestQuery = queryOptions({
+  queryKey: ["proInterest"],
+  queryFn: () => getProInterest(),
 })

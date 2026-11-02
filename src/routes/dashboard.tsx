@@ -83,7 +83,7 @@ const COPY = defineCopy({
       analytics: "Analitik",
       centers: "Pusat dialisis",
       leads: "Permohonan temujanji",
-      "follow-up": "Perlu susulan",
+      "follow-up": "Lead untuk dihubungi",
       featured: "Slot pilihan",
       sales: "Saluran jualan",
       invitations: "Jemputan",
@@ -160,6 +160,7 @@ function DashboardPage() {
         }
         role={userRole?.role}
         proLocked={proLocked}
+        upgradeCenterId={centers?.[0]?.id}
         newLeadCount={newLeadCount}
         followUpCount={followUpCount}
       />
