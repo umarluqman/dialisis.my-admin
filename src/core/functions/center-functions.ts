@@ -220,6 +220,7 @@ const CreateCenterSchema = z.object({
   highlights: z.string().default(""),
   sessionSlots: z.string().default(""),
   perkesoPanel: z.boolean().default(false),
+  verified: z.boolean().default(false),
   whatsappPicName: z.string().default(""),
   whatsappPicPhoneNumber: z.string().default(""),
 })
@@ -269,6 +270,7 @@ export const createCenter = createServerFn({ method: "POST" })
       highlights: data.highlights.trim() || null,
       sessionSlots: data.sessionSlots.trim() || null,
       perkesoPanel: data.perkesoPanel,
+      verifiedAt: data.verified ? toDbDate(Date.now()) : null,
       whatsappPicName: data.whatsappPicName.trim() || null,
       whatsappPicPhoneNumber: data.whatsappPicPhoneNumber.trim() || null,
     })
@@ -305,6 +307,7 @@ const UpdateCenterSchema = z.object({
     stateId: z.string().min(1).optional(),
     sessionSlots: z.string().nullable().optional(),
     perkesoPanel: z.boolean().optional(),
+    verified: z.boolean().optional(),
     whatsappPicName: z.string().nullable().optional(),
     whatsappPicPhoneNumber: z.string().nullable().optional(),
   }),
@@ -319,8 +322,17 @@ export const updateCenter = createServerFn({ method: "POST" })
 
     const beforeCenter = await getPublicCenterSnapshot(data.id)
 
-    const updateData: Partial<typeof dialysisCenter.$inferInsert> = {
-      ...data.data,
+    const { verified, ...fields } = data.data
+    const updateData: Partial<typeof dialysisCenter.$inferInsert> = { ...fields }
+    if (verified !== undefined) {
+      const [current] = await db
+        .select({ verifiedAt: dialysisCenter.verifiedAt })
+        .from(dialysisCenter)
+        .where(eq(dialysisCenter.id, data.id))
+        .limit(1)
+      updateData.verifiedAt = verified
+        ? (current?.verifiedAt ?? toDbDate(Date.now()))
+        : null
     }
     const isPic = (await getAccess(context.session.user.id)).role === "pic"
     if (
@@ -429,7 +441,6 @@ const UpdateCenterPlanSchema = z.object({
   plan: z.enum(["asas", "pro"]),
   planEndsAt: z.string().nullable(),
   earlybird: z.boolean(),
-  verified: z.boolean(),
 })
 
 export const updateCenterPlan = createServerFn({ method: "POST" })
@@ -439,10 +450,7 @@ export const updateCenterPlan = createServerFn({ method: "POST" })
     await requireSuperadmin(context.session.user.id)
 
     const [center] = await db
-      .select({
-        earlybird: dialysisCenter.earlybird,
-        verifiedAt: dialysisCenter.verifiedAt,
-      })
+      .select({ earlybird: dialysisCenter.earlybird })
       .from(dialysisCenter)
       .where(eq(dialysisCenter.id, data.id))
       .limit(1)
@@ -465,9 +473,6 @@ export const updateCenterPlan = createServerFn({ method: "POST" })
         plan: data.plan,
         planEndsAt: data.planEndsAt,
         earlybird: data.earlybird,
-        verifiedAt: data.verified
-          ? (center.verifiedAt ?? toDbDate(Date.now()))
-          : null,
         updatedAt: new Date(),
       })
       .where(eq(dialysisCenter.id, data.id))

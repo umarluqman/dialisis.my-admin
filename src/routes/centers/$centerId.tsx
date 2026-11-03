@@ -240,8 +240,8 @@ const COPY = defineCopy({
       `${used} / ${total} earlybird seats used${full ? " · full" : ""}`,
     loadingSeats: "Loading seats...",
     savePlan: "Save plan",
-    unverify: "Unverify",
-    markVerified: "Mark verified",
+    verifiedLabel: "Verified centre",
+    verifiedHint: "Shows the Verified badge on the public listing",
     verifiedOn: (date: string) => `Verified on ${date}`,
     intakeLeads: "Intake Leads",
     intakeLeadsDescription: "Recent appointment requests from the public site",
@@ -415,8 +415,8 @@ const COPY = defineCopy({
       `${used} / ${total} tempat earlybird digunakan${full ? " · penuh" : ""}`,
     loadingSeats: "Memuatkan tempat...",
     savePlan: "Simpan pelan",
-    unverify: "Batal pengesahan",
-    markVerified: "Tandakan disahkan",
+    verifiedLabel: "Pusat disahkan",
+    verifiedHint: "Paparkan lencana Disahkan di laman awam",
     verifiedOn: (date: string) => `Disahkan pada ${date}`,
     intakeLeads: "Permohonan temujanji",
     intakeLeadsDescription: "Permohonan temujanji terkini daripada laman awam",
@@ -484,6 +484,7 @@ type CenterFormData = {
   highlights: Highlight[]
   sessionSlots: string
   perkesoPanel: boolean
+  verified: boolean
   whatsappPicName: string
   whatsappPicPhoneNumber: string
 }
@@ -512,6 +513,7 @@ const EMPTY_CENTER_FORM_DATA: CenterFormData = {
   highlights: [],
   sessionSlots: "",
   perkesoPanel: false,
+  verified: false,
   whatsappPicName: "",
   whatsappPicPhoneNumber: "",
 }
@@ -597,6 +599,7 @@ function CenterEditPage() {
         highlights: parseHighlights(center.highlights),
         sessionSlots: center.sessionSlots ?? "",
         perkesoPanel: center.perkesoPanel,
+        verified: !!center.verifiedAt,
         whatsappPicName: center.whatsappPicName ?? "",
         whatsappPicPhoneNumber: center.whatsappPicPhoneNumber ?? "",
       }
@@ -897,6 +900,29 @@ function CenterEditPage() {
                     onChange={handleInputChange}
                     placeholder={t.centerNamePlaceholder}
                   />
+                </Field>
+                <Field
+                  orientation="horizontal"
+                  className="rounded-xl border bg-muted/40 p-3"
+                >
+                  <Switch
+                    id="verified"
+                    checked={formData.verified}
+                    onCheckedChange={(checked) =>
+                      setFormData((prev) => ({ ...prev, verified: checked }))
+                    }
+                  />
+                  <div className="flex flex-col gap-0.5">
+                    <Label htmlFor="verified" className="flex items-center gap-1.5">
+                      <BadgeCheck className="size-4 text-primary" />
+                      {t.verifiedLabel}
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      {center?.verifiedAt && formData.verified
+                        ? t.verifiedOn(toMytDayInput(center.verifiedAt))
+                        : t.verifiedHint}
+                    </p>
+                  </div>
                 </Field>
                 <Field className="md:max-w-[calc(50%-0.5rem)]">
                   <FieldLabel htmlFor="sector">{t.sector}</FieldLabel>
@@ -1352,7 +1378,7 @@ function CenterEditPage() {
           <>
             {userRole?.role === "superadmin" && center && (
               <PlanSection
-                key={[center.plan, center.planEndsAt, center.earlybird, center.verifiedAt].join("|")}
+                key={[center.plan, center.planEndsAt, center.earlybird].join("|")}
                 center={center}
               />
             )}
@@ -1625,7 +1651,6 @@ function PlanSection({ center }: { center: CenterData }) {
                 plan,
                 planEndsAt: planEndsOn ? endOfMytDay(planEndsOn) : null,
                 earlybird,
-                verified: !!center.verifiedAt,
               })
             }
             disabled={saveMutation.isPending}
@@ -1633,27 +1658,6 @@ function PlanSection({ center }: { center: CenterData }) {
           >
             {saveMutation.isPending ? t.saving : t.savePlan}
           </Button>
-          <Button
-            variant="outline"
-            onClick={() =>
-              saveMutation.mutate({
-                plan: center.plan,
-                planEndsAt: center.planEndsAt,
-                earlybird: center.earlybird,
-                verified: !center.verifiedAt,
-              })
-            }
-            disabled={saveMutation.isPending}
-            className="h-10"
-          >
-            <BadgeCheck className="size-4" />
-            {center.verifiedAt ? t.unverify : t.markVerified}
-          </Button>
-          {center.verifiedAt && (
-            <span className="text-sm text-muted-foreground">
-              {t.verifiedOn(toMytDayInput(center.verifiedAt))}
-            </span>
-          )}
         </div>
       </CardContent>
     </Card>
