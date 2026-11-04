@@ -2,7 +2,9 @@ import { Link, useNavigate } from "@tanstack/react-router"
 import {
   BarChart3,
   Building2,
+  Lock,
   LogOut,
+  Menu,
   MessageCircle,
   PhoneCall,
   Star,
@@ -28,6 +30,7 @@ import {
 } from "@/components/ui/sidebar"
 import type { DashboardTab } from "@/routes/dashboard"
 import { defineCopy, useCopy } from "@/lib/i18n"
+import { cn } from "@/lib/utils"
 import { ProBadge } from "@/components/pro-badge"
 import { UpgradeToProButton } from "@/components/upgrade-to-pro-button"
 import { PreviewPicker } from "./preview-picker"
@@ -53,6 +56,13 @@ const COPY = defineCopy({
       sales: "Sales pipeline",
       invitations: "Invitations",
     } satisfies Record<DashboardTab, string>,
+    shortTabs: {
+      analytics: "Analytics",
+      centers: "Centers",
+      leads: "Leads",
+      "follow-up": "Follow-up",
+    },
+    more: "More",
     newLeads: (count: number) => `${count} new leads`,
     followUp: (count: number) => `${count} leads need follow-up`,
     proHint: "Available on the Pro plan",
@@ -68,6 +78,13 @@ const COPY = defineCopy({
       sales: "Saluran jualan",
       invitations: "Jemputan",
     },
+    shortTabs: {
+      analytics: "Analitik",
+      centers: "Pusat",
+      leads: "Temujanji",
+      "follow-up": "Hubungi",
+    },
+    more: "Lagi",
     newLeads: (count: number) => `${count} permohonan baru`,
     followUp: (count: number) => `${count} lead perlu dihubungi`,
     proHint: "Tersedia dengan pelan Pro",
@@ -196,5 +213,90 @@ export function DashboardSidebar({
         </div>
       </SidebarFooter>
     </Sidebar>
+  )
+}
+
+const MOBILE_TABS = NAV_ITEMS.filter(
+  (item): item is Exclude<(typeof NAV_ITEMS)[number], { superadminOnly: true }> =>
+    !("superadminOnly" in item)
+)
+
+export function MobileTabBar({
+  activeTab,
+  proLocked,
+  newLeadCount,
+  followUpCount,
+}: Pick<
+  DashboardSidebarProps,
+  "activeTab" | "proLocked" | "newLeadCount" | "followUpCount"
+>) {
+  const { setOpenMobile } = useSidebar()
+  const t = useCopy(COPY)
+  const counts: Partial<Record<DashboardTab, number>> = {
+    leads: newLeadCount,
+    "follow-up": followUpCount,
+  }
+  const itemClass =
+    "relative flex min-h-14 flex-1 flex-col items-center justify-center gap-1 px-1 text-[11px] font-medium"
+
+  return (
+    <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
+      {MOBILE_TABS.map(({ tab, icon: Icon, ...item }) => {
+        const label = t.shortTabs[tab]
+        if ("proOnly" in item && proLocked) {
+          return (
+            <span
+              key={tab}
+              title={t.proHint}
+              aria-disabled="true"
+              className={cn(itemClass, "text-muted-foreground/60")}
+            >
+              <Icon className="size-5" />
+              {label}
+              <span className="absolute top-1.5 right-[calc(50%-1.5rem)]">
+                <Lock className="size-3" />
+              </span>
+            </span>
+          )
+        }
+        const count = counts[tab] ?? 0
+        return (
+          <Link
+            key={tab}
+            to="/dashboard"
+            search={{ tab }}
+            aria-current={activeTab === tab ? "page" : undefined}
+            className={cn(
+              itemClass,
+              activeTab === tab ? "text-primary" : "text-muted-foreground"
+            )}
+          >
+            <Icon className="size-5" />
+            {label}
+            {count > 0 && (
+              <span
+                className={cn(
+                  "absolute top-1 right-[calc(50%-1.75rem)] min-w-5 rounded-full px-1 text-center text-[10px] leading-5 tabular-nums",
+                  tab === "leads"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-destructive text-white"
+                )}
+                aria-label={tab === "leads" ? t.newLeads(count) : t.followUp(count)}
+              >
+                {count}
+              </span>
+            )}
+          </Link>
+        )
+      })}
+      <button
+        type="button"
+        onClick={() => setOpenMobile(true)}
+        className={cn(itemClass, "text-muted-foreground")}
+      >
+        <Menu className="size-5" />
+        {t.more}
+      </button>
+    </nav>
   )
 }

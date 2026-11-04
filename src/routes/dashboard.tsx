@@ -5,7 +5,7 @@ import { useSession } from "@/lib/auth-client"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
 import { AnalyticsView } from "@/components/analytics/analytics-view"
-import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar"
+import { DashboardSidebar, MobileTabBar } from "@/components/dashboard/dashboard-sidebar"
 import { CentersView } from "@/components/dashboard/centers-view"
 import { LeadsView } from "@/components/dashboard/leads-view"
 import { FollowUpView } from "@/components/dashboard/follow-up-view"
@@ -168,8 +168,8 @@ function DashboardPage() {
         <div className="sticky top-0 z-10">
           {preview && <PreviewBanner label={preview.label} />}
           <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-background/95 px-4 backdrop-blur">
-            <SidebarTrigger className="-ml-1" />
-            <Separator orientation="vertical" className="data-[orientation=vertical]:h-5 data-[orientation=vertical]:self-center" />
+            <SidebarTrigger className="-ml-1 hidden md:inline-flex" />
+            <Separator orientation="vertical" className="hidden data-[orientation=vertical]:h-5 data-[orientation=vertical]:self-center md:block" />
             <div className="flex min-w-0 items-baseline gap-3">
               <h1 className="truncate text-base font-semibold">{t.titles[tab]}</h1>
               {context[tab] && (
@@ -181,7 +181,7 @@ function DashboardPage() {
             <LocaleToggle className="ml-auto shrink-0" />
           </header>
         </div>
-        <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">
+        <div className="flex flex-1 flex-col gap-4 p-4 pb-24 md:p-6">
           {tab === "analytics" && <AnalyticsView isSuperadmin={isSuperadmin} />}
           {tab === "centers" && <CentersView isSuperadmin={isSuperadmin} />}
           {tab === "leads" && <LeadsView />}
@@ -190,6 +190,12 @@ function DashboardPage() {
           {tab === "sales" && <SalesView />}
           {tab === "invitations" && <InvitationsView />}
         </div>
+        <MobileTabBar
+          activeTab={tab}
+          proLocked={proLocked}
+          newLeadCount={newLeadCount}
+          followUpCount={followUpCount}
+        />
       </SidebarInset>
     </SidebarProvider>
   )
