@@ -2,10 +2,12 @@ import { redirect } from "@tanstack/react-router"
 import { createMiddleware } from "@tanstack/react-start"
 import { getRequest, getRequestHeaders } from "@tanstack/react-start/server"
 import { auth } from "./auth"
+import { ensureAdminDatabaseSchema } from "@/db/ensure-schema"
 import { readPreview } from "./access"
 import { getUserRole } from "./user-role"
 
 export const authMiddleware = createMiddleware().server(async ({ next }) => {
+  await ensureAdminDatabaseSchema()
   const headers = getRequestHeaders()
   const session = await auth.api.getSession({ headers })
 
