@@ -160,6 +160,8 @@ async function ensureSchema() {
   await client.execute("create index if not exists invitation_token_idx on invitation (token)")
   await client.execute("create index if not exists invitation_createdBy_idx on invitation (created_by)")
   await addColumnIfMissing("invitation", "email", "email text")
+  await addColumnIfMissing("user", "onboarding_seen_at", "onboarding_seen_at integer")
+  await addColumnIfMissing("user", "onboarding_dismissed_at", "onboarding_dismissed_at integer")
   await client.execute("create index if not exists invitation_email_idx on invitation (email)")
 
   await addColumnIfMissing("DialysisCenter", "whatsappPicName", "whatsappPicName text")

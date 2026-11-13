@@ -14,6 +14,7 @@ import { FeaturedView } from "@/components/dashboard/featured-view"
 import { SalesView } from "@/components/dashboard/sales-view"
 import { LocaleToggle } from "@/components/locale-toggle"
 import { PreviewBanner } from "@/components/dashboard/preview-banner"
+import { PicOnboarding } from "@/components/dashboard/onboarding"
 import {
   centersQuery,
   followUpLeadsQuery,
@@ -182,6 +183,9 @@ function DashboardPage() {
           </header>
         </div>
         <div className="flex flex-1 flex-col gap-4 p-4 pb-24 md:p-6">
+          {userRole?.role === "pic" && (tab === "analytics" || tab === "centers") && (
+            <PicOnboarding />
+          )}
           {tab === "analytics" && <AnalyticsView isSuperadmin={isSuperadmin} />}
           {tab === "centers" && <CentersView isSuperadmin={isSuperadmin} />}
           {tab === "leads" && <LeadsView />}

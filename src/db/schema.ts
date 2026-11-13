@@ -31,6 +31,8 @@ export const user = sqliteTable("user", {
   role: text("role", { enum: ["pic", "superadmin"] })
     .default("pic")
     .notNull(),
+  onboardingSeenAt: integer("onboarding_seen_at", { mode: "timestamp_ms" }),
+  onboardingDismissedAt: integer("onboarding_dismissed_at", { mode: "timestamp_ms" }),
   createdAt: integer("created_at", { mode: "timestamp_ms" })
     .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
     .notNull(),
