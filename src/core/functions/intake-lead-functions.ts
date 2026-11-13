@@ -5,16 +5,16 @@ import { db } from "@/db/connection"
 import { ensureAdminDatabaseSchema } from "@/db/ensure-schema"
 import { dialysisCenter, intakeLead } from "@/db/schema"
 import { authMiddleware } from "@/lib/middleware"
-import { activeProCenterSql, getAccess } from "@/lib/access"
+import { getAccess } from "@/lib/access"
 import { toDbDate } from "@/lib/analytics"
 import { getLeadQuality, leadDuplicateKey, testLeadSql } from "@/lib/lead-quality"
 
-// undefined = superadmin (no scope), null = PIC with no Pro centre
-async function picLeadScope(userId: string, now: number) {
+// undefined = superadmin (no scope), null = PIC with no centre
+async function picLeadScope(userId: string) {
   const { role, centerIds } = await getAccess(userId)
   if (role === "superadmin") return undefined
   if (centerIds.length === 0) return null
-  return and(inArray(dialysisCenter.id, centerIds), activeProCenterSql(toDbDate(now)))
+  return inArray(dialysisCenter.id, centerIds)
 }
 
 const GetIntakeLeadsSchema = z.object({
@@ -71,7 +71,7 @@ export const getIntakeLeads = createServerFn({ method: "GET" })
     await ensureAdminDatabaseSchema()
 
     const now = Date.now()
-    const scope = await picLeadScope(context.session.user.id, now)
+    const scope = await picLeadScope(context.session.user.id)
     if (scope === null) return []
 
     const rows = await db
@@ -108,7 +108,7 @@ export const getFollowUpLeads = createServerFn({ method: "GET" })
     await ensureAdminDatabaseSchema()
 
     const now = Date.now()
-    const scope = await picLeadScope(context.session.user.id, now)
+    const scope = await picLeadScope(context.session.user.id)
     if (scope === null) return []
 
     const rows = await db
@@ -150,7 +150,7 @@ export const updateIntakeLeadStatus = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     await ensureAdminDatabaseSchema()
 
-    const scope = await picLeadScope(context.session.user.id, Date.now())
+    const scope = await picLeadScope(context.session.user.id)
     if (scope !== undefined) {
       const allowed = scope
         ? await db

@@ -2,7 +2,6 @@ import { Link, useNavigate } from "@tanstack/react-router"
 import {
   BarChart3,
   Building2,
-  Lock,
   LogOut,
   Menu,
   MessageCircle,
@@ -31,15 +30,14 @@ import {
 import type { DashboardTab } from "@/routes/dashboard"
 import { defineCopy, useCopy } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
-import { ProBadge } from "@/components/pro-badge"
 import { UpgradeToProButton } from "@/components/upgrade-to-pro-button"
 import { PreviewPicker } from "./preview-picker"
 
 const NAV_ITEMS = [
   { tab: "analytics", icon: BarChart3 },
   { tab: "centers", icon: Building2 },
-  { tab: "leads", icon: MessageCircle, proOnly: true },
-  { tab: "follow-up", icon: PhoneCall, proOnly: true },
+  { tab: "leads", icon: MessageCircle },
+  { tab: "follow-up", icon: PhoneCall },
   { tab: "featured", icon: Star, superadminOnly: true },
   { tab: "sales", icon: TrendingUp, superadminOnly: true },
   { tab: "invitations", icon: UserPlus, superadminOnly: true },
@@ -65,7 +63,6 @@ const COPY = defineCopy({
     more: "More",
     newLeads: (count: number) => `${count} new leads`,
     followUp: (count: number) => `${count} leads need follow-up`,
-    proHint: "Available on the Pro plan",
     signOut: "Sign out",
   },
   ms: {
@@ -87,7 +84,6 @@ const COPY = defineCopy({
     more: "Lagi",
     newLeads: (count: number) => `${count} permohonan baru`,
     followUp: (count: number) => `${count} lead perlu dihubungi`,
-    proHint: "Tersedia dengan pelan Pro",
     signOut: "Log keluar",
   },
 })
@@ -134,22 +130,7 @@ export function DashboardSidebar({
           <SidebarMenu>
             {NAV_ITEMS.filter(
               (item) => !("superadminOnly" in item) || role === "superadmin"
-            ).map(({ tab, icon: Icon, ...item }) =>
-              "proOnly" in item && proLocked ? (
-                <SidebarMenuItem key={tab}>
-                  <SidebarMenuButton
-                    disabled
-                    title={t.proHint}
-                    className="text-muted-foreground"
-                  >
-                    <Icon />
-                    <span>{t.tabs[tab]}</span>
-                  </SidebarMenuButton>
-                  <SidebarMenuBadge>
-                    <ProBadge title={t.proHint} />
-                  </SidebarMenuBadge>
-                </SidebarMenuItem>
-              ) : (
+            ).map(({ tab, icon: Icon }) => (
                 <SidebarMenuItem key={tab}>
                   <SidebarMenuButton asChild isActive={activeTab === tab}>
                     <Link
@@ -223,12 +204,11 @@ const MOBILE_TABS = NAV_ITEMS.filter(
 
 export function MobileTabBar({
   activeTab,
-  proLocked,
   newLeadCount,
   followUpCount,
 }: Pick<
   DashboardSidebarProps,
-  "activeTab" | "proLocked" | "newLeadCount" | "followUpCount"
+  "activeTab" | "newLeadCount" | "followUpCount"
 >) {
   const { setOpenMobile } = useSidebar()
   const t = useCopy(COPY)
@@ -241,24 +221,8 @@ export function MobileTabBar({
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
-      {MOBILE_TABS.map(({ tab, icon: Icon, ...item }) => {
+      {MOBILE_TABS.map(({ tab, icon: Icon }) => {
         const label = t.shortTabs[tab]
-        if ("proOnly" in item && proLocked) {
-          return (
-            <span
-              key={tab}
-              title={t.proHint}
-              aria-disabled="true"
-              className={cn(itemClass, "text-muted-foreground/60")}
-            >
-              <Icon className="size-5" />
-              {label}
-              <span className="absolute top-1.5 right-[calc(50%-1.5rem)]">
-                <Lock className="size-3" />
-              </span>
-            </span>
-          )
-        }
         const count = counts[tab] ?? 0
         return (
           <Link

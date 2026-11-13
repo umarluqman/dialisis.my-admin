@@ -1,4 +1,4 @@
-import { and, eq, gt, isNull, or } from "drizzle-orm"
+import { eq } from "drizzle-orm"
 import { deleteCookie, getCookie, setCookie } from "@tanstack/react-start/server"
 import { z } from "zod"
 import { db } from "@/db/connection"
@@ -82,11 +82,4 @@ export async function requireProCenterAccess(userId: string, centerId: string) {
   if (role === "superadmin") return
   if (!centerIds.includes(centerId)) throw new Error("Access denied")
   if (!(await isProCenter(centerId))) throw new Error("Pro plan required")
-}
-
-export function activeProCenterSql(now: string) {
-  return and(
-    eq(dialysisCenter.plan, "pro"),
-    or(isNull(dialysisCenter.planEndsAt), gt(dialysisCenter.planEndsAt, now))
-  )
 }

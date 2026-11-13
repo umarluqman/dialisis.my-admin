@@ -1382,9 +1382,7 @@ function CenterEditPage() {
                 center={center}
               />
             )}
-            {(userRole?.role === "superadmin" || (center && isPlanActive(center))) && (
-              <IntakeLeadsSection centerId={centerId} />
-            )}
+            <IntakeLeadsSection centerId={centerId} />
             <CenterImagesSection centerId={centerId} locked={proLocked} />
             <OperatingHoursSection centerId={centerId} />
             <FaqSection centerId={centerId} locked={proLocked} />

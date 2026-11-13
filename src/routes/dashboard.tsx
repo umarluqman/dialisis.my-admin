@@ -37,7 +37,6 @@ const DASHBOARD_TABS = [
 ] as const
 export type DashboardTab = (typeof DASHBOARD_TABS)[number]
 const SUPERADMIN_TABS: DashboardTab[] = ["featured", "sales", "invitations"]
-const PRO_TABS: DashboardTab[] = ["leads", "follow-up"]
 
 const searchSchema = z.object({
   tab: z.enum(DASHBOARD_TABS).optional().catch(undefined),
@@ -114,10 +113,7 @@ function DashboardPage() {
   const isSuperadmin = userRole?.role === "superadmin"
   const proLocked = !isSuperadmin && !!centers && !centers.some(isPlanActive)
   const tab =
-    (SUPERADMIN_TABS.includes(requestedTab) && !isSuperadmin) ||
-    (PRO_TABS.includes(requestedTab) && proLocked)
-      ? "analytics"
-      : requestedTab
+    SUPERADMIN_TABS.includes(requestedTab) && !isSuperadmin ? "analytics" : requestedTab
   const newLeadCount =
     leads?.filter(
       (lead) => toLeadStatus(lead.status) === "new" && lead.quality !== "test"
@@ -196,7 +192,6 @@ function DashboardPage() {
         </div>
         <MobileTabBar
           activeTab={tab}
-          proLocked={proLocked}
           newLeadCount={newLeadCount}
           followUpCount={followUpCount}
         />
