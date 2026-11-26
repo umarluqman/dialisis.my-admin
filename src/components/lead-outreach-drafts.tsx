@@ -85,7 +85,7 @@ ${link}
 
 Pesakit mungkin turut memohon di pusat lain, jadi mohon hubungi pesakit secepat mungkin (sebaiknya hari ini) supaya tidak terlepas.
 
-Pautan aktif 10 hari. Tiada sebarang caj, kami cuma ingin bantu pesakit dapat tempat. Mohon pihak tuan/puan hubungi pesakit terus. Di halaman itu juga ada butang untuk kemas kini status (dihubungi / temujanji disahkan).
+Pautan aktif 10 hari. Permohonan ini kami kongsi secara percuma supaya pesakit tidak terlepas. Mohon pihak tuan/puan hubungi pesakit terus. Di halaman itu juga ada butang untuk kemas kini status (dihubungi / temujanji disahkan).
 
 Terima kasih 🙏`
 
@@ -107,7 +107,7 @@ Pesakit mungkin turut memohon di beberapa pusat lain, jadi kami sarankan tuan/pu
 
 Pautan ini aktif selama 10 hari sahaja. Di halaman yang sama, tuan/puan boleh menghubungi pesakit terus melalui panggilan atau WhatsApp, dan mengemas kini status susulan.
 
-Perkhidmatan ini percuma, tiada sebarang caj. Kami hanya ingin membantu pesakit mendapatkan tempat rawatan secepat mungkin.
+Permohonan ini kami kongsi secara percuma supaya pesakit dapat tempat rawatan secepat mungkin.
 
 Jika ada sebarang pertanyaan, sila balas e-mel ini. Saya juga ingin mengemas kini nombor WhatsApp pusat tuan/puan di Dialisis.my supaya pesakit lebih mudah menghubungi pihak tuan/puan. Mohon kongsikan jika ada.
 

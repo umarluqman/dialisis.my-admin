@@ -36,7 +36,7 @@ const COPY = defineCopy({
     images: "Photos",
     imagesDescription:
       "Shown on the centre page. The first photo is the cover. Changes can take up to an hour to appear.",
-    proHint: "Available on the Pro plan.",
+    proHint: "Available on Pilihan Bandar.",
     upload: "Upload photos",
     uploading: "Uploading...",
     uploaded: (count: number) => `${count} photo${count === 1 ? "" : "s"} uploaded`,
@@ -57,7 +57,7 @@ const COPY = defineCopy({
     images: "Gambar",
     imagesDescription:
       "Dipaparkan di halaman pusat. Gambar pertama ialah gambar utama. Perubahan mungkin mengambil masa sehingga sejam untuk dipaparkan.",
-    proHint: "Tersedia dengan pelan Pro.",
+    proHint: "Tersedia dengan Pilihan Bandar.",
     upload: "Muat naik gambar",
     uploading: "Memuat naik...",
     uploaded: (count: number) => `${count} gambar dimuat naik`,

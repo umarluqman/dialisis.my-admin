@@ -5,8 +5,8 @@ import { defineCopy, useCopy } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 
 const COPY = defineCopy({
-  en: { upgrade: "Upgrade to Pro" },
-  ms: { upgrade: "Naik taraf ke Pro" },
+  en: { upgrade: "Upgrade to Pilihan Bandar" },
+  ms: { upgrade: "Naik taraf ke Pilihan Bandar" },
 })
 
 export function UpgradeToProButton({
@@ -17,7 +17,7 @@ export function UpgradeToProButton({
   className?: string
 }) {
   const t = useCopy(COPY)
-  const href = `https://dialisis.my/untuk-pusat-dialisis?from=admin&center=${encodeURIComponent(centerId)}#pro`
+  const href = `https://dialisis.my/untuk-pusat-dialisis?from=admin&center=${encodeURIComponent(centerId)}#bandar`
 
   return (
     <Button asChild size="lg" className={cn("gap-2", className)}>
