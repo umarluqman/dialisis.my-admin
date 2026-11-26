@@ -14,9 +14,10 @@ describe("weeklyScorecard", () => {
     const at = (iso: string) => new Date(iso)
     const card = weeklyScorecard(
       [
-        { createdAt: at("2026-09-22T00:00:00Z"), demoAt: at("2026-09-24T00:00:00Z"), pilotAt: null, paidAt: null },
-        { createdAt: at("2026-09-15T00:00:00Z"), demoAt: null, pilotAt: null, paidAt: at("2026-09-25T00:00:00Z") },
-        { createdAt: at("2026-09-01T00:00:00Z"), demoAt: null, pilotAt: null, paidAt: null },
+        { contactedAt: at("2026-09-22T00:00:00Z"), demoAt: at("2026-09-24T00:00:00Z"), pilotAt: null, paidAt: null },
+        { contactedAt: at("2026-09-15T00:00:00Z"), demoAt: null, pilotAt: null, paidAt: at("2026-09-25T00:00:00Z") },
+        { contactedAt: at("2026-09-01T00:00:00Z"), demoAt: null, pilotAt: null, paidAt: null },
+        { contactedAt: null, demoAt: null, pilotAt: null, paidAt: null },
       ],
       now
     )

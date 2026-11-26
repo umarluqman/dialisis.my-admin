@@ -217,7 +217,7 @@ async function ensureSchema() {
       dialysis_center_id text,
       contact_name text,
       phone text,
-      stage text default 'contacted' not null,
+      stage text default 'lead' not null,
       lost_reason text,
       notes text,
       next_follow_up_at integer,
@@ -232,6 +232,17 @@ async function ensureSchema() {
       foreign key (created_by) references user(id)
     )
   `)
+  await addColumnIfMissing("sales_prospect", "email", "email text")
+  await addColumnIfMissing("sales_prospect", "contacted_at", "contacted_at integer")
+  await addColumnIfMissing("sales_prospect", "email_subject", "email_subject text")
+  await addColumnIfMissing("sales_prospect", "email_body", "email_body text")
+  await addColumnIfMissing("sales_prospect", "email_subject_bm", "email_subject_bm text")
+  await addColumnIfMissing("sales_prospect", "email_body_bm", "email_body_bm text")
+  await addColumnIfMissing("sales_prospect", "email_lang", "email_lang text not null default 'en'")
+  await addColumnIfMissing("sales_prospect", "email_image_url", "email_image_url text")
+  await addColumnIfMissing("sales_prospect", "email_image_caption", "email_image_caption text")
+  await addColumnIfMissing("sales_prospect", "email_sent_at", "email_sent_at integer")
+  await addColumnIfMissing("sales_prospect", "email_step", "email_step integer not null default 0")
   await client.execute("create index if not exists salesProspect_stage_idx on sales_prospect (stage)")
   await client.execute("create index if not exists salesProspect_dialysisCenterId_idx on sales_prospect (dialysis_center_id)")
 

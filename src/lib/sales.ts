@@ -1,13 +1,13 @@
 import { toMytDay } from "@/lib/analytics"
 
-export const SALES_STAGES = ["contacted", "demo", "pilot", "paid", "lost"] as const
+export const SALES_STAGES = ["lead", "contacted", "demo", "pilot", "paid", "lost"] as const
 
 const WEEK_MS = 7 * 86_400_000
 
 export const SCORECARD_STAGES = ["contacted", "demo", "pilot", "paid"] as const
 
 type StageDates = {
-  createdAt: Date
+  contactedAt: Date | null
   demoAt: Date | null
   pilotAt: Date | null
   paidAt: Date | null
@@ -23,7 +23,7 @@ export function weeklyScorecard(prospects: StageDates[], now = Date.now()) {
   const thisWeek = startOfMytWeek(now)
   const lastWeek = thisWeek - WEEK_MS
   const reachedAt = (prospect: StageDates) => ({
-    contacted: prospect.createdAt,
+    contacted: prospect.contactedAt,
     demo: prospect.demoAt,
     pilot: prospect.pilotAt,
     paid: prospect.paidAt,

@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Pencil, Plus } from "lucide-react"
+import { List, Mail, Pencil, Plus } from "lucide-react"
 import { toast } from "sonner"
 import {
   saveSalesProspect,
@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/combobox"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { ProInterestCard } from "./pro-interest-card"
+import { ColdEmailStudio } from "./cold-email-studio"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -35,13 +36,15 @@ import { toMytDay } from "@/lib/analytics"
 import { SALES_STAGES, weeklyScorecard } from "@/lib/sales"
 import { cn } from "@/lib/utils"
 import { defineCopy, useCopy } from "@/lib/i18n"
-import { allCentersQuery, salesProspectsQuery } from "./queries"
+import { allCentersQuery, coldEmailConfigQuery, salesProspectsQuery } from "./queries"
 
 type Stage = (typeof SALES_STAGES)[number]
+type SalesTab = "studio" | "pipeline"
 
 const COPY = defineCopy({
   en: {
     stages: {
+      lead: "To contact",
       contacted: "Contacted",
       demo: "Demo",
       pilot: "Pilot",
@@ -49,9 +52,16 @@ const COPY = defineCopy({
       lost: "Lost",
     } satisfies Record<Stage, string>,
     saveFailed: "Failed to save prospect",
-    thisWeekLabel: "This week",
+    thisWeekLabel: "Pipeline metrics",
+    readyToEmail: "Ready to email",
     thisWeek: (stage: string) => `${stage} this week`,
     lastWeek: (count: number) => `Last week ${count}`,
+    zohoConnected: "Zoho Mail connected",
+    zohoManual: "Manual Zoho / Copy mode",
+    sentProgress: (sent: number, total: number) => `Sent ${sent} / ${total} prospects`,
+    studioTab: "Cold Email Studio",
+    pipelineTab: "Pipeline List",
+    openEmailStudio: "Open in Cold Email Studio",
     filterByStage: "Filter by stage",
     all: "All",
     addProspect: "Add prospect",
@@ -71,6 +81,7 @@ const COPY = defineCopy({
     noCentres: "No centres found.",
     contactName: "Contact name",
     phone: "Phone",
+    email: "Email",
     nextFollowUp: "Next follow-up",
     lostReason: "Lost reason",
     notes: "Notes",
@@ -80,6 +91,7 @@ const COPY = defineCopy({
   },
   ms: {
     stages: {
+      lead: "Belum dihubungi",
       contacted: "Dihubungi",
       demo: "Demo",
       pilot: "Percubaan",
@@ -87,9 +99,16 @@ const COPY = defineCopy({
       lost: "Terlepas",
     },
     saveFailed: "Gagal menyimpan prospek",
-    thisWeekLabel: "Minggu ini",
+    thisWeekLabel: "Metrik saluran jualan",
+    readyToEmail: "Sedia untuk emel",
     thisWeek: (stage: string) => `${stage} minggu ini`,
     lastWeek: (count: number) => `Minggu lepas ${count}`,
+    zohoConnected: "Zoho Mail disambungkan",
+    zohoManual: "Mod Manual Zoho / Salin",
+    sentProgress: (sent: number, total: number) => `Dihantar ${sent} / ${total} prospek`,
+    studioTab: "Studio Emel Dingin",
+    pipelineTab: "Senarai Prospek",
+    openEmailStudio: "Buka di Studio Emel Dingin",
     filterByStage: "Tapis mengikut peringkat",
     all: "Semua",
     addProspect: "Tambah prospek",
@@ -109,6 +128,7 @@ const COPY = defineCopy({
     noCentres: "Tiada pusat dijumpai.",
     contactName: "Nama kenalan",
     phone: "No. telefon",
+    email: "Emel",
     nextFollowUp: "Susulan seterusnya",
     lostReason: "Sebab terlepas",
     notes: "Catatan",
@@ -140,6 +160,7 @@ function toInput(prospect: SalesProspectRow): ProspectInput {
     dialysisCenterIds: prospect.centers.map((c) => c.id),
     contactName: prospect.contactName,
     phone: prospect.phone,
+    email: prospect.email,
     stage: prospect.stage,
     lostReason: prospect.lostReason,
     notes: prospect.notes,
@@ -150,10 +171,21 @@ function toInput(prospect: SalesProspectRow): ProspectInput {
 export function SalesView() {
   const t = useCopy(COPY)
   const { data: prospects = [], isLoading, error } = useQuery(salesProspectsQuery)
+  const { data: emailConfig } = useQuery(coldEmailConfigQuery)
+  const [view, setView] = useState<SalesTab>("studio")
+  const [selectedProspectId, setSelectedProspectId] = useState<string | null>(null)
   const [stage, setStage] = useState<Stage | undefined>()
   const [editing, setEditing] = useState<SalesProspectRow | "new" | null>(null)
 
   const scorecard = weeklyScorecard(prospects)
+  const leadCount = prospects.filter((p) => p.stage === "lead").length
+  const sentCount = prospects.filter((p) => p.emailSentAt != null || p.stage !== "lead").length
+  const progressPct = prospects.length > 0 ? Math.round((sentCount / prospects.length) * 100) : 0
+
+  const zohoConfigured = emailConfig?.zohoConfigured ?? false
+  const fromEmail = emailConfig?.fromEmail ?? "luqman@dialisis.my"
+  const fromName = emailConfig?.fromName ?? "Umar Luqman"
+
   const filtered = stage ? prospects.filter((p) => p.stage === stage) : prospects
   const chips = [
     { value: undefined, label: t.all, count: prospects.length },
@@ -166,68 +198,169 @@ export function SalesView() {
 
   return (
     <div className="space-y-4">
-      <section aria-label={t.thisWeekLabel} className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <section aria-label={t.thisWeekLabel} className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        <Card size="sm">
+          <CardContent>
+            <p className="text-sm font-medium text-muted-foreground">{t.stages.lead}</p>
+            <p className="mt-1.5 font-mono text-2xl font-semibold tabular-nums">{leadCount}</p>
+            <p className="text-sm text-muted-foreground">{t.readyToEmail}</p>
+          </CardContent>
+        </Card>
         {scorecard.map((row) => (
           <Card key={row.stage} size="sm">
             <CardContent>
               <p className="text-sm font-medium text-muted-foreground">
                 {t.thisWeek(t.stages[row.stage])}
               </p>
-              <p className="mt-1.5 text-2xl font-semibold tabular-nums">{row.thisWeek}</p>
-              <p className="text-sm text-muted-foreground tabular-nums">{t.lastWeek(row.lastWeek)}</p>
+              <p className="mt-1.5 font-mono text-2xl font-semibold tabular-nums">{row.thisWeek}</p>
+              <p className="font-mono text-sm text-muted-foreground tabular-nums">
+                {t.lastWeek(row.lastWeek)}
+              </p>
             </CardContent>
           </Card>
         ))}
       </section>
 
-      <ProInterestCard />
-
-      <div className="flex flex-wrap items-center gap-2">
-        <div role="group" aria-label={t.filterByStage} className="-mx-4 flex flex-1 gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0">
-          {chips.map((chip) => (
-            <Button
-              key={chip.label}
-              size="sm"
-              variant={stage === chip.value ? "default" : "outline"}
-              aria-pressed={stage === chip.value}
-              className="shrink-0 rounded-full"
-              onClick={() => setStage(chip.value)}
+      <div className="flex flex-col gap-3 rounded-xl border bg-card p-3.5 md:flex-row md:items-center md:justify-between">
+        <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-mono text-xs font-medium text-foreground">{fromEmail}</span>
+            <span
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium",
+                zohoConfigured
+                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                  : "border-amber-500/30 bg-amber-500/15 text-amber-700 dark:text-amber-400"
+              )}
             >
-              {chip.label}
-              <span className="tabular-nums opacity-70">{chip.count}</span>
-            </Button>
-          ))}
+              <span
+                className={cn(
+                  "size-1.5 rounded-full",
+                  zohoConfigured ? "bg-emerald-500" : "bg-amber-500"
+                )}
+              />
+              {zohoConfigured ? t.zohoConnected : t.zohoManual}
+            </span>
+          </div>
+
+          <div className="flex min-w-[180px] flex-1 items-center gap-2.5">
+            <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full rounded-full bg-primary transition-all"
+                style={{ width: `${progressPct}%` }}
+              />
+            </div>
+            <span className="shrink-0 font-mono text-xs text-muted-foreground tabular-nums">
+              {t.sentProgress(sentCount, prospects.length)}
+            </span>
+          </div>
         </div>
-        <Button className="h-9" onClick={() => setEditing("new")}>
-          <Plus />
-          {t.addProspect}
-        </Button>
+
+        <div className="inline-flex shrink-0 rounded-full border bg-muted/40 p-0.5">
+          <Button
+            type="button"
+            size="sm"
+            variant={view === "studio" ? "default" : "ghost"}
+            className="h-8 gap-1.5 rounded-full px-3 text-xs"
+            onClick={() => setView("studio")}
+          >
+            <Mail className="size-3.5" />
+            {t.studioTab}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={view === "pipeline" ? "default" : "ghost"}
+            className="h-8 gap-1.5 rounded-full px-3 text-xs"
+            onClick={() => setView("pipeline")}
+          >
+            <List className="size-3.5" />
+            {t.pipelineTab}
+          </Button>
+        </div>
       </div>
 
-      {editing && (
-        <ProspectForm
-          key={editing === "new" ? "new" : editing.id}
-          prospect={editing === "new" ? null : editing}
-          onDone={() => setEditing(null)}
-        />
-      )}
-
-      {error ? (
-        <p className="rounded-lg border p-8 text-center text-destructive">
-          {error.message || t.loadFailed}
-        </p>
-      ) : isLoading ? (
-        <p className="rounded-lg border p-8 text-center text-muted-foreground">{t.loading}</p>
-      ) : filtered.length === 0 ? (
-        <p className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-          {stage ? t.noneInStage : t.noneYet}
-        </p>
+      {view === "studio" ? (
+        error ? (
+          <p className="rounded-lg border p-8 text-center text-destructive">
+            {error.message || t.loadFailed}
+          </p>
+        ) : isLoading ? (
+          <p className="rounded-lg border p-8 text-center text-muted-foreground">{t.loading}</p>
+        ) : (
+          <ColdEmailStudio
+            prospects={prospects}
+            selectedId={selectedProspectId}
+            onSelectId={setSelectedProspectId}
+            zohoConfigured={zohoConfigured}
+            fromEmail={fromEmail}
+            fromName={fromName}
+          />
+        )
       ) : (
-        <ul className="divide-y rounded-lg border bg-card">
-          {filtered.map((prospect) => (
-            <ProspectRow key={prospect.id} prospect={prospect} onEdit={() => setEditing(prospect)} />
-          ))}
-        </ul>
+        <>
+          <ProInterestCard />
+
+          <div className="flex flex-wrap items-center gap-2">
+            <div
+              role="group"
+              aria-label={t.filterByStage}
+              className="-mx-4 flex flex-1 gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0"
+            >
+              {chips.map((chip) => (
+                <Button
+                  key={chip.label}
+                  size="sm"
+                  variant={stage === chip.value ? "default" : "outline"}
+                  aria-pressed={stage === chip.value}
+                  className="shrink-0 rounded-full"
+                  onClick={() => setStage(chip.value)}
+                >
+                  {chip.label}
+                  <span className="font-mono tabular-nums opacity-70">{chip.count}</span>
+                </Button>
+              ))}
+            </div>
+            <Button className="h-9" onClick={() => setEditing("new")}>
+              <Plus />
+              {t.addProspect}
+            </Button>
+          </div>
+
+          {editing && (
+            <ProspectForm
+              key={editing === "new" ? "new" : editing.id}
+              prospect={editing === "new" ? null : editing}
+              onDone={() => setEditing(null)}
+            />
+          )}
+
+          {error ? (
+            <p className="rounded-lg border p-8 text-center text-destructive">
+              {error.message || t.loadFailed}
+            </p>
+          ) : isLoading ? (
+            <p className="rounded-lg border p-8 text-center text-muted-foreground">{t.loading}</p>
+          ) : filtered.length === 0 ? (
+            <p className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
+              {stage ? t.noneInStage : t.noneYet}
+            </p>
+          ) : (
+            <ul className="divide-y rounded-lg border bg-card">
+              {filtered.map((prospect) => (
+                <ProspectRow
+                  key={prospect.id}
+                  prospect={prospect}
+                  onEdit={() => setEditing(prospect)}
+                  onOpenStudio={() => {
+                    setSelectedProspectId(prospect.id)
+                    setView("studio")
+                  }}
+                />
+              ))}
+            </ul>
+          )}
+        </>
       )}
     </div>
   )
@@ -236,9 +369,11 @@ export function SalesView() {
 function ProspectRow({
   prospect,
   onEdit,
+  onOpenStudio,
 }: {
   prospect: SalesProspectRow
   onEdit: () => void
+  onOpenStudio: () => void
 }) {
   const t = useCopy(COPY)
   const saveMutation = useSaveProspect()
@@ -251,7 +386,9 @@ function ProspectRow({
       <div className="min-w-0 flex-1">
         <p className="font-medium">{prospect.organization}</p>
         <p className="truncate text-sm text-muted-foreground">
-          {[prospect.contactName, prospect.phone, ...prospect.centers.map((c) => c.name)].filter(Boolean).join(" · ") || "-"}
+          {[prospect.contactName, prospect.email, prospect.phone, ...prospect.centers.map((c) => c.name)]
+            .filter(Boolean)
+            .join(" · ") || "-"}
         </p>
         {(prospect.stage === "lost" && prospect.lostReason) || prospect.notes ? (
           <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
@@ -262,7 +399,12 @@ function ProspectRow({
         ) : null}
       </div>
       {followUp && (
-        <span className={cn("text-sm tabular-nums", overdue ? "font-medium text-destructive" : "text-muted-foreground")}>
+        <span
+          className={cn(
+            "font-mono text-sm tabular-nums",
+            overdue ? "font-medium text-destructive" : "text-muted-foreground"
+          )}
+        >
           {t.followUp(toMytDay(followUp.getTime()))}
         </span>
       )}
@@ -274,7 +416,7 @@ function ProspectRow({
             saveMutation.mutate({ ...toInput(prospect), stage: value as Stage })
           }
         >
-          <SelectTrigger aria-label={t.stage} className="data-[size=default]:h-9 w-32">
+          <SelectTrigger aria-label={t.stage} className="data-[size=default]:h-9 w-36">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -285,7 +427,22 @@ function ProspectRow({
             ))}
           </SelectContent>
         </Select>
-        <Button variant="outline" size="icon" className="size-9" aria-label={t.editProspect} onClick={onEdit}>
+        <Button
+          variant="outline"
+          size="icon"
+          className="size-9"
+          aria-label={t.openEmailStudio}
+          onClick={onOpenStudio}
+        >
+          <Mail />
+        </Button>
+        <Button
+          variant="outline"
+          size="icon"
+          className="size-9"
+          aria-label={t.editProspect}
+          onClick={onEdit}
+        >
           <Pencil />
         </Button>
       </div>
@@ -308,7 +465,8 @@ function ProspectForm({
     organization: prospect?.organization ?? "",
     contactName: prospect?.contactName ?? "",
     phone: prospect?.phone ?? "",
-    stage: prospect?.stage ?? ("contacted" as Stage),
+    email: prospect?.email ?? "",
+    stage: prospect?.stage ?? ("lead" as Stage),
     lostReason: prospect?.lostReason ?? "",
     notes: prospect?.notes ?? "",
     nextFollowUpOn: prospect?.nextFollowUpAt ? toMytDay(prospect.nextFollowUpAt.getTime()) : "",
@@ -344,6 +502,7 @@ function ProspectForm({
               dialysisCenterIds: centerIds,
               contactName: form.contactName,
               phone: form.phone,
+              email: form.email,
               stage: form.stage,
               lostReason: form.stage === "lost" ? form.lostReason : null,
               notes: form.notes,
@@ -406,6 +565,15 @@ function ProspectForm({
             <Input id="prospect-contact" value={form.contactName} onChange={set("contactName")} />
           </Field>
           <Field>
+            <FieldLabel htmlFor="prospect-email">{t.email}</FieldLabel>
+            <Input
+              id="prospect-email"
+              type="email"
+              value={form.email}
+              onChange={set("email")}
+            />
+          </Field>
+          <Field>
             <FieldLabel htmlFor="prospect-phone">{t.phone}</FieldLabel>
             <Input id="prospect-phone" inputMode="tel" value={form.phone} onChange={set("phone")} />
           </Field>
@@ -427,7 +595,7 @@ function ProspectForm({
               </SelectContent>
             </Select>
           </Field>
-          <Field>
+          <Field className="md:col-span-2">
             <FieldLabel htmlFor="prospect-follow-up">{t.nextFollowUp}</FieldLabel>
             <Input
               id="prospect-follow-up"
