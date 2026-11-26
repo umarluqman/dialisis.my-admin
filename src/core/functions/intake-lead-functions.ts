@@ -3,9 +3,16 @@ import { z } from "zod"
 import { and, desc, eq, inArray, not, sql } from "drizzle-orm"
 import { db } from "@/db/connection"
 import { ensureAdminDatabaseSchema } from "@/db/ensure-schema"
-import { dialysisCenter, intakeLead } from "@/db/schema"
+import {
+  company,
+  dialysisCenter,
+  intakeLead,
+  state,
+  userCenterAccess,
+} from "@/db/schema"
 import { authMiddleware } from "@/lib/middleware"
 import { getAccess } from "@/lib/access"
+import { requireSuperadmin } from "@/lib/center-admin"
 import { toDbDate } from "@/lib/analytics"
 import { getLeadQuality, leadDuplicateKey, testLeadSql } from "@/lib/lead-quality"
 
@@ -174,4 +181,76 @@ export const updateIntakeLeadStatus = createServerFn({ method: "POST" })
         updatedAt: sql`${now}`,
       })
       .where(inArray(intakeLead.id, data.ids))
+  })
+
+function toIsoString(value: Date | string | number | null) {
+  if (!value) return null
+  const date = value instanceof Date ? value : new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date.toISOString()
+}
+
+export const getLeadRecipients = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .handler(async ({ context }) => {
+    await requireSuperadmin(context.session.user.id)
+    await ensureAdminDatabaseSchema()
+
+    const [centers, companies, claimedRows, leads] = await Promise.all([
+      db
+        .select({
+          id: dialysisCenter.id,
+          name: dialysisCenter.dialysisCenterName,
+          slug: dialysisCenter.slug,
+          town: dialysisCenter.town,
+          stateName: state.name,
+          companyId: dialysisCenter.companyId,
+          companyName: company.name,
+          companySlug: company.slug,
+        })
+        .from(dialysisCenter)
+        .leftJoin(state, eq(dialysisCenter.stateId, state.id))
+        .leftJoin(company, eq(dialysisCenter.companyId, company.id))
+        .orderBy(dialysisCenter.dialysisCenterName),
+      db
+        .select({
+          id: company.id,
+          name: company.name,
+          slug: company.slug,
+        })
+        .from(company)
+        .orderBy(company.name),
+      db
+        .selectDistinct({ centerId: userCenterAccess.dialysisCenterId })
+        .from(userCenterAccess),
+      db
+        .select({
+          id: intakeLead.id,
+          dialysisCenterId: intakeLead.dialysisCenterId,
+          fullName: intakeLead.fullName,
+          phoneNumber: intakeLead.phoneNumber,
+          additionalNotes: intakeLead.additionalNotes,
+          status: intakeLead.status,
+          picNotificationStatus: intakeLead.picNotificationStatus,
+          viewedAt: intakeLead.viewedAt,
+          createdAt: intakeLead.createdAt,
+        })
+        .from(intakeLead)
+        .where(not(testLeadSql))
+        .orderBy(desc(intakeLead.createdAt)),
+    ])
+
+    const claimedIds = new Set(claimedRows.map((row) => row.centerId))
+
+    return {
+      centers: centers.map((center) => ({
+        ...center,
+        claimed: claimedIds.has(center.id),
+      })),
+      companies,
+      leads: leads.map((lead) => ({
+        ...lead,
+        viewedAt: toIsoString(lead.viewedAt),
+        createdAt: toIsoString(lead.createdAt) ?? new Date(0).toISOString(),
+      })),
+    }
   })

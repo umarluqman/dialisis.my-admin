@@ -137,7 +137,7 @@ export function FollowUpView() {
       toast.success(t.marked(lead.fullName, statusLabels[status]))
     },
     onSettled: () => {
-      for (const queryKey of [["followUpLeads"], ["intakeLeads"], ["analytics"]]) {
+      for (const queryKey of [["followUpLeads"], ["intakeLeads"], ["leadRecipients"], ["analytics"]]) {
         queryClient.invalidateQueries({ queryKey })
       }
     },

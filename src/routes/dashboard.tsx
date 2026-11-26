@@ -8,6 +8,7 @@ import { AnalyticsView } from "@/components/analytics/analytics-view"
 import { DashboardSidebar, MobileTabBar } from "@/components/dashboard/dashboard-sidebar"
 import { CentersView } from "@/components/dashboard/centers-view"
 import { LeadsView } from "@/components/dashboard/leads-view"
+import { LeadRecipientsView } from "@/components/dashboard/lead-recipients-view"
 import { FollowUpView } from "@/components/dashboard/follow-up-view"
 import { InvitationsView } from "@/components/dashboard/invitations-view"
 import { FeaturedView } from "@/components/dashboard/featured-view"
@@ -31,12 +32,18 @@ const DASHBOARD_TABS = [
   "centers",
   "leads",
   "follow-up",
+  "lead-recipients",
   "featured",
   "sales",
   "invitations",
 ] as const
 export type DashboardTab = (typeof DASHBOARD_TABS)[number]
-const SUPERADMIN_TABS: DashboardTab[] = ["featured", "sales", "invitations"]
+const SUPERADMIN_TABS: DashboardTab[] = [
+  "lead-recipients",
+  "featured",
+  "sales",
+  "invitations",
+]
 
 const searchSchema = z.object({
   tab: z.enum(DASHBOARD_TABS).optional().catch(undefined),
@@ -65,6 +72,7 @@ const COPY = defineCopy({
       centers: "Dialysis Centers",
       leads: "Intake Leads",
       "follow-up": "Needs follow-up",
+      "lead-recipients": "Lead recipients",
       featured: "Featured slots",
       sales: "Sales pipeline",
       invitations: "Invitations",
@@ -73,6 +81,7 @@ const COPY = defineCopy({
     previewCenters: (n: number) => `${n} ${n === 1 ? "centre" : "centres"}`,
     leadsContext: (newCount: number, total: number) => `${newCount} new · ${total} latest`,
     followUpContext: (n: number) => `${n} to contact`,
+    leadRecipientsContext: "Centers and brands that received leads",
     featuredContext: "One centre per town",
     salesContext: "Contacted → demo → pilot → paid",
     invitationsContext: "Invite a PIC to manage centers",
@@ -84,6 +93,7 @@ const COPY = defineCopy({
       centers: "Pusat dialisis",
       leads: "Permohonan temujanji",
       "follow-up": "Lead untuk dihubungi",
+      "lead-recipients": "Penerima permohonan",
       featured: "Slot pilihan",
       sales: "Saluran jualan",
       invitations: "Jemputan",
@@ -92,6 +102,7 @@ const COPY = defineCopy({
     previewCenters: (n: number) => `${n} pusat`,
     leadsContext: (newCount: number, total: number) => `${newCount} baru · ${total} terkini`,
     followUpContext: (n: number) => `${n} perlu dihubungi`,
+    leadRecipientsContext: "Pusat dan jenama yang telah menerima permohonan",
     featuredContext: "Satu pusat bagi setiap bandar",
     salesContext: "Dihubungi → demo → percubaan → berbayar",
     invitationsContext: "Jemput PIC untuk mengurus pusat",
@@ -125,6 +136,7 @@ function DashboardPage() {
     centers: centers ? t.centerCount(centers.length) : null,
     leads: leads ? t.leadsContext(newLeadCount, leads.length) : null,
     "follow-up": followUpLeads ? t.followUpContext(followUpCount) : null,
+    "lead-recipients": t.leadRecipientsContext,
     featured: t.featuredContext,
     sales: t.salesContext,
     invitations: t.invitationsContext,
@@ -186,6 +198,7 @@ function DashboardPage() {
           {tab === "centers" && <CentersView isSuperadmin={isSuperadmin} />}
           {tab === "leads" && <LeadsView />}
           {tab === "follow-up" && <FollowUpView />}
+          {tab === "lead-recipients" && <LeadRecipientsView />}
           {tab === "featured" && <FeaturedView />}
           {tab === "sales" && <SalesView />}
           {tab === "invitations" && <InvitationsView />}

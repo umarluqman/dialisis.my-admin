@@ -14,6 +14,7 @@ import { getProInterest } from "@/core/functions/pro-interest-functions"
 import {
   getFollowUpLeads,
   getIntakeLeads,
+  getLeadRecipients,
 } from "@/core/functions/intake-lead-functions"
 
 export const userRoleQuery = (userId: string | undefined) =>
@@ -43,6 +44,11 @@ export const intakeLeadsQuery = queryOptions({
 export const followUpLeadsQuery = queryOptions({
   queryKey: ["followUpLeads"],
   queryFn: () => getFollowUpLeads(),
+})
+
+export const leadRecipientsQuery = queryOptions({
+  queryKey: ["leadRecipients"],
+  queryFn: () => getLeadRecipients(),
 })
 
 export const featuredSlotsQuery = queryOptions({

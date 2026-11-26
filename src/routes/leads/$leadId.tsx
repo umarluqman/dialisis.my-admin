@@ -70,7 +70,7 @@ function LeadPage() {
     onError: (err) => toast.error(err.message || t.updateFailed),
     onSuccess: (_data, status) => toast.success(t.marked(statusLabels[status])),
     onSettled: () => {
-      for (const queryKey of [["intakeLeads"], ["followUpLeads"], ["analytics"]]) {
+      for (const queryKey of [["intakeLeads"], ["followUpLeads"], ["leadRecipients"], ["analytics"]]) {
         queryClient.invalidateQueries({ queryKey })
       }
     },
