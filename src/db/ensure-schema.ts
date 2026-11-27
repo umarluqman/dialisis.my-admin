@@ -33,7 +33,7 @@ const OPTIONAL_COLUMNS: Record<string, Array<{ name: string; definition: string 
     { name: "email_body", definition: "email_body text" },
     { name: "email_subject_bm", definition: "email_subject_bm text" },
     { name: "email_body_bm", definition: "email_body_bm text" },
-    { name: "email_lang", definition: "email_lang text not null default 'en'" },
+    { name: "email_lang", definition: "email_lang text not null default 'ms'" },
     { name: "email_image_url", definition: "email_image_url text" },
     { name: "email_image_caption", definition: "email_image_caption text" },
     { name: "email_sent_at", definition: "email_sent_at integer" },

@@ -40,7 +40,7 @@ import { SALES_STAGES } from "@/lib/sales"
 import { cn } from "@/lib/utils"
 
 type Stage = (typeof SALES_STAGES)[number]
-type EmailLang = "en" | "ms"
+type EmailLang = "ms" | "en"
 type QueueFilter = "lead" | "contacted" | "all"
 type ViewMode = "edit" | "preview" | "split"
 type PreviewDevice = "desktop" | "mobile"
@@ -511,7 +511,7 @@ function ComposerWorkspace({
   const queryClient = useQueryClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const [lang, setLang] = useState<EmailLang>(() => (prospect.emailLang === "ms" ? "ms" : "en"))
+  const [lang, setLang] = useState<EmailLang>(() => (prospect.emailLang === "en" ? "en" : "ms"))
   const [to, setTo] = useState(() => prospect.email ?? "")
   const [activeStep, setActiveStep] = useState<SequenceStep>(0)
   const [viewMode, setViewMode] = useState<ViewMode>("split")
@@ -799,7 +799,7 @@ function ComposerWorkspace({
             aria-label="Email language"
             className="inline-flex rounded-full border bg-background p-0.5"
           >
-            {(["en", "ms"] as const).map((code) => (
+            {(["ms", "en"] as const).map((code) => (
               <button
                 key={code}
                 type="button"

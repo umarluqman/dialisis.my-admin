@@ -344,7 +344,7 @@ export const salesProspect = sqliteTable(
     emailBody: text("email_body"),
     emailSubjectBm: text("email_subject_bm"),
     emailBodyBm: text("email_body_bm"),
-    emailLang: text("email_lang").default("en").notNull(),
+    emailLang: text("email_lang").default("ms").notNull(),
     emailImageUrl: text("email_image_url"),
     emailImageCaption: text("email_image_caption"),
     emailSentAt: integer("email_sent_at", { mode: "timestamp_ms" }),
