@@ -1,26 +1,9 @@
 import { createServerFn } from "@tanstack/react-start"
-import { z } from "zod"
 import { count, desc, eq, isNotNull } from "drizzle-orm"
 import { db } from "@/db/connection"
 import { dialysisCenter, proInterest, town } from "@/db/schema"
 import { authMiddleware } from "@/lib/middleware"
-import { requireCenterAccess } from "@/lib/access"
 import { requireSuperadmin } from "@/lib/center-admin"
-import { toDbDate } from "@/lib/analytics"
-
-export const logUpgradeClick = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
-  .inputValidator(z.object({ centerId: z.string().min(1) }))
-  .handler(async ({ context, data }) => {
-    await requireCenterAccess(context.session.user.id, data.centerId)
-    await db.insert(proInterest).values({
-      id: crypto.randomUUID(),
-      dialysisCenterId: data.centerId,
-      step: "upgrade_click",
-      source: "admin",
-      createdAt: toDbDate(Date.now()),
-    })
-  })
 
 export const getProInterest = createServerFn({ method: "GET" })
   .middleware([authMiddleware])

@@ -31,7 +31,6 @@ import {
 import type { DashboardTab } from "@/routes/dashboard"
 import { defineCopy, useCopy } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
-import { UpgradeToProButton } from "@/components/upgrade-to-pro-button"
 import { PreviewPicker } from "./preview-picker"
 
 const NAV_ITEMS = [
@@ -96,8 +95,6 @@ type DashboardSidebarProps = {
   activeTab: DashboardTab
   user: { name: string; email: string }
   role: "pic" | "superadmin" | undefined
-  proLocked: boolean
-  upgradeCenterId: string | undefined
   newLeadCount: number
   followUpCount: number
 }
@@ -106,8 +103,6 @@ export function DashboardSidebar({
   activeTab,
   user,
   role,
-  proLocked,
-  upgradeCenterId,
   newLeadCount,
   followUpCount,
 }: DashboardSidebarProps) {
@@ -170,9 +165,6 @@ export function DashboardSidebar({
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="border-t">
-        {proLocked && upgradeCenterId && (
-          <UpgradeToProButton centerId={upgradeCenterId} className="w-full" />
-        )}
         <div className="flex items-center gap-2 px-1 py-1">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">

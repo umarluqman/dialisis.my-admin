@@ -25,7 +25,6 @@ import {
 import { LEAD_STATUSES, toLeadStatus } from "@/components/intake-lead-list"
 import { ANALYTICS_PRESETS, CONTACT_KINDS, SOURCE_KEYS } from "@/lib/analytics"
 import { defineCopy, useCopy } from "@/lib/i18n"
-import { isPlanActive } from "@/lib/plan"
 
 const DASHBOARD_TABS = [
   "analytics",
@@ -122,7 +121,6 @@ function DashboardPage() {
 
   const preview = userRole?.preview
   const isSuperadmin = userRole?.role === "superadmin"
-  const proLocked = !isSuperadmin && !!centers && !centers.some(isPlanActive)
   const tab =
     SUPERADMIN_TABS.includes(requestedTab) && !isSuperadmin ? "analytics" : requestedTab
   const newLeadCount =
@@ -168,8 +166,6 @@ function DashboardPage() {
             : session.user
         }
         role={userRole?.role}
-        proLocked={proLocked}
-        upgradeCenterId={centers?.[0]?.id}
         newLeadCount={newLeadCount}
         followUpCount={followUpCount}
       />
