@@ -38,6 +38,11 @@ const OPTIONAL_COLUMNS: Record<string, Array<{ name: string; definition: string 
     { name: "email_image_caption", definition: "email_image_caption text" },
     { name: "email_sent_at", definition: "email_sent_at integer" },
     { name: "email_step", definition: "email_step integer not null default 0" },
+    { name: "primary_channel", definition: "primary_channel text" },
+    { name: "send_wave", definition: "send_wave text" },
+    { name: "email_source", definition: "email_source text" },
+    { name: "whatsapp_source", definition: "whatsapp_source text" },
+    { name: "whatsapp_body", definition: "whatsapp_body text" },
   ],
 }
 

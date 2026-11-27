@@ -121,6 +121,13 @@ const COPY = defineCopy({
     missingRecipient: "Add a recipient email address first",
     missingContent: "Add both a subject and message body first",
     stageUpdated: "Stage updated",
+    whatsappDraft: "WhatsApp draft",
+    whatsappPlaceholder: "Write a short BM WhatsApp message...",
+    copyWhatsapp: "Copy WhatsApp",
+    openWhatsapp: "Open in WhatsApp",
+    sourceLabel: (src: string) => `Source: ${src}`,
+    whatsappFirstBadge: "WA First",
+    emailFirstBadge: "Email First",
   },
   ms: {
     stages: {
@@ -196,6 +203,13 @@ const COPY = defineCopy({
     missingRecipient: "Masukkan alamat emel penerima dahulu",
     missingContent: "Masukkan subjek dan kandungan emel dahulu",
     stageUpdated: "Peringkat dikemas kini",
+    whatsappDraft: "Draf WhatsApp",
+    whatsappPlaceholder: "Tulis mesej WhatsApp ringkas dalam BM...",
+    copyWhatsapp: "Salin WhatsApp",
+    openWhatsapp: "Buka di WhatsApp",
+    sourceLabel: (src: string) => `Sumber: ${src}`,
+    whatsappFirstBadge: "WA Dulu",
+    emailFirstBadge: "Emel Dulu",
   },
 })
 
@@ -219,7 +233,7 @@ async function resizeOutreachImage(file: File): Promise<File> {
   return new File([blob], isPng ? "outreach.png" : "outreach.jpg", { type: mime })
 }
 
-function toMalaysiaWhatsAppUrl(phone: string | null): string | null {
+function toMalaysiaWhatsAppUrl(phone: string | null, text?: string): string | null {
   if (!phone) return null
   const digits = phone.replace(/\D/g, "")
   if (!digits) return null
@@ -229,7 +243,10 @@ function toMalaysiaWhatsAppUrl(phone: string | null): string | null {
       ? digits
       : null
   if (!normalized || !normalized.startsWith("601") || normalized.length < 10) return null
-  return `https://wa.me/${normalized}`
+  const trimmed = text?.trim()
+  return trimmed
+    ? `https://wa.me/${normalized}?text=${encodeURIComponent(trimmed)}`
+    : `https://wa.me/${normalized}`
 }
 
 function getInitials(name: string): string {
@@ -453,6 +470,25 @@ export function ColdEmailStudio({
                     )}
 
                     <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                      {prospect.sendWave && (
+                        <span className="shrink-0 rounded-full border border-border bg-muted/60 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                          {prospect.sendWave.replace(/\s*\(.*\)/, "")}
+                        </span>
+                      )}
+                      {prospect.primaryChannel && (
+                        <span
+                          className={cn(
+                            "shrink-0 rounded-full border px-1.5 py-0.5 text-[10px] font-medium",
+                            prospect.primaryChannel.startsWith("WhatsApp")
+                              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                              : "border-border bg-background text-muted-foreground"
+                          )}
+                        >
+                          {prospect.primaryChannel.startsWith("WhatsApp")
+                            ? t.whatsappFirstBadge
+                            : t.emailFirstBadge}
+                        </span>
+                      )}
                       {prospect.email ? (
                         <span className="max-w-full truncate text-xs text-muted-foreground">
                           {prospect.email}
@@ -518,7 +554,9 @@ function ComposerWorkspace({
   const [previewDevice, setPreviewDevice] = useState<PreviewDevice>("desktop")
   const [imageUrl, setImageUrl] = useState(() => prospect.emailImageUrl ?? "")
   const [imageCaption, setImageCaption] = useState(() => prospect.emailImageCaption ?? "")
+  const [whatsappBody, setWhatsappBody] = useState(() => prospect.whatsappBody ?? "")
   const [copied, setCopied] = useState(false)
+  const [copiedWa, setCopiedWa] = useState(false)
 
   const [drafts, setDrafts] = useState<Record<EmailLang, Partial<Record<SequenceStep, DraftContent>>>>(
     () => ({
@@ -622,6 +660,7 @@ function ComposerWorkspace({
           emailLang: lang,
           emailImageUrl: imageUrl.trim() || null,
           emailImageCaption: imageCaption.trim() || null,
+          whatsappBody: whatsappBody.trim() || null,
         },
       })
     },
@@ -736,7 +775,20 @@ function ComposerWorkspace({
     return `https://mail.zoho.com/zm/#compose?${params.toString()}`
   })()
 
-  const whatsappUrl = toMalaysiaWhatsAppUrl(prospect.phone)
+  const whatsappUrl = toMalaysiaWhatsAppUrl(prospect.phone, whatsappBody)
+
+  const handleCopyWhatsapp = async () => {
+    const text = whatsappBody.trim()
+    if (!text) return
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopiedWa(true)
+      toast.success(t.copied)
+      window.setTimeout(() => setCopiedWa(false), 2000)
+    } catch {
+      toast.error(t.copyFailed)
+    }
+  }
   const wordCount = countWords(currentDraft.body)
   const wordHint =
     wordCount <= 100
@@ -759,6 +811,24 @@ function ComposerWorkspace({
             {prospect.centers.length > 0 && (
               <Badge variant="outline" className="font-mono text-[11px] tabular-nums">
                 {t.branches(prospect.centers.length)}
+              </Badge>
+            )}
+            {prospect.sendWave && (
+              <Badge variant="secondary" className="font-mono text-[11px]">
+                {prospect.sendWave}
+              </Badge>
+            )}
+            {prospect.primaryChannel && (
+              <Badge
+                variant="outline"
+                className={cn(
+                  "text-[11px]",
+                  prospect.primaryChannel.startsWith("WhatsApp")
+                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                    : "text-muted-foreground"
+                )}
+              >
+                {prospect.primaryChannel}
               </Badge>
             )}
           </div>
@@ -883,9 +953,16 @@ function ComposerWorkspace({
             </div>
 
             <div className="space-y-1">
-              <label htmlFor="cold-email-to" className="text-xs font-medium text-muted-foreground">
-                {t.toLabel}
-              </label>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <label htmlFor="cold-email-to" className="text-xs font-medium text-muted-foreground">
+                  {t.toLabel}
+                </label>
+                {prospect.emailSource && (
+                  <span className="text-[11px] text-muted-foreground">
+                    {t.sourceLabel(prospect.emailSource)}
+                  </span>
+                )}
+              </div>
               <Input
                 id="cold-email-to"
                 type="email"
@@ -1008,6 +1085,61 @@ function ComposerWorkspace({
                   </Button>
                 </div>
               )}
+            </div>
+
+            <div className="space-y-2 rounded-xl border bg-muted/25 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-foreground">
+                    <MessageCircle className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                    {t.whatsappDraft}
+                  </span>
+                  {prospect.phone && (
+                    <span className="font-mono text-[11px] text-muted-foreground">
+                      {prospect.phone}
+                    </span>
+                  )}
+                </div>
+                {prospect.whatsappSource && (
+                  <span className="text-[11px] text-muted-foreground">
+                    {t.sourceLabel(prospect.whatsappSource)}
+                  </span>
+                )}
+              </div>
+              <Textarea
+                value={whatsappBody}
+                onChange={(e) => setWhatsappBody(e.target.value)}
+                placeholder={t.whatsappPlaceholder}
+                rows={4}
+                className="resize-y bg-background text-sm leading-relaxed"
+              />
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-8 gap-1.5 text-xs"
+                  disabled={!whatsappBody.trim()}
+                  onClick={handleCopyWhatsapp}
+                >
+                  {copiedWa ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+                  {t.copyWhatsapp}
+                </Button>
+                {whatsappUrl && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="default"
+                    className="h-8 gap-1.5 text-xs"
+                    asChild
+                  >
+                    <a href={whatsappUrl} target="_blank" rel="noreferrer">
+                      <MessageCircle className="size-3.5" />
+                      {t.openWhatsapp}
+                    </a>
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         )}

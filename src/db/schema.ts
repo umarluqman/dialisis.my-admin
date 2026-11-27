@@ -349,6 +349,11 @@ export const salesProspect = sqliteTable(
     emailImageCaption: text("email_image_caption"),
     emailSentAt: integer("email_sent_at", { mode: "timestamp_ms" }),
     emailStep: integer("email_step").default(0).notNull(),
+    primaryChannel: text("primary_channel"),
+    sendWave: text("send_wave"),
+    emailSource: text("email_source"),
+    whatsappSource: text("whatsapp_source"),
+    whatsappBody: text("whatsapp_body"),
     createdBy: text("created_by")
       .notNull()
       .references(() => user.id),

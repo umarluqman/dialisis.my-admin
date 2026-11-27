@@ -81,6 +81,11 @@ const SaveSalesProspectSchema = z.object({
   emailLang: z.enum(["en", "ms"]).optional(),
   emailImageUrl: optionalText.optional(),
   emailImageCaption: optionalText.optional(),
+  primaryChannel: optionalText.optional(),
+  sendWave: optionalText.optional(),
+  emailSource: optionalText.optional(),
+  whatsappSource: optionalText.optional(),
+  whatsappBody: optionalText.optional(),
 })
 
 const STAGE_REACHED_AT = {
