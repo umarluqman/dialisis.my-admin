@@ -1,17 +1,17 @@
 ---
 trigger: model_decision
-description: "Leads are free for every claimed centre (any plan), sent straight to PIC; pay-per-lead pilot dropped"
+description: "Lead routing & billing — claimed centres get leads straight to PICs; Asas billed RM150/verified lead (upfront consent), Pilihan Bandar & Rangkaian RM0 lead fees; unclaimed → team"
 ---
 
-# Leads Free for Claimed Centres
+# Lead Routing & Billing
 
-Decision (2026-11-11): lead intake is free for PICs to remove the team's manual lead handling. Replaces the 2026-10-23 pay-per-lead pilot and the earlier `"leads = Pro feature"`.
+Updated 2026-11-25 (`dialisis.my/src/app/(ms)/untuk-pusat-dialisis/pricing.ts`):
+- **Claimed centre** (has a `user_center_access` PIC): lead is emailed straight to PIC(s) and visible in admin leads/follow-up tabs on any plan (never gate lead visibility on plan).
+- **Billing**:
+  - **Asas**: flat **RM150/verified lead** monthly digital-marketing fee (with upfront HQ consent; duplicates, fake numbers, and spam are RM0).
+  - **Pilihan Bandar** & **Rangkaian**: **RM0 lead fees** for the plan duration.
+- **Unclaimed centre**: lead still goes to team (`LEAD_ADMIN_EMAILS`) rather than emailing the scraped centre address.
+- **Claiming**: stays manual via WhatsApp + superadmin invitation.
+- **MOH/gov**: still no booking form.
 
-- Claimed centre (has a `user_center_access` PIC), any plan: lead emailed straight to PIC(s) + visible in admin leads/follow-up tabs.
-- Unclaimed centre: lead still goes to team (`LEAD_ADMIN_EMAILS`) rather than emailing the scraped centre address.
-- Claiming stays manual via WhatsApp + superadmin invitation (no self-serve OTP claim for now).
-- Pro = profile extras only (photos, FAQ, benefits); Pilihan Bandar = featured slot.
-- MOH/gov: still no booking form.
-
-**Why:** free leads are the hook to get PICs to claim (only 6 of ~935 private/NGO centres were claimed on 2026-11-11).
-**How to apply:** never gate leads on plan in site or admin; copy says leads are free after claiming. Never promise lead/patient numbers. Related: `premium-plans-pricing.md`, `lead-data-not-baseline.md`.
+**How to apply:** never gate lead visibility on plan in admin; never charge % of patient revenue (Act 586); never promise lead/patient numbers. Related: `premium-plans-pricing.md`, `lead-data-not-baseline.md`.
