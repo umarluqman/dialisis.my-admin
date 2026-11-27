@@ -12,3 +12,4 @@ count.txt
 todos.json
 .dev.vars
 /.dev.vars
+.wrangler
