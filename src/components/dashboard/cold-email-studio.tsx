@@ -13,6 +13,7 @@ import {
   Send,
   Smartphone,
   Sparkles,
+  StickyNote,
   Trash2,
 } from "lucide-react"
 import { toast } from "sonner"
@@ -128,6 +129,8 @@ const COPY = defineCopy({
     sourceLabel: (src: string) => `Source: ${src}`,
     whatsappFirstBadge: "WA First",
     emailFirstBadge: "Email First",
+    notesLabel: "Prospect notes",
+    notesPlaceholder: "Research notes, alternate contacts, call takeaways...",
   },
   ms: {
     stages: {
@@ -210,6 +213,8 @@ const COPY = defineCopy({
     sourceLabel: (src: string) => `Sumber: ${src}`,
     whatsappFirstBadge: "WA Dulu",
     emailFirstBadge: "Emel Dulu",
+    notesLabel: "Catatan prospek",
+    notesPlaceholder: "Nota kajian, nombor alternatif, ringkasan panggilan...",
   },
 })
 
@@ -555,6 +560,7 @@ function ComposerWorkspace({
   const [imageUrl, setImageUrl] = useState(() => prospect.emailImageUrl ?? "")
   const [imageCaption, setImageCaption] = useState(() => prospect.emailImageCaption ?? "")
   const [whatsappBody, setWhatsappBody] = useState(() => prospect.whatsappBody ?? "")
+  const [notes, setNotes] = useState(() => prospect.notes ?? "")
   const [copied, setCopied] = useState(false)
   const [copiedWa, setCopiedWa] = useState(false)
 
@@ -620,7 +626,7 @@ function ComposerWorkspace({
           email: to.trim() || null,
           stage,
           lostReason: prospect.lostReason,
-          notes: prospect.notes,
+          notes: notes.trim() || null,
           nextFollowUpAt: prospect.nextFollowUpAt,
         },
       }),
@@ -651,7 +657,7 @@ function ComposerWorkspace({
           email: to.trim() || null,
           stage: prospect.stage,
           lostReason: prospect.lostReason,
-          notes: prospect.notes,
+          notes: notes.trim() || null,
           nextFollowUpAt: prospect.nextFollowUpAt,
           emailSubject: enSubject || null,
           emailBody: enBody || null,
@@ -1140,6 +1146,24 @@ function ComposerWorkspace({
                   </Button>
                 )}
               </div>
+            </div>
+
+            <div className="space-y-2 rounded-xl border bg-muted/25 p-3">
+              <label
+                htmlFor="cold-email-notes"
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-foreground"
+              >
+                <StickyNote className="size-3.5 text-muted-foreground" />
+                {t.notesLabel}
+              </label>
+              <Textarea
+                id="cold-email-notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder={t.notesPlaceholder}
+                rows={4}
+                className="resize-y bg-background text-xs leading-relaxed"
+              />
             </div>
           </div>
         )}
