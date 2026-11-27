@@ -430,7 +430,7 @@ export function ColdEmailStudio({
             ))}
           </div>
 
-          <div className="max-h-[calc(100vh-22rem)] min-h-[320px] flex-1 space-y-1.5 overflow-y-auto pr-0.5">
+          <div className="max-h-[360px] flex-1 space-y-1.5 overflow-y-auto pr-0.5 lg:max-h-none lg:overflow-y-visible">
             {filteredProspects.length === 0 ? (
               <p className="rounded-lg border border-dashed p-6 text-center text-xs text-muted-foreground">
                 {t.emptyQueue}
